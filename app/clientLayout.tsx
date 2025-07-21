@@ -23,11 +23,11 @@ import { usePathname } from "next/navigation"
 const inter = Inter({ subsets: ["latin"] })
 
 const navigation = [
-  { name: "Dashboard", href: "/", icon: Home },
-  { name: "Candidates", href: "/candidates", icon: Users },
-  { name: "Calendar", href: "/calendar", icon: Calendar },
-  { name: "Analytics", href: "/analytics", icon: BarChart3 },
-  { name: "Settings", href: "/settings", icon: Settings },
+  { name: "Dashboard", href: "/dashboard", icon: Home },
+  { name: "Candidates", href: "/dashboard/candidates", icon: Users },
+  { name: "Calendar", href: "/dashboard/calendar", icon: Calendar },
+  { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
+  { name: "Settings", href: "/dashboard/settings", icon: Settings },
 ]
 
 export default function ClientLayout({
