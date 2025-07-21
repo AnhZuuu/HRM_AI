@@ -161,7 +161,7 @@ function SidebarContent() {
           <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center">
             <Users className="h-5 w-5 text-white" />
           </div>
-          <span className="ml-3 text-xl font-bold text-gray-900">RecruitPro</span>
+          <span className="ml-3 text-xl font-bold text-gray-900">HRM AI</span>
         </div>
       </div>
       <nav className="flex flex-1 flex-col">
@@ -191,13 +191,13 @@ function SidebarContent() {
             </ul>
           </li>
           <li className="mt-auto">
-            <div className="rounded-lg bg-blue-50 p-4">
+            {/* <div className="rounded-lg bg-blue-50 p-4">
               <h3 className="text-sm font-medium text-blue-900">Upgrade to Pro</h3>
               <p className="text-xs text-blue-700 mt-1">Get advanced analytics and unlimited candidates</p>
               <Button size="sm" className="mt-3 w-full bg-blue-600 hover:bg-blue-700">
                 Upgrade Now
               </Button>
-            </div>
+            </div> */}
           </li>
         </ul>
       </nav>
