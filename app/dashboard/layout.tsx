@@ -1,5 +1,5 @@
 import type React from "react"
-import ClientLayout from "./clientLayout"
+// import ClientLayout from "./clientLayout"
 
 export const metadata = {
   title: "HRM AI",
@@ -12,17 +12,9 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
-  return (
-    <html lang="en">
-      <body>
-        {/* <Header/> */}
-        
-        {children}
-        {/* <Footer/> */}
-      </body>
-    </html>
-  )
+  return <ClientLayout>{children}</ClientLayout>
 }
 
 
-import './globals.css'
+import '../globals.css'
+import ClientLayout from "../clientLayout"
