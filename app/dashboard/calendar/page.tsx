@@ -377,7 +377,7 @@ export default function CalendarPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Calendar className="h-5 w-5" />
-                January 2024
+                Đặt lịch
               </CardTitle>
             </CardHeader>
             <CardContent>
