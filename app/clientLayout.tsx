@@ -135,7 +135,9 @@ export default function ClientLayout({
                         <DropdownMenuSeparator />
                         <DropdownMenuItem>
                           <LogOut className="mr-2 h-4 w-4" />
-                          <span>Log out</span>
+                          <Link href="/" >
+                            <span>Log out</span>
+                          </Link>
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -175,14 +177,12 @@ function SidebarContent() {
                   <li key={item.name}>
                     <Link
                       href={item.href}
-                      className={`group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold transition-colors ${
-                        isActive ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:text-blue-600 hover:bg-gray-50"
-                      }`}
+                      className={`group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold transition-colors ${isActive ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:text-blue-600 hover:bg-gray-50"
+                        }`}
                     >
                       <item.icon
-                        className={`h-6 w-6 shrink-0 ${
-                          isActive ? "text-blue-600" : "text-gray-400 group-hover:text-blue-600"
-                        }`}
+                        className={`h-6 w-6 shrink-0 ${isActive ? "text-blue-600" : "text-gray-400 group-hover:text-blue-600"
+                          }`}
                       />
                       {item.name}
                     </Link>
