@@ -42,7 +42,7 @@ const LoginPage = () => {
     code: ""
   });
 
-  const handleLoginInputChange = (e: any) => {
+  const handleLoginInputChange = (e : any) => {
   const { name, value, type, checked } = e.target;
   const val = type === "checkbox" ? checked : value;
   setFormData(prev => ({ ...prev, [name]: val }));
@@ -59,10 +59,61 @@ const handleVerifyInputChange = (e: any) => {
   setVerifyData(prev => ({ ...prev, [name]: value }));
 };
 
-  const handleSubmit = (e: any) => {
-    e.preventDefault();
-    console.log("Login attempted with:", formData);
-  };
+  const handleSubmit = async (e: any) => {
+  e.preventDefault();
+
+  try {
+    const response = await fetch("http://localhost:7064/api/v1/authentication/sign-in", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        email: formData.email,
+        password: formData.password
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error("Invalid credentials or server error");
+    }
+
+    const data = await response.json();
+    const { accessToken, refreshToken, refreshTokenExpires } = data;
+
+    // Save to localStorage
+    localStorage.setItem("accessToken", accessToken);
+    localStorage.setItem("refreshToken", refreshToken);
+    localStorage.setItem("refreshTokenExpires", refreshTokenExpires);
+
+    // Parse JWT
+    const parseJwt = (token: any) => {
+      try {
+        const base64Url = token.split(".")[1];
+        const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+        const jsonPayload = decodeURIComponent(
+          atob(base64)
+            .split("")
+            .map((c) => `%${("00" + c.charCodeAt(0).toString(16)).slice(-2)}`)
+            .join("")
+        );
+        return JSON.parse(jsonPayload);
+      } catch (e) {
+        console.error("Invalid JWT format", e);
+        return null;
+      }
+    };
+
+    const parsedToken = parseJwt(accessToken);
+    console.log("Parsed Token:", parsedToken);
+
+    // Navigate to dashboard
+    window.location.href = "/dashboard";
+  } catch (error: any) {
+    alert("Login failed: " + error.message);
+    console.error("Login error:", error);
+  }
+};
 
   const handleRegisterSubmit = (e: any) => {
     e.preventDefault();
@@ -105,7 +156,7 @@ const handleVerifyInputChange = (e: any) => {
               </div>
               <input name="phoneNumber" placeholder="Phone Number" className="w-full p-2 border rounded" onChange={handleRegisterInputChange} required />
               <input name="address" placeholder="Address" className="w-full p-2 border rounded" onChange={handleRegisterInputChange} required />
-              <button type="submit" className="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700">Đăng Ký</button>
+              <button type="submit" className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700">Đăng Ký</button>
             </form>
           </div>
         </div>
@@ -120,7 +171,7 @@ const handleVerifyInputChange = (e: any) => {
             <form className="space-y-4">
               <input name="email" type="email" placeholder="Email" className="w-full p-2 border rounded" onChange={handleVerifyInputChange} required />
               <input name="code" placeholder="Verification Code" className="w-full p-2 border rounded" onChange={handleVerifyInputChange} required />
-              <button type="button" onClick={() => setShowVerify(false)} className="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700">Xác minh</button>
+              <button type="button" onClick={() => setShowVerify(false)} className="w-full bg-gray-500 text-white py-2 rounded hover:bg-gray-600">Đóng</button>
             </form>
           </div>
         </div>
@@ -171,5 +222,7 @@ const handleVerifyInputChange = (e: any) => {
     </div>
   );
 };
+
+
 
 export default LoginPage;
