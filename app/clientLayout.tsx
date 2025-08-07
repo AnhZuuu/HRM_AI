@@ -16,7 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Home, Users, Calendar, BarChart3, Settings, Bell, Search, Menu, X, User, LogOut, Plus, Mail } from "lucide-react"
+import { Home, Users, Calendar, BarChart3, Settings, Bell, Search, Menu, X, User, LogOut, Plus, Mail, Megaphone} from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
@@ -29,6 +29,7 @@ const navigation = [
   { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
   { name: "System Config", href: "/dashboard/settings", icon: Settings },
   { name: "Mail", href: "/dashboard/mail", icon: Mail },
+  { name: "Campaign", href: "/dashboard/campaigns", icon:  Megaphone},
 ]
 
 export default function ClientLayout({
