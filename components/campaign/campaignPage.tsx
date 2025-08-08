@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -92,83 +92,136 @@ export default function CampaignPage() {
     description: "",
   });
 
-  //   const getStatusColor = (status: string) => {
-  //     switch (status) {
-  //       case "Hired":
-  //         return "bg-green-100 text-green-800"
-  //       case "Interview":
-  //         return "bg-purple-100 text-purple-800"
-  //       case "Screening":
-  //         return "bg-yellow-100 text-yellow-800"
-  //       case "Applied":
-  //         return "bg-blue-100 text-blue-800"
-  //       case "Rejected":
-  //         return "bg-red-100 text-red-800"
-  //       default:
-  //         return "bg-gray-100 text-gray-800"
-  //     }
-  //   }
+  const [errors, setErrors] = useState({
+    name: "",
+    startTime: "",
+    endTime: ""
+  });
+
+
+  const toMidnight = (d: string | Date) => {
+    const date = typeof d === "string" ? new Date(d) : d;
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  };
+
+  const getCampaignStatus = (start: string, end: string, today = new Date()) => {
+    const dToday = toMidnight(today);
+    const dStart = toMidnight(start);
+    const dEnd = toMidnight(end);
+
+    if (dToday < dStart) return "sắp bắt đầu";
+    if (dToday > dEnd) return "kết thúc";
+
+    const msPerDay = 24 * 60 * 60 * 1000;
+    const daysLeft = Math.round((dEnd.getTime() - dToday.getTime()) / msPerDay);
+
+    if (daysLeft === 0) return "kết thúc hôm nay";
+    return `còn ${daysLeft} ngày`;
+  };
+
+  const getStatusColor = (status: string) => {
+    if (status === "kết thúc" || status === "kết thúc hôm nay")
+      return "bg-red-100 text-red-800";
+    if (status === "sắp bắt đầu") return "bg-yellow-100 text-yellow-800";
+
+    const num = Number(status.match(/\d+/)?.[0] ?? "999");
+    if (num <= 2) return "bg-orange-100 text-orange-800";
+    return "bg-green-100 text-green-800";
+  };
+
+  const [today, setToday] = useState(new Date());
+
+  useEffect(() => {
+    const now = new Date();
+    const nextMidnight = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate() + 1
+    );
+    const ms = nextMidnight.getTime() - now.getTime();
+    const t1 = setTimeout(() => {
+      setToday(new Date());
+
+      const t2 = setInterval(() => setToday(new Date()), 24 * 60 * 60 * 1000);
+    }, ms);
+    return () => clearTimeout(t1);
+  }, []);
+
+  const getCampaignPhase = (start: string, end: string, today = new Date()) => {
+    const dToday = toMidnight(today)
+    const dStart = toMidnight(start)
+    const dEnd = toMidnight(end)
+
+    if (dToday < dStart) return "sap_bat_dau"
+    if (dToday > dEnd) return "ket_thuc"
+    return "dang_dien_ra"
+  }
 
   const filteredCampaigns = campaigns.filter((campaign) => {
     const matchesSearch = campaign.name
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
-    // const matchesStatus = statusFilter === "all" || campaign.status.toLowerCase() === statusFilter.toLowerCase()
-    return matchesSearch;
+    const phase = getCampaignPhase(campaign.startTime, campaign.endTime, today);
+    const matchesStatus = statusFilter === "all" || phase === statusFilter;
+
+  return matchesSearch && matchesStatus;
   });
 
   const handleAddCampaign = () => {
-    if (!newCampaign.name || !newCampaign.startTime || !newCampaign.endTime) {
-      toast({
-        title: "Error",
-        description: "Please fill in all required fields.",
-        variant: "destructive",
-      });
-      return;
-    }
+  const newErrors = { name: "", startTime: "", endTime: "" };
+  let hasError = false;
 
-    const campaign = {
-      id: campaigns.length + 1,
-      ...newCampaign,
-      createdBy: "null",
-    };
+  if (!newCampaign.name.trim()) {
+    newErrors.name = "Tên đợt tuyển dụng không được bỏ trống";
+    hasError = true;
+  }
+  if (!newCampaign.startTime) {
+    newErrors.startTime = "Chưa chọn ngày bắt đầu";
+    hasError = true;
+  }
+  if (!newCampaign.endTime) {
+    newErrors.endTime = "Chưa chọn ngày kết thúc";
+    hasError = true;
+  } else if (
+    newCampaign.startTime &&
+    new Date(newCampaign.endTime) <= new Date(newCampaign.startTime)
+  ) {
+    newErrors.endTime = "Ngày kết thúc phải sau ngày bắt đầu";
+    hasError = true;
+  }
 
-    setCampaigns([...campaigns, campaign]);
-    setNewCampaign({
-      name: "",
-      startTime: "",
-      endTime: "",
-      description: "",
-    });
-    setIsAddDialogOpen(false);
+  setErrors(newErrors);
 
-    toast({
-      title: "Success",
-      description: "Campaign added successfully!",
-    });
+  if (hasError) return;
+
+  const campaign = {
+    id: campaigns.length + 1,
+    ...newCampaign,
+    createdBy: "null",
   };
 
-  //   const handleStatusChange = (candidateId: number, newStatus: string) => {
-  //     setCandidates(
-  //       candidates.map((candidate) =>
-  //         candidate.id === candidateId
-  //           ? { ...candidate, status: newStatus }
-  //           : candidate
-  //       )
-  //     );
+  setCampaigns([...campaigns, campaign]);
+  setNewCampaign({
+    name: "",
+    startTime: "",
+    endTime: "",
+    description: "",
+  });
+  setIsAddDialogOpen(false);
 
-  //     toast({
-  //       title: "Status Updated",
-  //       description: `Candidate status changed to ${newStatus}`,
-  //     });
-  //   };
+  toast({
+    title: "Success",
+    description: "Campaign added successfully!",
+  });
+};
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Các đợt tuyển dụng</h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Các đợt tuyển dụng
+          </h1>
           <p className="text-gray-600 mt-1">Quản lý đợt tuyển dụng </p>
         </div>
 
@@ -189,46 +242,48 @@ export default function CampaignPage() {
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Tên *</Label>
+                  <Label htmlFor="name">Tên đợt tuyển dụng <span className="text-red-500">*</span></Label>
                   <Input
                     id="name"
                     value={newCampaign.name}
-                    onChange={(e) =>
-                      setNewCampaign({ ...newCampaign, name: e.target.value })
-                    }
-                    placeholder="John Doe"
+                    onChange={(e : any) => {
+                      setNewCampaign({ ...newCampaign, name: e.target.value });
+                      setErrors((prev : any) => ({ ...prev, name: "" }));
+                    }}                    
+                    placeholder="Tên đợt tuyển dụng"
                   />
+                  {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="startTime">Bắt đầu từ: *</Label>
+                  <Label htmlFor="startTime">Bắt đầu từ: <span className="text-red-500">*</span></Label>
                   <Input
                     id="startTime"
                     type="date"
                     value={newCampaign.startTime.slice(0, 10)}
-                    onChange={(e) =>
-                      setNewCampaign({
-                        ...newCampaign,
-                        startTime: e.target.value,
-                      })
-                    }
+                    max={newCampaign.endTime || undefined}
+                    onChange={(e) =>{
+                      setNewCampaign({...newCampaign,startTime: e.target.value });
+                      setErrors((prev : any) => ({ ...prev, startTime: "" }));                      
+                    }}
                   />
+                  {errors.startTime && <p className="text-red-500 text-sm">{errors.startTime}</p>}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="endTime">Kết thúc vào: *</Label>
+                  <Label htmlFor="endTime">Kết thúc vào: <span className="text-red-500">*</span></Label>
                   <Input
                     id="endTime"
                     type="date"
                     value={newCampaign.endTime.slice(0, 10)}
-                    onChange={(e) =>
-                      setNewCampaign({
-                        ...newCampaign,
-                        endTime: e.target.value,
-                      })
-                    }
+                    min={newCampaign.startTime || undefined}
+                    onChange={(e) =>{
+                      setNewCampaign({...newCampaign, endTime: e.target.value});
+                      setErrors((prev : any) => ({ ...prev, endTime: "" }));
+                    }}
                   />
+                  {errors.endTime && <p className="text-red-500 text-sm">{errors.endTime}</p>}
                 </div>
               </div>
 
@@ -238,7 +293,10 @@ export default function CampaignPage() {
                   id="notes"
                   value={newCampaign.description}
                   onChange={(e) =>
-                    setNewCampaign({ ...newCampaign, description: e.target.value })
+                    setNewCampaign({
+                      ...newCampaign,
+                      description: e.target.value,
+                    })
                   }
                   placeholder="Thêm mô tả về đợt tuyển dụng này..."
                   rows={3}
@@ -263,7 +321,6 @@ export default function CampaignPage() {
         </Dialog>
       </div>
 
-      {/* Filters */}
       <Card>
         <CardContent className="pt-6">
           <div className="flex flex-col sm:flex-row gap-4">
@@ -278,27 +335,24 @@ export default function CampaignPage() {
                 />
               </div>
             </div>
-            {/* <div className="flex gap-2">
+            <div className="flex gap-2">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-[180px]">
                   <Filter className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="Filter by status" />
+                  <SelectValue placeholder="Lọc theo trạng thái" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="applied">Applied</SelectItem>
-                  <SelectItem value="screening">Screening</SelectItem>
-                  <SelectItem value="interview">Interview</SelectItem>
-                  <SelectItem value="hired">Hired</SelectItem>
-                  <SelectItem value="rejected">Rejected</SelectItem>
+                  <SelectItem value="all">Tất cả</SelectItem>
+                  <SelectItem value="sap_bat_dau">Sắp bắt đầu</SelectItem>
+                  <SelectItem value="dang_dien_ra">Đang diễn ra</SelectItem>
+                  <SelectItem value="ket_thuc">Kết thúc</SelectItem>
                 </SelectContent>
               </Select>
-            </div> */}
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Candidates Table */}
       <Card>
         <CardHeader>
           <CardTitle>Tất cả đợt ({filteredCampaigns.length})</CardTitle>
@@ -309,13 +363,14 @@ export default function CampaignPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Tên</TableHead>
+                  <TableHead>Trạng thái</TableHead>
                   <TableHead>Bắt đầu</TableHead>
                   <TableHead>Kết thúc</TableHead>
                   <TableHead>Mô tả</TableHead>
-                  <TableHead>Tạo bởi</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>Tạo bởi</TableHead>                  
                 </TableRow>
               </TableHeader>
+
               <TableBody>
                 {filteredCampaigns.map((campaign) => (
                   <TableRow key={campaign.id}>
@@ -323,17 +378,14 @@ export default function CampaignPage() {
                       {campaign.name}
                     </TableCell>
                     <TableCell>
-                      {campaign.startTime}
+                      {(() => {
+                        const status = getCampaignStatus(campaign.startTime, campaign.endTime, today)
+                        return <Badge className={getStatusColor(status)}>{status}</Badge>
+                      })()}
                     </TableCell>
-                    <TableCell>
-                      {campaign.endTime}
-                    </TableCell>
+                    <TableCell>{campaign.startTime}</TableCell>
+                    <TableCell>{campaign.endTime}</TableCell>
                     <TableCell>{campaign.description}</TableCell>
-                    {/* <TableCell>
-                      <Badge className={getStatusColor(candidate.status)}>
-                        {candidate.status}
-                      </Badge>
-                    </TableCell> */}
                     <TableCell>{campaign.createdBy}</TableCell>
 
                     <TableCell className="text-right">
@@ -343,20 +395,19 @@ export default function CampaignPage() {
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuContent align="end">                          
                           <DropdownMenuItem>
                             <Eye className="mr-2 h-4 w-4" />
-                            View Details
+                            Chi tiết
                           </DropdownMenuItem>
                           <DropdownMenuItem>
                             <Edit className="mr-2 h-4 w-4" />
-                            Edit
+                            Sửa
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem className="text-red-600">
                             <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
+                            Xóa
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
