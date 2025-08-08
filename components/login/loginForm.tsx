@@ -1,19 +1,21 @@
 import React, { useState } from "react";
 import { FaEnvelope, FaLock } from "react-icons/fa";
+import RegisterForm from "./registerForm";
+import VerificationForm from "./verificationForm";
 
 const LoginPage = () => {
-  React.useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        console.log("Tab out detected. Simulating SignalR by refreshing page.");
-        window.location.reload();
-      }
-    };
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, []);
+  // React.useEffect(() => {
+  //   const handleVisibilityChange = () => {
+  //     if (document.hidden) {
+  //       // console.log("Tab out detected. Simulating SignalR by refreshing page.");
+  //       window.location.reload();
+  //     }
+  //   };
+  //   document.addEventListener("visibilitychange", handleVisibilityChange);
+  //   return () => {
+  //     document.removeEventListener("visibilitychange", handleVisibilityChange);
+  //   };
+  // }, []);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -43,25 +45,64 @@ const LoginPage = () => {
   });
 
   const handleLoginInputChange = (e: any) => {
-  const { name, value, type, checked } = e.target;
-  const val = type === "checkbox" ? checked : value;
-  setFormData(prev => ({ ...prev, [name]: val }));
-};
+    const { name, value, type, checked } = e.target;
+    const val = type === "checkbox" ? checked : value;
+    setFormData(prev => ({ ...prev, [name]: val }));
+  };
 
-const handleRegisterInputChange = (e: any) => {
-  const { name, value, type, checked } = e.target;
-  const val = type === "checkbox" ? checked : value;
-  setRegisterData(prev => ({ ...prev, [name]: val }));
-};
+  const handleRegisterInputChange = (e: any) => {
+    const { name, value, type, checked } = e.target;
+    const val = type === "checkbox" ? checked : value;
+    setRegisterData(prev => ({ ...prev, [name]: val }));
+  };
 
-const handleVerifyInputChange = (e: any) => {
-  const { name, value } = e.target;
-  setVerifyData(prev => ({ ...prev, [name]: value }));
-};
+  const handleVerifyInputChange = (e: any) => {
+    const { name, value } = e.target;
+    setVerifyData(prev => ({ ...prev, [name]: value }));
+  };
 
-  const handleSubmit = (e: any) => {
+  const handleSubmit = async (e: any) => {
     e.preventDefault();
-    console.log("Login attempted with:", formData);
+
+    try {
+      console.log("check run");
+
+      const response = await fetch("http://localhost:7064/api/v1/authentication/sign-in", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password
+        })
+      });
+      console.log("check body", response);
+      if (!response.ok) {
+        console.log("check run2");
+
+        throw new Error("Invalid credentials or server error");
+
+      }
+      console.log("check run3");
+
+      const data = await response.json();
+      console.log(data);
+      // const { accessToken, refreshToken, refreshTokenExpires } = data;
+
+      // Save to localStorage
+      localStorage.setItem("accessToken", data.data.accessToken);
+      localStorage.setItem("refreshToken", data.refreshToken);
+      localStorage.setItem("refreshTokenExpires", data.refreshTokenExpires);
+
+      console.log("Saved test token:", localStorage.getItem("accessToken"));
+
+      // Navigate to dashboard
+      window.location.href = "/dashboard";
+    } catch (error: any) {
+      alert("Login failed: " + error.message);
+      console.error("Login error:", error);
+    }
   };
 
   const handleRegisterSubmit = (e: any) => {
@@ -83,47 +124,19 @@ const handleVerifyInputChange = (e: any) => {
     <div className="min-h-screen bg-gray-200 flex items-center justify-center p-4 relative">
       {/* Register Popup */}
       {showRegister && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 animate-fadeIn">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md relative">
-            <button onClick={() => setShowRegister(false)} className="absolute top-2 right-2 text-red-500 text-lg font-bold">×</button>
-            <h2 className="text-xl font-bold mb-4 text-center">Đăng Ký</h2>
-            <form onSubmit={handleRegisterSubmit} className="space-y-3">
-              <input name="firstName" placeholder="First Name" className="w-full p-2 border rounded" onChange={handleRegisterInputChange} required />
-              <input name="lastName" placeholder="Last Name" className="w-full p-2 border rounded" onChange={handleRegisterInputChange} required />
-              <input name="username" placeholder="Username" className="w-full p-2 border rounded" onChange={handleRegisterInputChange} required />
-              <input name="email" type="email" placeholder="Email" className="w-full p-2 border rounded" onChange={handleRegisterInputChange} required />
-              <input name="password" type="password" placeholder="Password \(8-28 chars\)" className="w-full p-2 border rounded" onChange={handleRegisterInputChange} required />
-              <input name="confirmPassword" type="password" placeholder="Confirm Password" className="w-full p-2 border rounded" onChange={handleRegisterInputChange} required />
-              <select name="gender" className="w-full p-2 border rounded" onChange={handleRegisterInputChange} required>
-                <option value="">Select Gender</option>
-                <option value="0">Male</option>
-                <option value="1">Female</option>
-                <option value="2">Other</option>
-              </select>
-              <div className="relative max-w-full">
-                <input name="dateOfBirth" type="date" className="ps-10 p-2.5 border border-gray-300 rounded-lg w-full" onChange={handleRegisterInputChange} required />
-              </div>
-              <input name="phoneNumber" placeholder="Phone Number" className="w-full p-2 border rounded" onChange={handleRegisterInputChange} required />
-              <input name="address" placeholder="Address" className="w-full p-2 border rounded" onChange={handleRegisterInputChange} required />
-              <button type="submit" className="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700">Đăng Ký</button>
-            </form>
-          </div>
-        </div>
+        <RegisterForm
+          onClose={() => setShowRegister(false)}
+          onChange={handleRegisterInputChange}
+          onSubmit={handleRegisterSubmit}
+        />
       )}
 
       {/* Verify Popup */}
       {showVerify && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 animate-fadeIn">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-sm relative">
-            <button onClick={() => setShowVerify(false)} className="absolute top-2 right-2 text-red-500 text-lg font-bold">×</button>
-            <h2 className="text-xl font-bold mb-4 text-center">Xác minh tài khoản</h2>
-            <form className="space-y-4">
-              <input name="email" type="email" placeholder="Email" className="w-full p-2 border rounded" onChange={handleVerifyInputChange} required />
-              <input name="code" placeholder="Verification Code" className="w-full p-2 border rounded" onChange={handleVerifyInputChange} required />
-              <button type="button" onClick={() => setShowVerify(false)} className="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700">Xác minh</button>
-            </form>
-          </div>
-        </div>
+        <VerificationForm
+          onClose={() => setShowVerify(false)}
+          onChange={handleVerifyInputChange}
+        />
       )}
 
       <div className="max-w-md w-full bg-white rounded-xl shadow-2xl overflow-hidden">
@@ -171,5 +184,7 @@ const handleVerifyInputChange = (e: any) => {
     </div>
   );
 };
+
+
 
 export default LoginPage;
