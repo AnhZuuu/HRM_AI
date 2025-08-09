@@ -22,8 +22,12 @@ import { useToast } from "@/hooks/use-toast";
 import UpdateCampaignDialog from "./handleUpdateCampaign";
 import AddCampaignDialog from "./handleAddCampaign";
 import DeleteCampaignDialog from "./handleDeleteCampaign";
+
 import { authFetch } from "@/app/utils/authFetch";
 import { formatDMYHM, toIsoFromDateInput } from "@/app/utils/helper";
+
+import { useRouter } from "next/navigation";
+
 
 const API_BASE = "http://localhost:7064/api";
 
@@ -143,6 +147,9 @@ export default function CampaignPage() {
     fetchCampaigns(ctrl.signal);
     return () => ctrl.abort();
   }, []);
+
+  const { toast } = useToast();
+  const router = useRouter();
 
   const toMidnight = (d: string | Date) => {
     const date = typeof d === "string" ? new Date(d) : d;
@@ -339,9 +346,14 @@ export default function CampaignPage() {
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
+
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Hành động</DropdownMenuLabel>
                           <DropdownMenuItem>
+
+                        <DropdownMenuContent align="end">                          
+                          <DropdownMenuItem onClick={() => router.push(`/dashboard/campaigns/${campaign.id}`)}>
+
                             <Eye className="mr-2 h-4 w-4" />
                             Chi tiết
                           </DropdownMenuItem>

@@ -3,6 +3,6 @@ interface InterviewOutcome {
   interviewScheduleId: string;        
   interviewSchedule: InterviewSchedule | null;
 
-  createdBy: Account | null;
+  createdBy: string | null;
   feedback: string;                  
 }

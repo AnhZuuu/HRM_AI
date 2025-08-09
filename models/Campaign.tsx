@@ -5,6 +5,6 @@ interface Campaign {
     endTime : string;
     description : string;
     createdBy : string | null;
+    campaignPosition?: CampaignPosition[];
 }
-
 
