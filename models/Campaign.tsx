@@ -7,3 +7,4 @@ interface Campaign {
     createdBy : string | null;
     campaignPosition?: CampaignPosition[];
 }
+
