@@ -105,20 +105,20 @@ const LoginPage = () => {
     }
   };
 
-  const handleRegisterSubmit = (e: any) => {
-    e.preventDefault();
-    if (registerData.password.length < 8 || registerData.password.length > 28) {
-      return alert("Password must be 8-28 characters long");
-    }
-    if (registerData.password !== registerData.confirmPassword) {
-      return alert("Passwords do not match");
-    }
-    if (!/^\d{10}$/.test(registerData.phoneNumber)) {
-      return alert("Phone number must be exactly 10 digits");
-    }
-    console.log("Register submitted:", registerData);
-    setShowRegister(false);
-  };
+  // const handleRegisterSubmit = (e: any) => {
+  //   e.preventDefault();
+  //   if (registerData.password.length < 8 || registerData.password.length > 28) {
+  //     return alert("Password must be 8-28 characters long");
+  //   }
+  //   if (registerData.password !== registerData.confirmPassword) {
+  //     return alert("Passwords do not match");
+  //   }
+  //   if (!/^\d{10}$/.test(registerData.phoneNumber)) {
+  //     return alert("Phone number must be exactly 10 digits");
+  //   }
+  //   console.log("Register submitted:", registerData);
+  //   setShowRegister(false);
+  // };
 
   return (
     <div className="min-h-screen bg-gray-200 flex items-center justify-center p-4 relative">
@@ -127,7 +127,7 @@ const LoginPage = () => {
         <RegisterForm
           onClose={() => setShowRegister(false)}
           onChange={handleRegisterInputChange}
-          onSubmit={handleRegisterSubmit}
+          formData={registerData}
         />
       )}
 
