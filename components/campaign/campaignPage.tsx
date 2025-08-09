@@ -52,6 +52,7 @@ import { useToast } from "@/hooks/use-toast";
 import UpdateCampaignDialog from "./handleUpdateCampaign";
 import AddCampaignDialog from "./handleAddCampaign";
 import DeleteCampaignDialog from "./handleDeleteCampaign";
+import { useRouter } from "next/navigation";
 
 // Mock candidates data
 const campaignsData = [
@@ -91,6 +92,7 @@ export default function CampaignPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState<Campaign | null>(null);
   const { toast } = useToast();
+  const router = useRouter();
 
   const toMidnight = (d: string | Date) => {
     const date = typeof d === "string" ? new Date(d) : d;
@@ -272,7 +274,7 @@ export default function CampaignPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">                          
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => router.push(`/dashboard/campaigns/${campaign.id}`)}>
                             <Eye className="mr-2 h-4 w-4" />
                             Chi tiết
                           </DropdownMenuItem>
