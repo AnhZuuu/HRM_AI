@@ -4,5 +4,5 @@ interface Campaign {
     startTime : string;
     endTime : string;
     description : string;
-    createdBy : string | null;
+    createdBy : Account | null;
 }
