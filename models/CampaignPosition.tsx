@@ -2,12 +2,13 @@ interface CampaignPosition {
     id: string; 
     departmentId: string;
     campaignId: string;
-    campaign: Campaign | null;  
-    department: Department | null;
-    createdBy: Account | null;
-    totalSlot: number | null;
+    campaign: string | null;  
+    department: string | null;
+    createdBy: string | null;
+    totalSlot: number;
     description: string;
-    embedding: number[];
-    campaignPositionDetails: CampaignPositionDetail[];    
-    cvApplicants: CVApplicant[];
+    // embedding: number[];
+    // campaignPositionDetails: CampaignPositionDetail[];    
+    cvApplicants?: CVApplicant[];
+
 }

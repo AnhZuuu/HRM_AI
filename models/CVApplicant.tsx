@@ -6,7 +6,7 @@ interface CVApplicant {
     email: string | null;
     point: string | null;
     status: string | null
-    createdBy: Account | null;
+    createdBy: string | null;
     campaignPositionId: string;
     campaignPosition: CampaignPosition | null;
     cvApplicantDetails: CVApplicantDetail[];

@@ -6,7 +6,7 @@ interface InterviewSchedule {
   startTime: string;                
   endTime: string | null;          
 
-  createdBy: Account | null;
+  createdBy: string | null;
 
   status: string | null;
   round: number | null;               
