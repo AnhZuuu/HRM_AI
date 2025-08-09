@@ -1,8 +1,8 @@
 interface Campaign {
     id : string;
     name : string;
-    startTime : string | null;
-    endTime : string | null;
+    startTime : string;
+    endTime : string;
     description : string;
     createdBy : string | null;
 }

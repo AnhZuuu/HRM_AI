@@ -49,11 +49,14 @@ import {
   Phone,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import UpdateCampaignDialog from "./handleUpdateCampaign";
+import AddCampaignDialog from "./handleAddCampaign";
+import DeleteCampaignDialog from "./handleDeleteCampaign";
 
 // Mock candidates data
 const campaignsData = [
   {
-    id: 1,
+    id: "1",
     name: "đợt 1",
     startTime: "2024-01-14",
     endTime: "2024-02-14",
@@ -61,7 +64,7 @@ const campaignsData = [
     createdBy: "123",
   },
   {
-    id: 2,
+    id: "2",
     name: "đợt 2",
     startTime: "2024-01-14",
     endTime: "2024-02-14",
@@ -69,7 +72,7 @@ const campaignsData = [
     createdBy: "123",
   },
   {
-    id: 3,
+    id: "3",
     name: "đợt 3",
     startTime: "2024-01-14",
     endTime: "2024-02-14",
@@ -83,21 +86,11 @@ export default function CampaignPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editing, setEditing] = useState<Campaign | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState<Campaign | null>(null);
   const { toast } = useToast();
-
-  const [newCampaign, setNewCampaign] = useState({
-    name: "",
-    startTime: "",
-    endTime: "",
-    description: "",
-  });
-
-  const [errors, setErrors] = useState({
-    name: "",
-    startTime: "",
-    endTime: ""
-  });
-
 
   const toMidnight = (d: string | Date) => {
     const date = typeof d === "string" ? new Date(d) : d;
@@ -167,53 +160,27 @@ export default function CampaignPage() {
   return matchesSearch && matchesStatus;
   });
 
-  const handleAddCampaign = () => {
-  const newErrors = { name: "", startTime: "", endTime: "" };
-  let hasError = false;
-
-  if (!newCampaign.name.trim()) {
-    newErrors.name = "Tên đợt tuyển dụng không được bỏ trống";
-    hasError = true;
-  }
-  if (!newCampaign.startTime) {
-    newErrors.startTime = "Chưa chọn ngày bắt đầu";
-    hasError = true;
-  }
-  if (!newCampaign.endTime) {
-    newErrors.endTime = "Chưa chọn ngày kết thúc";
-    hasError = true;
-  } else if (
-    newCampaign.startTime &&
-    new Date(newCampaign.endTime) <= new Date(newCampaign.startTime)
-  ) {
-    newErrors.endTime = "Ngày kết thúc phải sau ngày bắt đầu";
-    hasError = true;
-  }
-
-  setErrors(newErrors);
-
-  if (hasError) return;
-
-  const campaign = {
-    id: campaigns.length + 1,
-    ...newCampaign,
-    createdBy: "null",
+  const handleAddCampaign = (created: Campaign) => {
+    setCampaigns((prev : any) => [...prev, created]);
+    toast({ title: "Success", description: "Campaign added successfully!" });
   };
 
-  setCampaigns([...campaigns, campaign]);
-  setNewCampaign({
-    name: "",
-    startTime: "",
-    endTime: "",
-    description: "",
-  });
-  setIsAddDialogOpen(false);
+  const handleUpdateCampaign = (updated: Campaign) => {
+    setCampaigns((prev : any) =>
+      prev.map((c : any) => (c.id === updated.id ? { ...c, ...updated } : c))
+    );
+    toast({ title: "Đã cập nhật", description: "Cập nhật đợt tuyển dụng thành công." });
+  };
 
-  toast({
-    title: "Success",
-    description: "Campaign added successfully!",
-  });
-};
+  const openDelete = (c: Campaign) => {
+    setDeleting(c);
+    setDeleteOpen(true);
+  };
+
+  const handleDeleteCampaign = async (id: string) => {
+    setCampaigns((prev : any) => prev.filter((c : any) => c.id !== id));
+    toast({ title: "Đã xóa", description: "Xóa đợt tuyển dụng thành công." });
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -224,101 +191,10 @@ export default function CampaignPage() {
           </h1>
           <p className="text-gray-600 mt-1">Quản lý đợt tuyển dụng </p>
         </div>
-
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-blue-600 hover:bg-blue-700">
-              <Plus className="w-4 h-4 mr-2" />
+        <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => setIsAddDialogOpen(true)}>
+          <Plus className="w-4 h-4 mr-2" />
               Thêm đợt tuyển dụng
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Thêm mới đợt tuyển dụng</DialogTitle>
-              <DialogDescription>
-                Nhập thông tin về đợt tuyển dụng
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Tên đợt tuyển dụng <span className="text-red-500">*</span></Label>
-                  <Input
-                    id="name"
-                    value={newCampaign.name}
-                    onChange={(e : any) => {
-                      setNewCampaign({ ...newCampaign, name: e.target.value });
-                      setErrors((prev : any) => ({ ...prev, name: "" }));
-                    }}                    
-                    placeholder="Tên đợt tuyển dụng"
-                  />
-                  {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="startTime">Bắt đầu từ: <span className="text-red-500">*</span></Label>
-                  <Input
-                    id="startTime"
-                    type="date"
-                    value={newCampaign.startTime.slice(0, 10)}
-                    max={newCampaign.endTime || undefined}
-                    onChange={(e) =>{
-                      setNewCampaign({...newCampaign,startTime: e.target.value });
-                      setErrors((prev : any) => ({ ...prev, startTime: "" }));                      
-                    }}
-                  />
-                  {errors.startTime && <p className="text-red-500 text-sm">{errors.startTime}</p>}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="endTime">Kết thúc vào: <span className="text-red-500">*</span></Label>
-                  <Input
-                    id="endTime"
-                    type="date"
-                    value={newCampaign.endTime.slice(0, 10)}
-                    min={newCampaign.startTime || undefined}
-                    onChange={(e) =>{
-                      setNewCampaign({...newCampaign, endTime: e.target.value});
-                      setErrors((prev : any) => ({ ...prev, endTime: "" }));
-                    }}
-                  />
-                  {errors.endTime && <p className="text-red-500 text-sm">{errors.endTime}</p>}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">Mô tả</Label>
-                <Textarea
-                  id="notes"
-                  value={newCampaign.description}
-                  onChange={(e) =>
-                    setNewCampaign({
-                      ...newCampaign,
-                      description: e.target.value,
-                    })
-                  }
-                  placeholder="Thêm mô tả về đợt tuyển dụng này..."
-                  rows={3}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setIsAddDialogOpen(false)}
-              >
-                Hủy
-              </Button>
-              <Button
-                onClick={handleAddCampaign}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                Thêm đợt tuyển dụng
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        </Button>
       </div>
 
       <Card>
@@ -400,12 +276,17 @@ export default function CampaignPage() {
                             <Eye className="mr-2 h-4 w-4" />
                             Chi tiết
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => {
+                              setEditing(campaign);
+                              setEditOpen(true);
+                            }}>
                             <Edit className="mr-2 h-4 w-4" />
                             Sửa
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-red-600">
+                          <DropdownMenuItem className="text-red-600"
+                            onClick={() => openDelete(campaign)}>
                             <Trash2 className="mr-2 h-4 w-4" />
                             Xóa
                           </DropdownMenuItem>
@@ -419,6 +300,29 @@ export default function CampaignPage() {
           </div>
         </CardContent>
       </Card>
+   
+      <AddCampaignDialog
+        open={isAddDialogOpen}
+        onOpenChange={setIsAddDialogOpen}
+        onCreate={handleAddCampaign}
+        nextId={campaigns.length + 1}
+        defaultCreatedBy={"null"}
+      />
+
+      <UpdateCampaignDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        campaign={editing}
+        onSave={handleUpdateCampaign}
+      />
+
+      <DeleteCampaignDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        campaign={deleting}
+        onConfirm={handleDeleteCampaign}
+      />
+
     </div>
   );
 }
