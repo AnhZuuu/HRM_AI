@@ -35,3 +35,8 @@ export const formatDMYHM = (s?: string | null): string => {
   const mi = String(d.getMinutes()).padStart(2, "0");
   return `${dd}-${mm}-${yyyy} ${hh}:${mi}`;
 };
+
+export const toMidnight = (d: string | Date) => {
+    const date = typeof d === "string" ? new Date(d) : d;
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  };

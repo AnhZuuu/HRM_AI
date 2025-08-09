@@ -30,9 +30,8 @@ import { useRouter } from "next/navigation";
 
 
 const API_BASE = "http://localhost:7064/api";
-
 export default function CampaignPage() {
-  const { toast } = useToast();
+  
 
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -347,13 +346,12 @@ export default function CampaignPage() {
                           </Button>
                         </DropdownMenuTrigger>
 
-                        <DropdownMenuContent align="end">
+                        {/* <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Hành động</DropdownMenuLabel>
-                          <DropdownMenuItem>
+                          <DropdownMenuItem> */}
 
                         <DropdownMenuContent align="end">                          
                           <DropdownMenuItem onClick={() => router.push(`/dashboard/campaigns/${campaign.id}`)}>
-
                             <Eye className="mr-2 h-4 w-4" />
                             Chi tiết
                           </DropdownMenuItem>
