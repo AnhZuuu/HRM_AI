@@ -49,11 +49,12 @@ import {
   Phone,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import UpdateCampaignDialog from "./handleUpdateCampaign";
 
 // Mock candidates data
 const campaignsData = [
   {
-    id: 1,
+    id: "1",
     name: "đợt 1",
     startTime: "2024-01-14",
     endTime: "2024-02-14",
@@ -61,7 +62,7 @@ const campaignsData = [
     createdBy: "123",
   },
   {
-    id: 2,
+    id: "2",
     name: "đợt 2",
     startTime: "2024-01-14",
     endTime: "2024-02-14",
@@ -69,7 +70,7 @@ const campaignsData = [
     createdBy: "123",
   },
   {
-    id: 3,
+    id: "3",
     name: "đợt 3",
     startTime: "2024-01-14",
     endTime: "2024-02-14",
@@ -98,6 +99,8 @@ export default function CampaignPage() {
     endTime: ""
   });
 
+  const [editOpen, setEditOpen] = useState(false);
+  const [editing, setEditing] = useState<Campaign | null>(null);
 
   const toMidnight = (d: string | Date) => {
     const date = typeof d === "string" ? new Date(d) : d;
@@ -195,7 +198,7 @@ export default function CampaignPage() {
   if (hasError) return;
 
   const campaign = {
-    id: campaigns.length + 1,
+    id: "CAM" + campaigns.length + 1,
     ...newCampaign,
     createdBy: "null",
   };
@@ -211,8 +214,15 @@ export default function CampaignPage() {
 
   toast({
     title: "Success",
-    description: "Campaign added successfully!",
+    description: "Thêm đợt tuyển dụng thành công.",
   });
+};
+
+const handleSaveCampaign = (updated: Campaign) => {
+  setCampaigns((prev : any) =>
+    prev.map((c : any) => (c.id === updated.id ? { ...c, ...updated } : c))
+  );
+  toast({ title: "Đã cập nhật", description: "Cập nhật đợt tuyển dụng thành công." });
 };
 
   return (
@@ -400,7 +410,11 @@ export default function CampaignPage() {
                             <Eye className="mr-2 h-4 w-4" />
                             Chi tiết
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => {
+                              setEditing(campaign);
+                              setEditOpen(true);
+                            }}>
                             <Edit className="mr-2 h-4 w-4" />
                             Sửa
                           </DropdownMenuItem>
@@ -419,6 +433,14 @@ export default function CampaignPage() {
           </div>
         </CardContent>
       </Card>
+   
+      <UpdateCampaignDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        campaign={editing}
+        onSave={handleSaveCampaign}
+      />
+      
     </div>
   );
 }
