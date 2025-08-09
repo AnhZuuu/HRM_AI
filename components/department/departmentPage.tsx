@@ -13,6 +13,7 @@ import { Button } from "../ui/button";
 import { Plus, Search } from "lucide-react";
 import { Card, CardContent } from "../ui/card";
 import { Input } from "../ui/input";
+import { DeleteDepartmentDialog } from "./handleDeleteDepartment";
 
 // ---- Types ----
 export interface Account {
@@ -70,6 +71,8 @@ export default function DepartmentPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [selectedDept, setSelectedDept] = useState<Department | null>(null);
 
   // ---- Replace this with your real fetch ----
   useEffect(() => {
@@ -97,6 +100,12 @@ export default function DepartmentPage() {
       return name.includes(q) || code.includes(q) || desc.includes(q);
     });
   }, [departments, searchQuery]);
+
+  const handleDeleteDepartment = async (id: string) => {
+    // Call your API
+    // await fetch(`/api/departments/${id}`, { method: "DELETE" });
+    setDepartments((prev) => prev.filter((d) => d.id !== id));
+  };
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -155,15 +164,23 @@ export default function DepartmentPage() {
                       {dept.departmentName}
                     </h2>
                   </div>
-
                   <Link href={`/dashboard/departments/${dept.id}/edit`}>
-                    <button                      
+                    <button
                       className="text-sm text-blue-500 hover:text-blue-700"
                       title="Chỉnh sửa phòng ban"
                     >
                       <FaEdit className="text-lg" />
                     </button>
                   </Link>
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      setSelectedDept(dept);
+                      setDeleteOpen(true);
+                    }}
+                  >
+                    Xóa
+                  </Button>
                 </div>
 
                 <div className="space-y-3">
@@ -202,6 +219,13 @@ export default function DepartmentPage() {
           );
         })}
       </div>
+
+      <DeleteDepartmentDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        department={selectedDept as any}
+        onConfirm={handleDeleteDepartment}
+      />
     </div>
   );
 }
