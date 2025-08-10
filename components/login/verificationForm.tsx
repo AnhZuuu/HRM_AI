@@ -36,7 +36,7 @@ const VerificationForm: React.FC<VerificationFormProps> = ({ onClose, onChange }
         verificationCode: formData.verificationCode
       });
 
-      const response = await fetch(`http://localhost:7064/api/v1/authentication/email/verify?${query.toString()}`, {
+      const response = await fetch(`${API_VERIFY_EMAIL}?${query.toString()}`, {
         method: "GET"
       });
 
@@ -56,7 +56,7 @@ const VerificationForm: React.FC<VerificationFormProps> = ({ onClose, onChange }
 
   const handleResendCode = async () => {
   try {
-    const response = await fetch("http://localhost:7064/api/v1/authentication/email/resend-verification", {
+    const response = await fetch(API_RESET_VERIFICATION, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"

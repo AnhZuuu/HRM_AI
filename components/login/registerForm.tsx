@@ -39,7 +39,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onClose, onChange, formData
         gender: Number(formData.gender), // Ensure gender is a number
       };
 
-      const response = await fetch("http://localhost:7064/api/v1/authentication/sign-up", {
+      const response = await fetch(API_SIGNUP, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requestBody),
