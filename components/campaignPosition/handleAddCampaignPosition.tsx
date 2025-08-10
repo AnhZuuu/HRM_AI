@@ -49,7 +49,7 @@ export default function AddPositionDialog({
             setDepsLoading(true);
             setDepsError(null);
             try {
-                const res = await authFetch("http://localhost:7064/api/departments");
+                const res = await authFetch(API_DEPARTMENT);
                 if (!res.ok) throw new Error(await res.text());
                 const list = (await unwrap(res)) as any[];
                 const mapped: DepartmentOption[] = (Array.isArray(list) ? list : []).map((d: any) => ({
@@ -101,7 +101,7 @@ export default function AddPositionDialog({
                 ]
             };
 
-            const res = await authFetch("http://localhost:7064/api/campaign-positions", {
+            const res = await authFetch(API_CAMPAIGN_POSITION, {
                 method: "POST",
                 body: JSON.stringify(payload),
             });
