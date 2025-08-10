@@ -3,6 +3,6 @@ interface Department {
     departmentName: string;
     code: string;
     description: string | null;
-    campaignPositions: CampaignPosition[];
-    employees: Account[];
+    campaignPositions: CampaignPosition[] | null;
+    employees: Account[] | null;
 }
