@@ -25,14 +25,14 @@ function getCampaignStatus(start: string, end: string, today = new Date()) {
 }
 function getStatusTone(status: string) {
   if (status === "Kết thúc" || status === "Kết thúc hôm nay") {
-    return { className: "bg-red-100 text-red-700", message: "Đợt tuyển dụng đã kết thúc" };
+    return { className: "inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold shadow-sm bg-red-100 text-red-700", message: "Đợt tuyển dụng đã kết thúc" };
   }
   if (status === "Sắp bắt đầu") {
-    return { className: "bg-yellow-100 text-yellow-700", message: "Đợt tuyển dụng chưa bắt đầu" };
+    return { className: "inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold shadow-sm bg-yellow-100 text-yellow-700", message: "Đợt tuyển dụng chưa bắt đầu" };
   }
   const num = Number(status.match(/\d+/)?.[0] ?? "999");
   if (num <= 2) {
-    return { className: "bg-orange-100 text-orange-700", message: "Sắp kết thúc" };
+    return { className: "inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold shadow-sm bg-orange-100 text-orange-700", message: "Sắp kết thúc" };
   }
   return { className: "inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold shadow-sm bg-green-100 text-green-700", message: "Đang diễn ra" };
 }
