@@ -1,3 +1,4 @@
+"use client";
 import * as React from "react";
 import { FaBuilding, FaUsers, FaBriefcase, FaInfoCircle } from "react-icons/fa";
 

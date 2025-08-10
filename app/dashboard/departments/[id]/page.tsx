@@ -1,5 +1,3 @@
-"use client";
-
 import DepartmentDetailClient from "@/components/department/detailDepartmentPage";
 import { notFound } from "next/navigation";
 
