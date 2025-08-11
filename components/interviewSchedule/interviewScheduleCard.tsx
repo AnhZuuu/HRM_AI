@@ -1,9 +1,11 @@
 import {
   Clock,
+  MapPin,
   PencilLineIcon,
   User
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 
 type Props = {
   item: InterviewSchedule;
@@ -16,6 +18,7 @@ export default function InterviewScheduleCard({
   onEdit,
   onCancel,
 }: Props) {
+  const router = useRouter();
   const start = new Date(item.startTime);
   const end = item.endTime ? new Date(item.endTime) : null;
   const duration =
@@ -33,15 +36,20 @@ export default function InterviewScheduleCard({
             <h3 className="font-semibold text-gray-900">
               {item.cvApplicant?.fullName || "Unknown Candidate"}
             </h3>
-            <p className="text-sm text-gray-500">
-              {item.cvApplicant?.campaignPosition?.department || "N/A"}
+             <p className="text-sm text-gray-500">
+              Vòng {item.round || "N/A"} - {item.interviewType}
             </p>
           </div>
-          {item.interviewType && (
+          {item.status && (
             <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-medium">
-              {item.interviewType}
+              {item.status}
             </span>
           )}
+        </div>
+
+        <div className="flex items-center text-sm text-gray-700 mt-2">
+          <MapPin className="w-4 h-4 mr-2 text-gray-500" />
+          {item.cvApplicant?.campaignPosition?.department || "N/A"}
         </div>
 
         <div className="flex items-center text-sm text-gray-700 mt-3">
@@ -52,7 +60,7 @@ export default function InterviewScheduleCard({
 
         <div className="flex items-center text-sm text-gray-700 mt-2">
           <User className="w-4 h-4 mr-2 text-gray-500" />
-          {item.interviewers || "N/A"}
+          Người phỏng vấn : {item.interviewers || "N/A"}
         </div>
 
         {item.notes && (
@@ -66,16 +74,17 @@ export default function InterviewScheduleCard({
           <Button
             variant="outline"
             className="flex-1"
-            onClick={() => onEdit?.(item.id)}
+            // onClick={() => onEdit?.(item.id)}
+            onClick={() => router.push(`/dashboard/schedules/${item.id}/edit`)}
           >
-            Edit
+            Chỉnh sửa
           </Button>
           <Button
             variant="outline"
             className="flex-1 text-red-600 border-red-600 hover:bg-red-50"
             onClick={() => onCancel?.(item.id)}
           >
-            Cancel
+            Hủy
           </Button>
         </div>
       </div>
