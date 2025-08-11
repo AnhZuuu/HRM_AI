@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Plus } from "lucide-react";
 import { authFetch } from "@/app/utils/authFetch";
+import API from "@/api/api";
 
 
 type DepartmentOption = { id: string; name: string };
@@ -49,7 +50,7 @@ export default function AddPositionDialog({
             setDepsLoading(true);
             setDepsError(null);
             try {
-                const res = await authFetch(API_DEPARTMENT);
+                const res = await authFetch(API.DEPARTMENT);
                 if (!res.ok) throw new Error(await res.text());
                 const list = (await unwrap(res)) as any[];
                 const mapped: DepartmentOption[] = (Array.isArray(list) ? list : []).map((d: any) => ({
@@ -101,7 +102,7 @@ export default function AddPositionDialog({
                 ]
             };
 
-            const res = await authFetch(API_CAMPAIGN_POSITION, {
+            const res = await authFetch(API.CAMPAIGN.POSITION, {
                 method: "POST",
                 body: JSON.stringify(payload),
             });

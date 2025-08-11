@@ -1,3 +1,4 @@
+import API from "@/api/api";
 import { formatDMYHM } from "@/app/utils/helper";
 import AddPositionDialog from "@/components/campaignPosition/handleAddCampaignPosition";
 import CampaignPositions from "@/components/campaignPosition/positionCard";
@@ -78,7 +79,7 @@ export default async function CampaignDetailPage({
 }) {
   const { id } = params;
 
-  const res = await fetch(`${API_CAMPAIGN}/${id}`, {
+  const res = await fetch(`${API.CAMPAIGN.BASE}/${id}`, {
     cache: "no-store",
   });
 

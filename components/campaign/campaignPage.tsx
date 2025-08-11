@@ -27,6 +27,7 @@ import { authFetch } from "@/app/utils/authFetch";
 import { formatDMYHM, toIsoFromDateInput } from "@/app/utils/helper";
 
 import { useRouter } from "next/navigation";
+import API from "@/api/api";
 
 export default function CampaignPage() {
   
@@ -80,7 +81,7 @@ export default function CampaignPage() {
   const fetchCampaigns = async (signal?: AbortSignal) => {
     setLoading(true);
     try {
-      const res = await authFetch(`${API_CAMPAIGN}`, { signal, cache: "no-store" });
+      const res = await authFetch(`${API.CAMPAIGN.BASE}`, { signal, cache: "no-store" });
       if (res.status === 401) throw new Error("Unauthorized");
       if (!res.ok) throw new Error("Failed to load campaigns");
 
@@ -102,7 +103,7 @@ export default function CampaignPage() {
 
   // POST
   const createCampaign = async (payload: Omit<Campaign, "id">) => {
-    const res = await authFetch(`${API_CAMPAIGN}`, {
+    const res = await authFetch(`${API.CAMPAIGN.BASE}`, {
       method: "POST",
       body: JSON.stringify(mapToApi(payload)),
     });
@@ -116,7 +117,7 @@ export default function CampaignPage() {
 
   // PUT
   const updateCampaign = async (id: string, payload: Partial<Campaign>) => {
-    const res = await authFetch(`${API_CAMPAIGN}/${id}`, {
+    const res = await authFetch(`${API.CAMPAIGN.BASE}/${id}`, {
       method: "PUT",
       body: JSON.stringify(mapToApi(payload)),
     });
@@ -131,7 +132,7 @@ export default function CampaignPage() {
 
   // DELETE
   const deleteCampaign = async (id: string) => {
-    const res = await authFetch(`${API_CAMPAIGN}/${id}`, { method: "DELETE" });
+    const res = await authFetch(`${API.CAMPAIGN.BASE}/${id}`, { method: "DELETE" });
     if (res.status === 401) throw new Error("Unauthorized");
     if (!res.ok) throw new Error((await res.text()) || "Delete failed");
 

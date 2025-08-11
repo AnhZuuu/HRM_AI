@@ -1,3 +1,4 @@
+import API from "@/api/api";
 import React from "react";
 
 interface RegisterFormProps {
@@ -39,7 +40,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onClose, onChange, formData
         gender: Number(formData.gender), // Ensure gender is a number
       };
 
-      const response = await fetch(API_SIGNUP, {
+      const response = await fetch(API.AUTH.SIGNUP, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requestBody),

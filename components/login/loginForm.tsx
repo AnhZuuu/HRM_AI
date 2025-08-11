@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { FaEnvelope, FaLock } from "react-icons/fa";
 import RegisterForm from "./registerForm";
 import VerificationForm from "./verificationForm";
+import API from "@/api/api";
 
 const LoginPage = () => {
   // React.useEffect(() => {
@@ -67,7 +68,7 @@ const LoginPage = () => {
     try {
       console.log("check run");
 
-      const response = await fetch(API_SIGNIN, {
+      const response = await fetch(API.AUTH.SIGNIN, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
