@@ -57,12 +57,14 @@ export function DeleteDepartmentDialog({ open, onOpenChange, department, onConfi
         </DialogHeader>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+          <Button variant="outline" onClick={() => {setErrorMsg(""); onOpenChange(false);}} disabled={loading}>
             Hủy
           </Button>
-          <Button variant="destructive" onClick={handleConfirm} disabled={loading}>
-            {loading ? "Đang xóa..." : "Xóa"}
-          </Button>
+          {!errorMsg && (
+              <Button variant="destructive" onClick={handleConfirm} disabled={loading}>
+                {loading ? "Đang xóa..." : "Xóa"}
+              </Button>
+            )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

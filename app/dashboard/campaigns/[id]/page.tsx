@@ -78,7 +78,7 @@ export default async function CampaignDetailPage({
 }) {
   const { id } = params;
 
-  const res = await fetch(`http://localhost:7064/api/campaigns/${id}`, {
+  const res = await fetch(`${API_CAMPAIGN}/${id}`, {
     cache: "no-store",
   });
 

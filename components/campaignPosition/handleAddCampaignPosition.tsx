@@ -30,6 +30,7 @@ export default function AddPositionDialog({
   campaignId: string;
   departmentOptions?: DepartmentOption[];
 }) {
+
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
@@ -44,6 +45,7 @@ export default function AddPositionDialog({
   // Form 1 state
   const [form, setForm] = useState({ departmentId: "", totalSlot: 1, description: "" });
   const [errors, setErrors] = useState<{ departmentId?: string; totalSlot?: string }>({});
+
 
   // Submission
   const [submitting, setSubmitting] = useState(false);
@@ -125,10 +127,12 @@ export default function AddPositionDialog({
         // Try to parse a structured error first
         let message = "Create failed";
         try {
+
           const errJson = await res.json();
           message = errJson?.message || JSON.stringify(errJson);
         } catch {
           message = await res.text();
+
         }
         throw new Error(message || "Create failed");
       }
