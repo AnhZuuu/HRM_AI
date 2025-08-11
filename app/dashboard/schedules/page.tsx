@@ -11,7 +11,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Select } from "@radix-ui/react-select";
-import { Filter, Search } from "lucide-react";
+import { Filter, Plus, Search } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState, useMemo } from "react";
 
 const mockData: InterviewSchedule[] = [
@@ -29,7 +30,7 @@ const mockData: InterviewSchedule[] = [
     status: "Scheduled",
     round: 2,
     interviewTypeId: "type-2",
-    interviewType: "Technical",
+    interviewType: "Test Quiz",
     notes: "Presentation",
     interviewers: "Mai L., Tùng P.",
   },
@@ -90,6 +91,12 @@ export default function InterviewSchedulesPage() {
             Danh sách lịch phỏng vấn của ứng viên
           </p>
         </div>
+         <Button asChild className="bg-blue-600 hover:bg-blue-700">
+          <Link href="/dashboard/schedules/new">
+            <Plus className="w-4 h-4 mr-2" />
+            Tạo phỏng vấn
+          </Link>
+        </Button>
       </div>
 
       <Card>
