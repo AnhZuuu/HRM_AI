@@ -167,3 +167,42 @@ export const mockInterviewTypes: InterviewType[] = [
   { id: "int-002", name: "In-person Interview" },
   { id: "int-003", name: "Phone Interview" },
 ];
+
+export const mockInterviewSchedule: InterviewSchedule[] = [
+  {
+    id: "is-001",
+    cvApplicantId: "cv-01",
+    cvApplicant: {
+      id: "cv-01",
+      fullName: "Nguyễn Văn A",
+      email: "a@example.com"     
+    },
+    startTime: "2025-05-11T07:30:00+07:00",
+    endTime: "2025-05-11T08:00:00+07:00",
+    createdBy: "admin-1",
+    status: "Scheduled",
+    round: 2,
+    interviewTypeId: "type-2",
+    interviewType: "Test Quiz",
+    notes: "Presentation",
+    interviewers: "Mai L., Tùng P.",
+  },
+  {
+    id: "is-002",
+    cvApplicantId: "cv-02",
+    cvApplicant: {
+      id: "cv-02",
+      fullName: "Trần B",
+      email: "b@example.com"
+    },
+    startTime: "2025-05-12T09:00:00+07:00",
+    endTime: "2025-05-12T10:00:00+07:00",
+    createdBy: "admin-1",
+    status: "Completed",
+    round: 1,
+    interviewTypeId: "type-1",
+    interviewType: "HR Screening",
+    notes: null,
+    interviewers: "Lan N.",
+  },
+];
