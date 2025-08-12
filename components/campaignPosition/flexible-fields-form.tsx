@@ -78,7 +78,7 @@ export default function FlexibleFieldsForm({ positionName, onSave }: FlexibleFie
 
   const handleSave = async () => {
     if (!details.length) {
-      // Block save if your API requires at least 1 detail
+      
       return;
     }
     try {

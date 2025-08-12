@@ -2,7 +2,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  FaPlus,
   FaEdit,
   FaBuilding,
   FaUsers,
@@ -14,58 +13,39 @@ import { Plus, Search } from "lucide-react";
 import { Card, CardContent } from "../ui/card";
 import { Input } from "../ui/input";
 import { DeleteDepartmentDialog } from "./handleDeleteDepartment";
+import API from "@/api/api";
 
-// ---- Types ----
-export interface Account {
-  id: string;
-  firstName?: string;
-  lastName?: string;
-  email?: string;
-}
-export interface CampaignPosition {
-  id: string;
-  title?: string;
-}
 export interface Department {
   id: string;
   departmentName: string;
   code: string;
   description: string | null;
-  campaignPositions: CampaignPosition[] | null;
-  employees: Account[] | null;
+  numOfCampaignPosition: number;
+  numOfEmployee: number;
+  // keep optional fields in case you need them later
+  creationDate?: string | null;
+  createdById?: string | null;
+  modificationDate?: string | null;
+  modifiedById?: string | null;
+  deletionDate?: string | null;
+  deletedById?: string | null;
+  isDeleted?: boolean;
 }
 
-// ---- Mock data (replace with API) ----
-const mockDepartments: Department[] = [
-  {
-    id: "dep-001",
-    departmentName: "Kinh Doanh",
-    code: "SALES",
-    description: "Phụ trách bán hàng & quan hệ khách hàng.",
-    campaignPositions: [{ id: "pos-1", title: "Sales Exec" }],
-    employees: [{ id: "emp-1", firstName: "Anh", lastName: "Lê" }],
-  },
-  {
-    id: "dep-002",
-    departmentName: "Nhân Sự",
-    code: "HR",
-    description: "Tuyển dụng & phúc lợi.",
-    campaignPositions: [
-      { id: "pos-2", title: "HR Generalist" },
-      { id: "pos-3", title: "Talent Sourcer" },
-    ],
-    employees: [{ id: "emp-2" }, { id: "emp-3" }, { id: "emp-4" }],
-  },
-  {
-    id: "dep-003",
-    departmentName: "Kỹ Thuật",
-    code: "ENG",
-    description: "Phát triển và vận hành hệ thống.",
-    campaignPositions: null,
-    employees: null,
-  },
-];
+type ApiSuccess<T> = {
+  code: number;
+  status: boolean;
+  message: string;
+  data: {
+    data: T;
+    currentPage: number;
+    pageSize: number;
+    totalPages: number;
+  };
+};
 
+
+// ---- Page ----
 export default function DepartmentPage() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -74,14 +54,22 @@ export default function DepartmentPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [selectedDept, setSelectedDept] = useState<Department | null>(null);
 
-  // ---- Replace this with your real fetch ----
+  // Fetch real data
   useEffect(() => {
     (async () => {
       try {
-        // const res = await fetch("/api/Department");
-        // const data: Department[] = await res.json();
-        const data = mockDepartments;
-        setDepartments(data);
+        const res = await fetch(`${API.DEPARTMENT.BASE}`, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+          cache: "no-store",
+        });
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error(txt || "Không thể tải dữ liệu phòng ban.");
+        }
+        const json = (await res.json()) as ApiSuccess<Department[]>;
+        const items = json?.data?.data ?? [];
+        setDepartments(items);
       } catch (e: any) {
         setError(e?.message || "Không thể tải dữ liệu phòng ban.");
       } finally {
@@ -102,9 +90,20 @@ export default function DepartmentPage() {
   }, [departments, searchQuery]);
 
   const handleDeleteDepartment = async (id: string) => {
-    // Call your API
-    // await fetch(`/api/departments/${id}`, { method: "DELETE" });
-    setDepartments((prev) => prev.filter((d) => d.id !== id));
+    try {
+      // If your API uses soft delete or different route, adjust here
+      const res = await fetch(`${API.DEPARTMENT.BASE}/${id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(txt || "Xóa phòng ban thất bại.");
+      }
+      setDepartments((prev) => prev.filter((d) => d.id !== id));
+    } catch (e: any) {
+      setError(e?.message || "Xóa phòng ban thất bại.");
+    }
   };
 
   return (
@@ -112,7 +111,7 @@ export default function DepartmentPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Các phòng ban</h1>
-          <p className="text-gray-600 mt-1">Quản lý các phòng ban </p>
+          <p className="text-gray-600 mt-1">Quản lý các phòng ban</p>
         </div>
         <Button asChild className="bg-blue-600 hover:bg-blue-700">
           <Link href="/dashboard/departments/new">
@@ -129,7 +128,7 @@ export default function DepartmentPage() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
-                  placeholder="Tìm đợt tuyển dụng theo tên, mã, mô tả..."
+                  placeholder="Tìm phòng ban theo tên, mã, mô tả..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
@@ -147,8 +146,9 @@ export default function DepartmentPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {filtered.map((dept) => {
-          const empCount = dept.employees?.length ?? 0;
-          const posCount = dept.campaignPositions?.length ?? 0;
+          const empCount = dept.numOfEmployee ?? 0;
+          const posCount = dept.numOfCampaignPosition ?? 0;
+
           return (
             <div
               key={dept.id}
@@ -164,23 +164,25 @@ export default function DepartmentPage() {
                       {dept.departmentName}
                     </h2>
                   </div>
-                  <Link href={`/dashboard/departments/${dept.id}/edit`}>
-                    <button
-                      className="text-sm text-blue-500 hover:text-blue-700"
-                      title="Chỉnh sửa phòng ban"
+                  <div className="flex items-center gap-2">
+                    <Link href={`/dashboard/departments/${dept.id}/edit`}>
+                      <button
+                        className="text-sm text-blue-500 hover:text-blue-700"
+                        title="Chỉnh sửa phòng ban"
+                      >
+                        <FaEdit className="text-lg" />
+                      </button>
+                    </Link>
+                    <Button
+                      variant="destructive"
+                      onClick={() => {
+                        setSelectedDept(dept);
+                        setDeleteOpen(true);
+                      }}
                     >
-                      <FaEdit className="text-lg" />
-                    </button>
-                  </Link>
-                  <Button
-                    variant="destructive"
-                    onClick={() => {
-                      setSelectedDept(dept);
-                      setDeleteOpen(true);
-                    }}
-                  >
-                    Xóa
-                  </Button>
+                      Xóa
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="space-y-3">

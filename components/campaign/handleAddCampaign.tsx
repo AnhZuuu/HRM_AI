@@ -57,7 +57,6 @@ export default function AddCampaignDialog({
         createdBy: defaultCreatedBy,
       };
 
-      // If later you call an API, do it here and replace payload with server response if needed.
       
       await onCreate(payload);
 

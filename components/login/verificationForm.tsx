@@ -1,3 +1,5 @@
+
+import API from "@/api/api";
 import React, { useState, useEffect } from "react";
 
 interface VerificationFormProps {
@@ -36,7 +38,7 @@ const VerificationForm: React.FC<VerificationFormProps> = ({ onClose, onChange }
         verificationCode: formData.verificationCode
       });
 
-      const response = await fetch(`${API_VERIFY_EMAIL}?${query.toString()}`, {
+      const response = await fetch(`${API.AUTH.VERIFY_EMAIL}?${query.toString()}`, {
         method: "GET"
       });
 
@@ -56,7 +58,7 @@ const VerificationForm: React.FC<VerificationFormProps> = ({ onClose, onChange }
 
   const handleResendCode = async () => {
   try {
-    const response = await fetch(API_RESET_VERIFICATION, {
+    const response = await fetch(API.AUTH.RESET_VERIFICATION, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
