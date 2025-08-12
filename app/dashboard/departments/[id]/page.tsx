@@ -1,62 +1,81 @@
 import DepartmentDetailClient from "@/components/department/detailDepartmentPage";
 import { notFound } from "next/navigation";
 
-// // Types
-export interface Account {
+// Match the API shape you showed
+export interface DepartmentDetail {
   id: string;
-  firstName?: string;
-  lastName?: string;
-  email?: string;
-  username?: string;
-  phoneNumber?: string;
-  imageUrl?: string;
-  isActive?: boolean;
-  role?: string;
-}
-export interface CampaignPosition {
-  id: string;
-  title?: string;
-  description?: string | null;
-}
-export interface Department {
-  id: string; 
   departmentName: string;
   code: string;
   description: string | null;
-  campaignPositions: CampaignPosition[] | null;
-  employees: Account[] | null;
+  numOfCampaignPosition: number;
+  numOfEmployee: number;
+  // Optional fields the API may include
+  campaignPositionModels?: any[]; // keep if you want to render positions later
+  creationDate?: string | null;
+  createdById?: string | null;
+  modificationDate?: string | null;
+  modifiedById?: string | null;
+  deletionDate?: string | null;
+  deletedById?: string | null;
+  isDeleted?: boolean;
 }
 
-// Replace with your real fetch
-async function getDepartment(id: string): Promise<Department | null> {
-  // Example (server fetch):
-  // const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/Department/${id}`, { cache: "no-store" });
-  // if (!res.ok) return null;
-  // return res.json();
+type ApiEnvelope<T> = {
+  code: number;
+  status: boolean;
+  message: string;
+  data: T;
+};
 
-  // Mock:
-  return {
-    id,
-    departmentName: "Kinh Doanh",
-    code: "SALES",
-    description: "Phụ trách bán hàng & quan hệ khách hàng.",
-    campaignPositions: [
-      { id: "pos-1", title: "Sales Executive", description: "Chịu trách nhiệm doanh số khu vực." },
-      { id: "pos-2", title: "Account Manager", description: "Quản lý khách hàng chiến lược." },
-    ],
-    employees: [
-      { id: "emp-1", username: "anh.le", firstName: "Anh", lastName: "Lê", role: "Trưởng phòng", phoneNumber: "0909 000 001", email: "anh.le@example.com", isActive: true },
-      { id: "emp-2", username: "bao.tran", firstName: "Bảo", lastName: "Trần", role: "Sales", phoneNumber: "0909 000 002", email: "bao.tran@example.com", isActive: true },
-    ],
-  };
-}
+const API_BASE = "http://localhost:7064/api/v1";
 
-export default async function DepartmentDetailPage(
-  { params }: { params: Promise<{ id: string }> }
-) {
+const unwrap = async (res: Response) => {
+  const txt = await res.text();
+  const json = txt ? JSON.parse(txt) : null;
+  // detail endpoint should return { data: <object> } (not paginated)
+  return json?.data ?? json;
+};
+
+export default async function DepartmentDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = await params;
-  const dept = await getDepartment(id);
-  if (!dept) return notFound();
+
+  const res = await fetch(`${API_BASE}/departments/${id}`, {
+    cache: "no-store",
+  });
+
+  if (res.status === 404) return notFound();
+  if (!res.ok) return notFound();
+
+  const payload = (await unwrap(res)) as DepartmentDetail | ApiEnvelope<DepartmentDetail>;
+  // Support either raw object or envelope
+  const entity: DepartmentDetail =
+    (payload as any)?.departmentName
+      ? (payload as DepartmentDetail)
+      : ((payload as ApiEnvelope<DepartmentDetail>)?.data as DepartmentDetail);
+
+  if (!entity) return notFound();
+
+  // Make sure counts are always numbers (employees backend not ready => default 0)
+  const dept: DepartmentDetail = {
+    id: entity.id,
+    departmentName: entity.departmentName,
+    code: entity.code,
+    description: entity.description ?? null,
+    numOfCampaignPosition: Number(entity.numOfCampaignPosition ?? 0),
+    numOfEmployee: Number(entity.numOfEmployee ?? 0),
+    campaignPositionModels: entity.campaignPositionModels ?? [],
+    creationDate: entity.creationDate ?? null,
+    createdById: entity.createdById ?? null,
+    modificationDate: entity.modificationDate ?? null,
+    modifiedById: entity.modifiedById ?? null,
+    deletionDate: entity.deletionDate ?? null,
+    deletedById: entity.deletedById ?? null,
+    isDeleted: Boolean(entity.isDeleted ?? false),
+  };
 
   return <DepartmentDetailClient dept={dept as any} />;
 }

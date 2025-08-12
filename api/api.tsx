@@ -17,7 +17,12 @@ export const API = {
     POSITION: `${API_BASE_URL}/campaign-positions`,
   },
 
-  DEPARTMENT: `${API_BASE_URL}/departments`,
+  DEPARTMENT: { BASE: `${API_BASE_URL}/departments` 
+},
+  CV : {
+    PARSE: `${API_BASE_URL}/cv/parse`,
+    APPLICANT: `${API_BASE_URL}/cvApplicants`
+  }
 };
 
 export default API;

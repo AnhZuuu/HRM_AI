@@ -14,6 +14,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Plus } from "lucide-react";
 import { authFetch } from "@/app/utils/authFetch";
 import FlexibleFieldsForm from "./flexible-fields-form";
+import API from "@/api/api";
 
 type DepartmentOption = { id: string; name: string };
 
@@ -56,7 +57,7 @@ export default function AddPositionDialog({
       setDepsLoading(true);
       setDepsError(null);
       try {
-        const res = await authFetch("http://localhost:7064/api/departments");
+        const res = await authFetch(API.DEPARTMENT.BASE);
         if (!res.ok) throw new Error(await res.text());
         const list = (await unwrap(res)) as any[];
         const mapped: DepartmentOption[] = (Array.isArray(list) ? list : []).map((d: any) => ({
@@ -116,7 +117,7 @@ export default function AddPositionDialog({
         campaignPositionDetailAddModels: details,
       };
 
-      const res = await authFetch("http://localhost:7064/api/campaign-positions", {
+      const res = await authFetch(API.CAMPAIGN.POSITION, {
         method: "POST",
         body: JSON.stringify(payload),
       });

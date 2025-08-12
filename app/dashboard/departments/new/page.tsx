@@ -1,4 +1,6 @@
 "use client";
+import API from "@/api/api";
+import { authFetch } from "@/app/utils/authFetch";
 import DepartmentForm, { DepartmentFormValues } from "@/components/department/departmentForm";
 import { useRouter } from "next/navigation";
 
@@ -7,8 +9,8 @@ export default function NewDepartmentPage() {
 
   const handleCreate = async (values: DepartmentFormValues) => {
     // TODO: replace with real API call
-    // await fetch("/api/Department", { method: "POST", body: JSON.stringify(values) });
-    alert("Tạo thành công"); 
+    await authFetch(`${API.DEPARTMENT.BASE}`, { method: "POST", body: JSON.stringify(values) });
+    alert("Tạo thành công");
     router.push("/dashboard/departments");
   };
 

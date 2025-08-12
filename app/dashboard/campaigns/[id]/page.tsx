@@ -1,4 +1,5 @@
 import API from "@/api/api";
+import { authFetch } from "@/app/utils/authFetch";
 import { formatDMYHM } from "@/app/utils/helper";
 import AddPositionDialog from "@/components/campaignPosition/handleAddCampaignPosition";
 import CampaignPositions from "@/components/campaignPosition/positionCard";
@@ -38,7 +39,7 @@ function getStatusTone(status: string) {
   return { className: "inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold shadow-sm bg-green-100 text-green-700", message: "Đang diễn ra" };
 }
 
-// If your global Campaign type doesn't include positions, add a local extension:
+
 type CampaignWithPositions = Campaign & {
   campaignPosition?: Array<{
     id: string;
@@ -56,7 +57,7 @@ type CampaignWithPositions = Campaign & {
 const mapFromApi = (c: any): CampaignWithPositions => ({
   id: c.id,
   name: c.name,
-  startTime: c.startTime ?? c.starTime, // tolerate backend typo if any
+  startTime: c.startTime ?? c.starTime, 
   endTime: c.endTime,
   description: c.description,
   createdBy: c.createdById ?? null,
@@ -75,11 +76,13 @@ const mapFromApi = (c: any): CampaignWithPositions => ({
 export default async function CampaignDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
+  // params: { id: string };
 }) {
-  const { id } = params;
+  const { id } =  await params;
+  //await
 
-  const res = await fetch(`${API.CAMPAIGN.BASE}/${id}`, {
+  const res = await authFetch(`${API.CAMPAIGN.BASE}/${id}`, {
     cache: "no-store",
   });
 
@@ -125,7 +128,7 @@ export default async function CampaignDetailPage({
         </div>
       </div>
 
-
+      {/* Position cards */}
       <CampaignPositions
         positions={campaign.campaignPosition ?? []}
         campaignStatus={status}

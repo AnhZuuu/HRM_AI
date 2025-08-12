@@ -4,7 +4,8 @@ import { FaBuilding, FaUsers, FaBriefcase, FaInfoCircle } from "react-icons/fa";
 
 type TabKey = "employees" | "positions";
 
-export default function DepartmentDetailClient({ dept }: { dept: Department }) {
+export default function DepartmentDetailClient(
+  { dept }:  { dept: Department & { numOfEmployee?: number; numOfCampaignPosition?: number }; }) {
   const [activeTab, setActiveTab] = React.useState<TabKey>("employees");
 
   const empCount = dept.employees?.length ?? 0;
@@ -34,14 +35,16 @@ export default function DepartmentDetailClient({ dept }: { dept: Department }) {
             </div>
           )}
 
-          <div className="flex items-center gap-6 text-gray-700">
-            <div className="flex items-center gap-2">
+
+          <div className="flex items-center gap-4">
+            <div className="flex items-center text-gray-700 gap-2">
+              {/* same icon classes you used */}
               <FaUsers />
-              <span>{empCount} nhân sự</span>
+              <span>{dept.numOfEmployee} nhân sự</span>
             </div>
-            <div className="flex items-center gap-2">
-              <FaBriefcase />
-              <span>{posCount} vị trí tuyển</span>
+            <div className="flex items-center text-gray-700 gap-2">
+              <FaUsers />
+              <span>{dept.numOfCampaignPosition} vị trí tuyển</span>
             </div>
           </div>
         </div>
