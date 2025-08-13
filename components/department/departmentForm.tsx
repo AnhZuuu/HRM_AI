@@ -1,10 +1,11 @@
+// components/department/departmentForm.tsx
 "use client";
 import { useState } from "react";
 
 export interface DepartmentFormValues {
   departmentName: string;
+  code: string;
   description: string;
-  departmentStatus: number; // 0: active, 1: inactive
 }
 
 export default function DepartmentForm({
@@ -12,7 +13,7 @@ export default function DepartmentForm({
   onSubmit,
   onCancel,
   submitText = "Submit",
-  title
+  title,
 }: {
   initial?: Partial<DepartmentFormValues>;
   onSubmit: (values: DepartmentFormValues) => Promise<void> | void;
@@ -22,18 +23,20 @@ export default function DepartmentForm({
 }) {
   const [form, setForm] = useState<DepartmentFormValues>({
     departmentName: initial?.departmentName ?? "",
+    code: (initial?.code ?? "").toString(),
     description: initial?.description ?? "",
-    departmentStatus: initial?.departmentStatus ?? 0, // default to active
   });
+
   const [errors, setErrors] = useState<{
     departmentName?: string;
+    code?: string;
   }>({});
   const [busy, setBusy] = useState(false);
 
   const validate = () => {
     const e: typeof errors = {};
-    if (!form.departmentName.trim())
-      e.departmentName = "Tên phòng ban không được bỏ trống";
+    if (!form.departmentName.trim()) e.departmentName = "Tên phòng ban không được bỏ trống";
+    if (!form.code.trim()) e.code = "Mã phòng ban không được bỏ trống";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -44,8 +47,8 @@ export default function DepartmentForm({
       setBusy(true);
       await onSubmit({
         departmentName: form.departmentName.trim(),
+        code: form.code.trim(),
         description: form.description.trim(),
-        departmentStatus: form.departmentStatus
       });
     } finally {
       setBusy(false);
@@ -62,6 +65,7 @@ export default function DepartmentForm({
                 {title}
               </h3>
             </div>
+
             <div className="space-y-4">
               {/* Department Name */}
               <div>
@@ -80,45 +84,36 @@ export default function DepartmentForm({
                   }
                 />
                 {errors.departmentName && (
-                  <p className="mt-1 text-xs text-red-500">
-                    {errors.departmentName}
-                  </p>
+                  <p className="mt-1 text-xs text-red-500">{errors.departmentName}</p>
                 )}
+              </div>
+
+              {/* Code */}
+              <div>
+                <label className="block text-sm text-gray-700 mb-1">
+                  Mã phòng ban <span className="text-red-500">*</span>
+                </label>
+                <input
+                  className={`w-full rounded-md border px-3 py-2 text-sm uppercase tracking-wider focus:outline-none focus:ring-2 ${
+                    errors.code ? "border-red-400 focus:ring-red-200" : "border-gray-300 focus:ring-blue-200"
+                  }`}
+                  value={form.code}
+                  onChange={(e) =>
+                    setForm((s) => ({ ...s, code: e.target.value.toUpperCase() }))
+                  }
+                />
+                {errors.code && <p className="mt-1 text-xs text-red-500">{errors.code}</p>}
               </div>
 
               {/* Description */}
               <div>
-                <label className="block text-sm text-gray-700 mb-1">
-                  Mô tả
-                </label>
+                <label className="block text-sm text-gray-700 mb-1">Mô tả</label>
                 <textarea
                   className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
                   rows={3}
                   value={form.description ?? ""}
-                  onChange={(e) =>
-                    setForm((s) => ({ ...s, description: e.target.value }))
-                  }
+                  onChange={(e) => setForm((s) => ({ ...s, description: e.target.value }))}
                 />
-              </div>
-
-              {/* Department Status */}
-              <div>
-                <label className="block text-sm text-gray-700 mb-1">
-                  Trạng thái
-                </label>
-                <select
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
-                  value={form.departmentStatus}
-                  onChange={(e) =>
-                    setForm((s) => ({
-                      ...s,
-                      departmentStatus: Number(e.target.value)
-                    }))
-                  }
-                >
-                  <option value={0}>Hoạt động</option>
-                  <option value={1}>Ngừng hoạt động</option>
-                </select>
               </div>
             </div>
 

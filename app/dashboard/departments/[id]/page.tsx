@@ -1,3 +1,4 @@
+import API from "@/api/api";
 import DepartmentDetailClient from "@/components/department/detailDepartmentPage";
 import { notFound } from "next/navigation";
 
@@ -27,7 +28,6 @@ type ApiEnvelope<T> = {
   data: T;
 };
 
-const API_BASE = "http://localhost:7064/api/v1";
 
 const unwrap = async (res: Response) => {
   const txt = await res.text();
@@ -43,7 +43,7 @@ export default async function DepartmentDetailPage({
 }) {
   const { id } = await params;
 
-  const res = await fetch(`${API_BASE}/departments/${id}`, {
+  const res = await fetch(`${API.DEPARTMENT.BASE}/${id}`, {
     cache: "no-store",
   });
 
