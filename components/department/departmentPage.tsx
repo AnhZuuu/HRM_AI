@@ -14,6 +14,7 @@ import { Card, CardContent } from "../ui/card";
 import { Input } from "../ui/input";
 import { DeleteDepartmentDialog } from "./handleDeleteDepartment";
 import API from "@/api/api";
+import { authFetch } from "@/app/utils/authFetch";
 
 export interface Department {
   id: string;
@@ -92,7 +93,7 @@ export default function DepartmentPage() {
   const handleDeleteDepartment = async (id: string) => {
     try {
       // If your API uses soft delete or different route, adjust here
-      const res = await fetch(`${API.DEPARTMENT.BASE}/${id}`, {
+      const res = await authFetch(`${API.DEPARTMENT.BASE}/${id}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
       });
@@ -173,7 +174,7 @@ export default function DepartmentPage() {
                         <FaEdit className="text-lg" />
                       </button>
                     </Link>
-                    <Button
+                    {/* <Button
                       variant="destructive"
                       onClick={() => {
                         setSelectedDept(dept);
@@ -181,7 +182,7 @@ export default function DepartmentPage() {
                       }}
                     >
                       Xóa
-                    </Button>
+                    </Button> */}
                   </div>
                 </div>
 
