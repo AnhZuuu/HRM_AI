@@ -1,53 +1,14 @@
 "use client";
 
 import InterviewScheduleCard from "@/components/interviewSchedule/interviewScheduleCard";
+import { mockInterviewSchedule } from "@/components/interviewSchedule/mockData";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import {
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Select } from "@radix-ui/react-select";
-import { Filter, Search } from "lucide-react";
-import { useEffect, useState, useMemo } from "react";
-
-const mockData: InterviewSchedule[] = [
-  {
-    id: "is-001",
-    cvApplicantId: "cv-01",
-    cvApplicant: {
-      id: "cv-01",
-      fullName: "Nguyễn Văn A",
-      email: "a@example.com",
-    },
-    startTime: "2025-05-11T07:30:00+07:00",
-    endTime: "2025-05-11T08:00:00+07:00",
-    createdBy: "admin-1",
-    status: "Scheduled",
-    round: 2,
-    interviewTypeId: "type-2",
-    interviewType: "Technical",
-    notes: "Presentation",
-    interviewers: "Mai L., Tùng P.",
-  },
-  {
-    id: "is-002",
-    cvApplicantId: "cv-02",
-    cvApplicant: { id: "cv-02", fullName: "Trần B", email: "b@example.com" },
-    startTime: "2025-05-12T09:00:00+07:00",
-    endTime: "2025-05-12T10:00:00+07:00",
-    createdBy: "admin-1",
-    status: "Completed",
-    round: 1,
-    interviewTypeId: "type-1",
-    interviewType: "HR Screening",
-    notes: null,
-    interviewers: "Lan N.",
-  },
-];
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Filter, Plus, Search } from "lucide-react";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 
 export default function InterviewSchedulesPage() {
   const [items, setItems] = useState<InterviewSchedule[]>([]);
@@ -55,10 +16,79 @@ export default function InterviewSchedulesPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("");
 
+  // ---- helpers for local date handling ----
+  const toLocalYMD = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
+  const localYMDFromISO = (iso: string) => toLocalYMD(new Date(iso));
+
+  const startOfWeekMon = (d = new Date()) => {
+    const day = d.getDay(); // 0 Sun .. 6 Sat
+    const monday = new Date(d);
+    monday.setHours(0, 0, 0, 0);
+    monday.setDate(d.getDate() - ((day + 6) % 7));
+    return monday;
+  };
+  const endOfWeekSun = (d = new Date()) => {
+    const end = new Date(startOfWeekMon(d));
+    end.setDate(end.getDate() + 6);
+    end.setHours(23, 59, 59, 999);
+    return end;
+  };
+
   useEffect(() => {
-    setItems(mockData); // replace with fetch
+    setItems(mockInterviewSchedule); // TODO: replace with fetch/mocks repo if needed
   }, []);
 
+  // ---- Stats: today + this week (based on ALL items) ----
+  const todayYMD = toLocalYMD(new Date());
+  const todayItems = useMemo(
+    () => items.filter((it) => localYMDFromISO(it.startTime) === todayYMD),
+    [items, todayYMD]
+  );
+  const weekRange = useMemo(() => {
+    const s = startOfWeekMon();
+    const e = endOfWeekSun();
+    return { s, e };
+  }, []);
+  const weekItems = useMemo(() => {
+    return items.filter((it) => {
+      const d = new Date(it.startTime);
+      return d >= weekRange.s && d <= weekRange.e;
+    });
+  }, [items, weekRange]);
+
+  const todayCount = todayItems.length;
+  const weekCount = weekItems.length;
+
+  // Scheduled today = status "Scheduled" whose startTime is today (local)
+const scheduledTodayCount = useMemo(
+  () =>
+    items.filter(
+      (it) =>
+        (it.status ?? "").toLowerCase() === "scheduled" &&
+        localYMDFromISO(it.startTime) === todayYMD
+    ).length,
+  [items, todayYMD]
+);
+
+// Completed today = status "Completed"
+// Use endTime if present (more accurate), otherwise fall back to startTime.
+const completedTodayCount = useMemo(
+  () =>
+    items.filter((it) => {
+      const statusOk = (it.status ?? "").toLowerCase() === "completed";
+      if (!statusOk) return false;
+      const when = it.endTime ? it.endTime : it.startTime;
+      return localYMDFromISO(when) === todayYMD;
+    }).length,
+  [items, todayYMD]
+);
+
+  // ---- Existing filters (apply to the "All interviews" right pane) ----
   const filtered = useMemo(() => {
     return items.filter((it) => {
       const name = it.cvApplicant?.fullName?.toLowerCase() ?? "";
@@ -73,7 +103,7 @@ export default function InterviewSchedulesPage() {
       const statusMatch =
         statusFilter === "all" || status === statusFilter.toLowerCase();
 
-      const dateOnly = it.startTime.split("T")[0]; // "YYYY-MM-DD"
+      const dateOnly = it.startTime.split("T")[0]; // "YYYY-MM-DD" (ISO part)
       const dateMatch = !dateFilter || dateOnly === dateFilter;
 
       return queryMatch && statusMatch && dateMatch;
@@ -86,12 +116,49 @@ export default function InterviewSchedulesPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Lịch phỏng vấn</h1>
-          <p className="text-gray-600 mt-1">
-            Danh sách lịch phỏng vấn của ứng viên
+          <p className="text-gray-600 mt-1">Danh sách lịch phỏng vấn của ứng viên</p>
+        </div>
+        <Button asChild className="bg-blue-600 hover:bg-blue-700">
+          <Link href="/dashboard/schedules/new">
+            <Plus className="w-4 h-4 mr-2" />
+            Tạo phỏng vấn
+          </Link>
+        </Button>
+      </div>
+
+      {/* Stats strip */}
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <div className="rounded-xl border border-gray-200 p-4 bg-white shadow-sm">
+          <p className="text-sm text-gray-500">Hôm nay</p>
+          <p className="text-2xl font-semibold">{todayCount}</p>
+          <p className="text-xs text-gray-500 mt-1">
+            {todayCount > 0 ? `Có ${todayCount} lịch vào ${new Date().toLocaleDateString("vi-VN")}` : "Không có lịch hôm nay"}
+          </p>
+        </div>
+        <div className="rounded-xl border border-gray-200 p-4 bg-white shadow-sm">
+          <p className="text-sm text-gray-500">Đã phỏng vấn (hôm nay)</p>
+          <p className="text-2xl font-semibold">{scheduledTodayCount }</p>
+          <p className="text-xs text-gray-500 mt-1">
+            {scheduledTodayCount  > 0 ? `Có ${scheduledTodayCount } lịch đã phỏng vấn` : "Không có lịch hôm nay"}
+          </p>
+        </div>
+        <div className="rounded-xl border border-gray-200 p-4 bg-white shadow-sm">
+          <p className="text-sm text-gray-500">Đã hoàn thành (hôm nay)</p>
+          <p className="text-2xl font-semibold">{completedTodayCount }</p>
+          <p className="text-xs text-gray-500 mt-1">
+            {completedTodayCount  > 0 ? `Có ${completedTodayCount } lịch đã hoàn thành` : "Không có lịch hôm nay"}
+          </p>
+        </div>
+        <div className="rounded-xl border border-gray-200 p-4 bg-white shadow-sm">
+          <p className="text-sm text-gray-500">Trong tuần này</p>
+          <p className="text-2xl font-semibold">{weekCount}</p>
+          <p className="text-xs text-gray-500 mt-1">
+            {weekRange.s.toLocaleDateString("vi-VN")} – {weekRange.e.toLocaleDateString("vi-VN")}
           </p>
         </div>
       </div>
 
+      {/* Filters (apply to right pane) */}
       <Card>
         <CardContent className="pt-6">
           <div className="flex flex-col gap-3">
@@ -101,7 +168,7 @@ export default function InterviewSchedulesPage() {
                 <Input
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
-                  placeholder="Tìm theo tên đợt tuyển dụng…"
+                  placeholder="Tìm theo tên ứng viên / loại / trạng thái…"
                   className="pl-9 pr-9 h-10 rounded-full border-gray-200 focus-visible:ring-0 focus-visible:ring-offset-0 shadow-sm"
                 />
                 {!!q && (
@@ -115,10 +182,7 @@ export default function InterviewSchedulesPage() {
                 )}
               </div>
 
-              <Select
-                value={statusFilter}
-                onValueChange={(v) => setStatusFilter(v)}
-              >
+              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v)}>
                 <SelectTrigger className="h-10 w-full sm:w-[200px] rounded-full border-gray-200 shadow-sm">
                   <Filter className="h-4 w-4 mr-2 text-gray-500" />
                   <SelectValue placeholder="Lọc theo trạng thái" />
@@ -154,16 +218,36 @@ export default function InterviewSchedulesPage() {
         </CardContent>
       </Card>
 
-      {/* List */}
-      {filtered.length === 0 ? (
-        <p className="text-gray-500">Không có lịch phỏng vấn.</p>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {filtered.map((item) => (
-            <InterviewScheduleCard key={item.id} item={item as any} />
-          ))}
+      {/* Split layout: left 1/3 = today's list, right 2/3 = all interviews */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        {/* Left: Today */}
+        <div className="xl:col-span-1 space-y-3 rounded-xl border border-gray-200 p-4 bg-white shadow-sm">
+          <h2 className="text-lg font-semibold">Hôm nay ({todayCount})</h2>
+          {todayItems.length === 0 ? (
+            <p className="text-gray-500">Không có lịch phỏng vấn hôm nay.</p>
+          ) : (
+            <div className="grid grid-cols-1 gap-4">
+              {todayItems.map((item : any) => (
+                <InterviewScheduleCard key={item.id} item={item as any} />
+              ))}
+            </div>
+          )}
         </div>
-      )}
+
+        {/* Right: All */}
+        <div className="xl:col-span-2 space-y-3 rounded-xl border border-gray-200 p-4 bg-white shadow-sm">
+          <h2 className="text-lg font-semibold">Tất cả lịch ({filtered.length})</h2>
+          {filtered.length === 0 ? (
+            <p className="text-gray-500">Không có lịch phỏng vấn.</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-6">
+              {filtered.map((item : any) => (
+                <InterviewScheduleCard key={item.id} item={item as any} />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
