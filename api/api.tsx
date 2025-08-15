@@ -18,10 +18,18 @@ export const API = {
   },
 
   DEPARTMENT: { BASE: `${API_BASE_URL}/departments` 
-},
+  },
   CV : {
     PARSE: `${API_BASE_URL}/cv/parse`,
     APPLICANT: `${API_BASE_URL}/cvApplicants`
+  },
+  INTERVIEW : {
+    TYPE :`${API_BASE_URL}/interview-types`,
+    SCHEDULE :`${API_BASE_URL}/interview-schedules`,
+    OUTCOME :`${API_BASE_URL}/interview-outcomes`
+  },
+  MAIL : {
+    BASE: `${API_BASE_URL}/emails`,
   }
 };
 

@@ -54,6 +54,7 @@ export default function CampaignPage() {
     endTime: c.endTime,
     description: c.description,
     createdBy: c.createdById ?? null,
+    createdByName: c.createdByName ?? null,
   });
 
   // Map UI -> server
@@ -335,7 +336,7 @@ export default function CampaignPage() {
                     <TableCell>{formatDMYHM(campaign.startTime)}</TableCell>
                     <TableCell>{formatDMYHM(campaign.endTime)}</TableCell>
                     <TableCell>{campaign.description}</TableCell>
-                    <TableCell>{campaign.createdBy ?? "—"}</TableCell>
+                    <TableCell>{campaign.createdByName ?? "—"}</TableCell>
 
                     <TableCell className="text-right">
                       <DropdownMenu>

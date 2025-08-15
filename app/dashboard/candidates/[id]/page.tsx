@@ -395,7 +395,7 @@ export default function CvApplicantDetailPage() {
               {/* Status Legend */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Status Legend</CardTitle>
+                  <CardTitle>Status</CardTitle>
                 </CardHeader>
                 <CardContent className="grid grid-cols-2 gap-2 text-sm">
                   <LegendRow icon={<Clock className="h-4 w-4" />} label="Pending" cls="bg-blue-100 text-blue-800" />
