@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, Suspense } from "react"
 import { Inter } from "next/font/google"
 import "./globals.css"
@@ -16,24 +15,88 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Home, Users, Calendar, BarChart3, Settings, Bell, Search, Menu, X, User, LogOut, Plus, Mail, Megaphone, Building2Icon, CalendarRange, Shapes} from "lucide-react"
+import {
+  Home, Users, Mail, Megaphone, Building2Icon, CalendarRange, Shapes,
+  Settings, Bell, Search, Menu, X, User, LogOut, Plus
+} from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+
+// ---------------- Added breadcrumb helper ----------------
+const LABELS: Record<string, string> = {
+  dashboard: "Dashboard",
+  candidates: "Ứng viên",
+  campaigns: "Dự án",
+  mail: "Mail",
+  schedules: "Lịch",
+  department: "Phòng ban",
+  departments: "Phòng ban",
+  interviewTypes: "Loại phỏng vấn",
+}
+
+function isLikelyId(seg: string) {
+  return /^\d+$/.test(seg) || /^[0-9a-f-]{6,}$/i.test(seg)
+}
+
+function Breadcrumbs() {
+  const pathname = usePathname()
+  const segments = pathname.split("/").filter(Boolean)
+
+  const items = []
+  let hrefAcc = ""
+
+  for (let i = 0; i < segments.length; i++) {
+    const seg = segments[i]
+    hrefAcc += `/${seg}`
+    let label =
+      LABELS[seg] ??
+      seg.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+
+    if (isLikelyId(seg)) {
+      const parent = segments[i - 1]
+      const parentLabel = LABELS[parent] ?? "Chi tiết"
+      label = `Chi tiết ${parentLabel}`
+    }
+
+    items.push({
+      label,
+      href: i < segments.length - 1 ? hrefAcc : undefined,
+    })
+  }
+
+  if (items.length === 0) return null
+
+  return (
+    <nav aria-label="Breadcrumb" className="py-2 px-4 sm:px-6 lg:px-8 bg-white border-b border-gray-200">
+      <ol className="flex items-center gap-2 text-sm text-muted-foreground">
+        {items.map((it, idx) => (
+          <li key={idx} className="flex items-center gap-2">
+            {it.href ? (
+              <Link href={it.href} className="hover:text-foreground">
+                {it.label}
+              </Link>
+            ) : (
+              <span className="font-medium text-foreground">{it.label}</span>
+            )}
+            {idx < items.length - 1 && <span className="select-none">›</span>}
+          </li>
+        ))}
+      </ol>
+    </nav>
+  )
+}
+// -----------------------------------------------------------
 
 const inter = Inter({ subsets: ["latin"] })
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: Home },
   { name: "Candidates", href: "/dashboard/candidates", icon: Users },
-  { name: "Calendar", href: "/dashboard/calendar", icon: Calendar },
-  { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
-  { name: "System Config", href: "/dashboard/settings", icon: Settings },
   { name: "Mail", href: "/dashboard/mail", icon: Mail },
-  { name: "Campaign", href: "/dashboard/campaigns", icon:  Megaphone},
-  { name: "Department", href: "/dashboard/departments", icon:  Building2Icon},
-  { name: "Schedule", href: "/dashboard/schedules", icon:  CalendarRange},
-  { name: "Interview Type", href: "/dashboard/interviewTypes", icon:  Shapes},
-
+  { name: "Campaign", href: "/dashboard/campaigns", icon: Megaphone },
+  { name: "Department", href: "/dashboard/departments", icon: Building2Icon },
+  { name: "Schedule", href: "/dashboard/schedules", icon: CalendarRange },
+  { name: "Interview Type", href: "/dashboard/interviewTypes", icon: Shapes },
 ]
 
 export default function ClientLayout({
@@ -151,6 +214,10 @@ export default function ClientLayout({
               </div>
             </div>
 
+            {/* ---------------- Added breadcrumb here ---------------- */}
+            <Breadcrumbs />
+            {/* ------------------------------------------------------- */}
+
             {/* Page content */}
             <main className="flex-1">{children}</main>
           </div>
@@ -177,17 +244,21 @@ function SidebarContent() {
           <li>
             <ul role="list" className="-mx-2 space-y-1">
               {navigation.map((item) => {
-                const isActive = pathname === item.href
+                const isActive = pathname.startsWith(item.href)
                 return (
                   <li key={item.name}>
                     <Link
                       href={item.href}
-                      className={`group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold transition-colors ${isActive ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:text-blue-600 hover:bg-gray-50"
-                        }`}
+                      className={`group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold transition-colors ${
+                        isActive
+                          ? "bg-blue-50 text-blue-600"
+                          : "text-gray-700 hover:text-blue-600 hover:bg-gray-50"
+                      }`}
                     >
                       <item.icon
-                        className={`h-6 w-6 shrink-0 ${isActive ? "text-blue-600" : "text-gray-400 group-hover:text-blue-600"
-                          }`}
+                        className={`h-6 w-6 shrink-0 ${
+                          isActive ? "text-blue-600" : "text-gray-400 group-hover:text-blue-600"
+                        }`}
                       />
                       {item.name}
                     </Link>
@@ -196,15 +267,7 @@ function SidebarContent() {
               })}
             </ul>
           </li>
-          <li className="mt-auto">
-            {/* <div className="rounded-lg bg-blue-50 p-4">
-              <h3 className="text-sm font-medium text-blue-900">Upgrade to Pro</h3>
-              <p className="text-xs text-blue-700 mt-1">Get advanced analytics and unlimited candidates</p>
-              <Button size="sm" className="mt-3 w-full bg-blue-600 hover:bg-blue-700">
-                Upgrade Now
-              </Button>
-            </div> */}
-          </li>
+          <li className="mt-auto"></li>
         </ul>
       </nav>
     </div>

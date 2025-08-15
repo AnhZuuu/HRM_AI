@@ -194,7 +194,7 @@ export default function ShowAllDialog({
                                                 </div>
                                             ) : null}
 
-                                            {parsed.length > 0 ? (
+                                            {/* {parsed.length > 0 ? (
                                                 <div className="mt-2">
                                                     <p className="text-sm text-muted-foreground">Trích xuất: {parsed.length} mục</p>
                                                     <pre className="max-h-64 overflow-auto rounded-md border p-2 text-xs">
@@ -202,7 +202,7 @@ export default function ShowAllDialog({
                                                     </pre>
                                                     <p className="text-xs text-muted-foreground">Hiển thị tối đa 10 mục để xem nhanh.</p>
                                                 </div>
-                                            ) : null}
+                                            ) : null} */}
                                         </li>
                                     );
                                 })}
