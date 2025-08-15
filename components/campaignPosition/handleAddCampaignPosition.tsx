@@ -14,6 +14,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Plus } from "lucide-react";
 import { authFetch } from "@/app/utils/authFetch";
 import FlexibleFieldsForm from "./flexible-fields-form";
+import API from "@/api/api";
 
 type DepartmentOption = { id: string; name: string };
 
@@ -30,7 +31,6 @@ export default function AddPositionDialog({
   campaignId: string;
   departmentOptions?: DepartmentOption[];
 }) {
-
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
@@ -46,7 +46,6 @@ export default function AddPositionDialog({
   const [form, setForm] = useState({ departmentId: "", totalSlot: 1, description: "" });
   const [errors, setErrors] = useState<{ departmentId?: string; totalSlot?: string }>({});
 
-
   // Submission
   const [submitting, setSubmitting] = useState(false);
 
@@ -58,7 +57,7 @@ export default function AddPositionDialog({
       setDepsLoading(true);
       setDepsError(null);
       try {
-        const res = await authFetch("http://localhost:7064/api/departments");
+        const res = await authFetch(API.DEPARTMENT.BASE);
         if (!res.ok) throw new Error(await res.text());
         const list = (await unwrap(res)) as any[];
         const mapped: DepartmentOption[] = (Array.isArray(list) ? list : []).map((d: any) => ({
@@ -118,7 +117,7 @@ export default function AddPositionDialog({
         campaignPositionDetailAddModels: details,
       };
 
-      const res = await authFetch("http://localhost:7064/api/campaign-positions", {
+      const res = await authFetch(API.CAMPAIGN.POSITION, {
         method: "POST",
         body: JSON.stringify(payload),
       });
@@ -127,12 +126,10 @@ export default function AddPositionDialog({
         // Try to parse a structured error first
         let message = "Create failed";
         try {
-
           const errJson = await res.json();
           message = errJson?.message || JSON.stringify(errJson);
         } catch {
           message = await res.text();
-
         }
         throw new Error(message || "Create failed");
       }

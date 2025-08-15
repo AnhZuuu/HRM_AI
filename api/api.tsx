@@ -1,7 +1,28 @@
-const API_SIGNIN = "http://localhost:7064/api/v1/authentication/sign-in";
-const API_SIGNUP = "http://localhost:7064/api/v1/authentication/sign-up"; 
-const API_VERIFY_EMAIL = "http://localhost:7064/api/v1/authentication/email/verify";
-const API_RESET_VERIFICATION = "http://localhost:7064/api/v1/authentication/email/resend-verification";
-const API_CAMPAIGN = "http://localhost:7064/api/campaigns";
-const API_CAMPAIGN_POSITION ="http://localhost:7064/api/campaign-positions";
-const API_DEPARTMENT = "http://localhost:7064/api/departments";
+// api.ts
+
+const API_BASE_URL = "http://localhost:7064/api/v1";
+
+export const API = {
+  BASE_URL: API_BASE_URL,
+
+  AUTH: {
+    SIGNIN: `${API_BASE_URL}/authentication/sign-in`,
+    SIGNUP: `${API_BASE_URL}/authentication/sign-up`,
+    VERIFY_EMAIL: `${API_BASE_URL}/authentication/email/verify`,
+    RESET_VERIFICATION: `${API_BASE_URL}/authentication/email/resend-verification`,
+  },
+
+  CAMPAIGN: {
+    BASE: `${API_BASE_URL}/campaigns`,
+    POSITION: `${API_BASE_URL}/campaign-positions`,
+  },
+
+  DEPARTMENT: { BASE: `${API_BASE_URL}/departments` 
+},
+  CV : {
+    PARSE: `${API_BASE_URL}/cv/parse`,
+    APPLICANT: `${API_BASE_URL}/cvApplicants`
+  }
+};
+
+export default API;
