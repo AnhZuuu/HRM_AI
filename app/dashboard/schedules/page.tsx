@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { mockInterviewSchedule } from "@/components/interviewSchedule/mockData";
+import { mockInterviewSchedule } from "@/components/interviewSchedule/sampleData/mockData";
 import InterviewSchedulesTable from "@/components/interviewSchedule/interviewScheduleCard";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
