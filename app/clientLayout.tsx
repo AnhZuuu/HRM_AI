@@ -28,7 +28,7 @@ const LABELS: Record<string, string> = {
   candidates: "Ứng viên",
   campaigns: "Dự án",
   mail: "Mail",
-  schedules: "Lịch",
+  schedules: "Lịch phỏng vấn",
   department: "Phòng ban",
   departments: "Phòng ban",
   interviewTypes: "Loại phỏng vấn",
@@ -164,10 +164,10 @@ export default function ClientLayout({
                   </div>
 
                   <div className="ml-4 flex items-center space-x-4">
-                    <Button variant="outline" size="sm" className="hidden sm:flex">
+                    {/* <Button variant="outline" size="sm" className="hidden sm:flex">
                       <Plus className="h-4 w-4 mr-2" />
                       Add Candidate
-                    </Button>
+                    </Button> */}
 
                     <Button variant="ghost" size="sm" className="relative">
                       <Bell className="h-5 w-5" />

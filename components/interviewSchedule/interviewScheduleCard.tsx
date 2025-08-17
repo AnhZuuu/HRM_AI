@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 
-// ---------- Types (aligned to your latest) ----------
+// ---------- Types (shared with the page) ----------
 export type CampaignPosition = {
   id: string;
   departmentId?: string;
@@ -31,12 +31,14 @@ export type CampaignPosition = {
   campaign?: string | null;
   department?: string | null;
 };
+
 export type CVApplicant = {
   id: string;
   fullName: string;
   email: string | null;
   campaignPosition?: CampaignPosition | null;
 };
+
 export type Interviewer = {
   id?: string;
   firstName?: string;
@@ -44,14 +46,15 @@ export type Interviewer = {
   email?: string;
   departmentId?: string;
 };
+
 export type InterviewSchedule = {
   id: string;
   cvApplicantId: string;
   cvApplicant: CVApplicant | null;
-  startTime: string; // ISO
-  endTime: string | null; // ISO | null
+  startTime: string;            // ISO
+  endTime: string | null;       // ISO | null
   createdBy: string | null;
-  status: string | null;
+  status: string | null;        // "Pending" | "Pass" | "Fail" | "Canceled"
   round: number | null;
   interviewTypeId: string;
   interviewType?: string | null;
@@ -121,8 +124,8 @@ function fmtDT(iso?: string | null, locale = "vi-VN") {
 }
 function durationMin(start?: string, end?: string | null) {
   if (!start || !end) return null;
-  const a = new Date(start).getTime(),
-    b = new Date(end).getTime();
+  const a = new Date(start).getTime();
+  const b = new Date(end).getTime();
   if (isNaN(a) || isNaN(b)) return null;
   return Math.max(0, Math.round((b - a) / 60000));
 }
@@ -148,7 +151,7 @@ function normalizeInterviewers(iv?: Interviewer[] | string): string {
         .filter(Boolean)
         .join(", ") || "—"
     );
-  if (typeof iv === "string") return iv || "—"; // sample data style
+  if (typeof iv === "string") return iv || "—";
   return "—";
 }
 
@@ -161,7 +164,7 @@ function normalizeStatus(s?: string | null) {
   if (["pass", "completed", "done", "interviewed"].includes(v))
     return { label: "Pass", tone: "success" as const };
   if (["fail"].includes(v))
-    return { label: "Failed", tone: "destructive" as const };
+    return { label: "Fail", tone: "destructive" as const };
   if (["canceled", "cancelled"].includes(v))
     return { label: "Hủy", tone: "destructive" as const };
   return { label: s, tone: "secondary" as const };
@@ -178,7 +181,8 @@ function StatusBadge({ status }: { status: string | null }) {
   return <Badge>{label}</Badge>;
 }
 
-function sortByStartAsc(a: InterviewSchedule, b: InterviewSchedule) {
+// Newest first (desc by startTime)
+function sortByStartDesc(a: InterviewSchedule, b: InterviewSchedule) {
   return new Date(b.startTime).getTime() - new Date(a.startTime).getTime();
 }
 
@@ -198,13 +202,12 @@ export default function InterviewSchedulesTable({
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [q, setQ] = useState<string>("");
 
-  // Variant‑specific filters
+  // Variant-specific filters
   const [range, setRange] = useState<RangeKey>("today"); // for "range"
   const [selectedDate, setSelectedDate] = useState<string>(""); // for "all" (YYYY-MM-DD)
   const [roundFilter, setRoundFilter] = useState<string>("all");
 
   const filtered = useMemo(() => {
-    // name / type search
     const byText = (it: InterviewSchedule) => {
       if (!q) return true;
       const name = it.cvApplicant?.fullName?.toLowerCase() ?? "";
@@ -217,7 +220,6 @@ export default function InterviewSchedulesTable({
       );
     };
 
-    // status
     const byStatus = (it: InterviewSchedule) => {
       if (statusFilter === "all") return true;
       return (it.status ?? "").toLowerCase() === statusFilter.toLowerCase();
@@ -228,12 +230,12 @@ export default function InterviewSchedulesTable({
       return String(it.round ?? "") === roundFilter;
     };
 
-
     // range vs date
     const { start, end } =
       variant === "range"
         ? getRange(range)
         : { start: null as Date | null, end: null as Date | null };
+
     const byTime = (it: InterviewSchedule) => {
       const d = parseLocal(it.startTime);
       if (!d) return false;
@@ -241,15 +243,14 @@ export default function InterviewSchedulesTable({
         return d >= (start as Date) && d <= (end as Date);
       } else {
         if (!selectedDate) return true;
-        // compare YYYY-MM-DD
         const isoDay = it.startTime.split("T")[0];
         return isoDay === selectedDate;
       }
     };
 
-    return data
+    return (data ?? [])
       .filter((it) => byText(it) && byStatus(it) && byTime(it) && byRound(it))
-      .sort(sortByStartAsc);
+      .sort(sortByStartDesc);
   }, [data, q, statusFilter, range, selectedDate, variant, roundFilter]);
 
   return (
@@ -356,6 +357,7 @@ export default function InterviewSchedulesTable({
                 <TableHead>Thời gian</TableHead>
                 <TableHead>Trạng thái</TableHead>
                 <TableHead>Người phỏng vấn</TableHead>
+                <TableHead className="text-right">Thao tác</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -415,7 +417,7 @@ export default function InterviewSchedulesTable({
                           variant="outline"
                           size="sm"
                           onClick={() =>
-                            router.push(`/dashboard/interviewSchedules/${it.id}/edit`)
+                            router.push(`/dashboard/schedules/${it.id}/edit`)
                           }
                         >
                           Chỉnh lịch
@@ -424,7 +426,7 @@ export default function InterviewSchedulesTable({
                           variant="outline"
                           size="sm"
                           onClick={() =>
-                            router.push(`/dashboard/interviewSchedules/${it.id}`)
+                            router.push(`/dashboard/schedules/${it.id}`)
                           }
                         >
                           Chi tiết
