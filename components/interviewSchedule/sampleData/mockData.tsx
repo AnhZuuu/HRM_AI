@@ -26,7 +26,7 @@ export interface CVApplicant {
   campaignPositionId: string;
   campaignPosition: CampaignPosition | null;
   cvApplicantDetails: any[];
-  interviewSchedules: any[];
+  interviewSchedules: AnySchedule[];
 }
 
 export interface Account {
@@ -49,6 +49,39 @@ export interface CampaignPosition {
   cvApplicants?: CVApplicant[];
 }
 
+export type PendingOne = {
+  applicantId: string;
+  round: 1 | 2;
+  interviewerIds: string[];
+  startTime?: string;
+  endTime?: string;
+  notes?: string | null;
+};
+
+export type FormState = {
+  campaignId?: string;
+  campaignPositionId?: string;
+  departmentId?: string;
+  cvApplicantId?: string;
+  interviewers: Account[];
+  round?: number;
+  interviewTypeId?: string;
+  notes?: string;
+  startTime?: string;
+  endTime?: string;
+};
+
+export interface AnySchedule {
+  id?: string;
+  round?: number | null;
+  status?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
+  interviewers?:
+    | { firstName?: string; lastName?: string; username?: string }[]
+    | string;
+  notes?: string | null;
+}
 
 // Same STORAGE_KEY used in mockRepo.ts
 const STORAGE_KEY = "mock_interview_schedules_v1";

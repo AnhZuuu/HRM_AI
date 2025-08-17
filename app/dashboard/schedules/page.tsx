@@ -5,6 +5,8 @@ import InterviewSchedulesTable, {
   type InterviewSchedule as RowType,
   type CVApplicant as UICVApplicant,
 } from "@/components/interviewSchedule/interviewScheduleCard";
+import { mockInterviewSchedule } from "@/components/interviewSchedule/sampleData/mockData";
+
 import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import Link from "next/link";
