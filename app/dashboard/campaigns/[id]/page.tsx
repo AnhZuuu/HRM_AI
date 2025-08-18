@@ -53,25 +53,73 @@ type CampaignWithPositions = Campaign & {
   }>;
 };
 
-// Map API -> UI
-const mapFromApi = (c: any): CampaignWithPositions => ({
-  id: c.id,
-  name: c.name,
-  startTime: c.startTime ?? c.starTime, 
-  endTime: c.endTime,
-  description: c.description,
-  createdBy: c.createdById ?? null,
-  campaignPosition: (c.campaignPositions ?? []).map((p: any) => ({
-    id: p.id,
-    departmentId: p.departmentId ?? null,
-    campaignId: p.campaignId ?? null,
-    campaign: p.campaign?.name ?? null,
-    department: p.department?.name ?? null,
-    createdBy: p.createdById ?? null,
-    totalSlot: p.totalSlot ?? null,
-    description: p.description ?? null,
-  })),
+// ---------- Strong mappers from API -> UI ----------
+type ApiCampaign = any; // if you have a DTO, use it instead of 'any'
+type ApiCampaignPosition = any;
+type ApiCampaignPositionDetail = any;
+
+const mapPositionDetail = (d: ApiCampaignPositionDetail): CampaignPositionDetail => ({
+  id: String(d?.id ?? ""),
+  campaignPositionId: String(d?.campaignPositionId ?? d?.campaign_position_id ?? ""),
+  campaignPosition: null, // avoid circular; fill only when you truly need it
+  type: String(d?.type ?? ""),
+  key: String(d?.key ?? ""),
+  value: String(d?.value ?? ""),
+  groupIndex: Number.isFinite(d?.groupIndex) ? Number(d.groupIndex) : 0,
 });
+
+const mapPosition = (p: ApiCampaignPosition): CampaignPosition => ({
+  id: String(p?.id ?? ""),
+  departmentId: String(p?.departmentId ?? p?.department_id ?? ""),
+  campaignId: String(p?.campaignId ?? p?.campaign_id ?? ""),
+  campaign: p?.campaign?.name ?? (typeof p?.campaign === "string" ? p.campaign : null),
+  department: p?.department?.name ?? (typeof p?.department === "string" ? p.department : null),
+  createdBy: p?.createdBy ?? p?.createdById ?? null,
+  totalSlot: Number.isFinite(p?.totalSlot) ? Number(p.totalSlot) : 0,
+  description: typeof p?.description === "string" ? p.description : "",
+  cvApplicants: Array.isArray(p?.cvApplicants) ? p.cvApplicants : undefined, // keep your existing CVApplicant[] type
+});
+
+const mapPositionModel = (p: ApiCampaignPosition): CampaignPositionModel => ({
+  id: String(p?.id ?? ""),
+  departmentId: String(p?.departmentId ?? p?.department_id ?? ""),
+  campaignId: String(p?.campaignId ?? p?.campaign_id ?? ""),
+  departmentName:
+    p?.department?.name ??
+    p?.departmentName ??
+    (typeof p?.department === "string" ? p.department : ""),
+  totalSlot: Number.isFinite(p?.totalSlot) ? Number(p.totalSlot) : 0,
+  description: typeof p?.description === "string" ? p.description : null,
+  campaignPositionDetail: Array.isArray(p?.campaignPositionDetails)
+    ? (p.campaignPositionDetails as ApiCampaignPositionDetail[]).map(mapPositionDetail)
+    : null,
+});
+
+const mapFromApi = (c: ApiCampaign): CampaignWithPositions => {
+  const start = c?.startTime ?? c?.starTime; // tolerate backend typo
+  const end = c?.endTime;
+
+  if (!start || !end) throw new Error("Invalid campaign payload: missing start/end time");
+
+  const rawPositions: ApiCampaignPosition[] = Array.isArray(c?.campaignPositions)
+    ? c.campaignPositions
+    : [];
+
+  // If you want Campaign.campaignPosition to be CampaignPosition[] (not the *Model*),
+  // map with mapPosition. If you prefer the richer *Model*, swap to mapPositionModel below.
+  const positions: CampaignPosition[] = rawPositions.map(mapPosition);
+
+  return {
+    id: String(c?.id ?? ""),
+    name: String(c?.name ?? ""),
+    startTime: String(start),
+    endTime: String(end),
+    description: typeof c?.description === "string" ? c.description : "",
+    createdBy: c?.createdBy ?? c?.createdById ?? null,
+    createdByName: typeof c?.createdByName === "string" ? c.createdByName : null,
+    campaignPosition: positions,
+  };
+};
 
 export default async function CampaignDetailPage({
   params,

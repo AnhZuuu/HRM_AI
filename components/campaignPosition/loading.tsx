@@ -6,7 +6,7 @@ import { Loader2 } from "lucide-react";
 export default function LoadingDialog({
   open,
   title = "Đang xử lý...",
-  subtitle = "Hệ thống đang phân tích CV của bạn. Vui lòng đợi trong giây lát."
+  subtitle = "Hệ thống đang xử lý CV của bạn. Vui lòng đợi trong giây lát."
 }: {
   open: boolean;
   title?: string;

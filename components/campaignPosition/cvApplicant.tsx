@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-// If you have authFetch, import it; otherwise use fetch
 import { authFetch } from "@/app/utils/authFetch";
+import API from "@/api/api";
+import { Badge } from "@/components/ui/badge";
 
 type CvApplicantDraft = {
     fileUrl: string;
@@ -14,7 +15,11 @@ type CvApplicantDraft = {
     point: number | null;
     campaignPositionId: string;
     cvApplicantDetailsAddModels: any[];
-    originalFile?: File; // keep original binary if available
+    originalFile?: File;
+
+    // optional from backend response
+    warning?: string | null;
+    evaluationComment?: string | null;
 };
 
 export default function CvApplicantDialog({
@@ -27,8 +32,31 @@ export default function CvApplicantDialog({
     draft: CvApplicantDraft | null;
 }) {
     const [saving, setSaving] = useState(false);
-
     if (!draft) return null;
+
+    // -------- NEW: compute skills from parsedData --------
+    const skillRows = useMemo(
+        () =>
+            (draft.cvApplicantDetailsAddModels ?? []).filter(
+                (d: any) => String(d.type ?? d.Type) === "skill"
+            ),
+        [draft.cvApplicantDetailsAddModels]
+    );
+
+    const skills = useMemo(() => {
+        const set = new Set<string>();
+        for (const r of skillRows) {
+            const raw = String(r.value ?? r.Value ?? "");
+            if (!raw) continue;
+            raw
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean)
+                .forEach((s) => set.add(s));
+        }
+        return Array.from(set);
+    }, [skillRows]);
+    // -----------------------------------------------------
 
     const saveApplicant = async () => {
         if (!draft) return;
@@ -53,7 +81,7 @@ export default function CvApplicantDialog({
             fd.append("Point", draft.point != null ? String(draft.point) : "");
             fd.append("CampaignPositionId", draft.campaignPositionId);
 
-            // List fields (indexed) — FIX A
+            // List fields (indexed)
             const details = draft.cvApplicantDetailsAddModels ?? [];
             details.forEach((d: any, i: number) => {
                 fd.append(`CVApplicantDetailsAddModels[${i}].Type`, String(d.type ?? d.Type ?? ""));
@@ -62,10 +90,10 @@ export default function CvApplicantDialog({
                 fd.append(`CVApplicantDetailsAddModels[${i}].GroupIndex`, String(d.groupIndex ?? d.GroupIndex ?? 0));
             });
 
-            const res = await authFetch("http://localhost:7064/api/v1/cvApplicants", { method: "POST", body: fd });
+            const res = await authFetch(`${API.CV.APPLICANT}`, { method: "POST", body: fd });
 
             const text = await res.text();
-            let data: any = null; try { data = text ? JSON.parse(text) : null; } catch { }
+            let data: any = null; try { data = text ? JSON.parse(text) : null; } catch { /* ignore */ }
             if (!res.ok) throw new Error(data?.message || text || `Tạo ứng viên thất bại: ${res.status}`);
 
             onOpenChange(false);
@@ -79,7 +107,6 @@ export default function CvApplicantDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            {/* Layout from your latest version that fixes overflow and keeps footer visible */}
             <DialogContent
                 className="
           w-[95vw] max-w-[95vw] sm:max-w-3xl md:max-w-5xl
@@ -90,6 +117,22 @@ export default function CvApplicantDialog({
                 {/* Header */}
                 <DialogHeader className="p-6 pb-0">
                     <DialogTitle>Xác nhận tạo ứng viên</DialogTitle>
+
+                    {/* Warning (optional) */}
+                    {draft.warning ? (
+                        <div className="mt-3 rounded-md border border-amber-300 bg-amber-50 text-amber-800 px-3 py-2">
+                            <p className="text-sm font-medium">Cảnh báo</p>
+                            <p className="text-sm whitespace-pre-line">{draft.warning}</p>
+                        </div>
+                    ) : null}
+
+                    {/* Evaluation comment (optional) */}
+                    {/* {draft.evaluationComment ? (
+                        <div className="mt-3 rounded-md border border-blue-300 bg-blue-50 text-blue-900 px-3 py-2">
+                            <p className="text-sm font-medium">Nhận xét đánh giá</p>
+                            <p className="text-sm whitespace-pre-line">{draft.evaluationComment}</p>
+                        </div>
+                    ) : null} */}
                 </DialogHeader>
 
                 {/* Body */}
@@ -128,7 +171,57 @@ export default function CvApplicantDialog({
                         </div>
                     </div>
 
+                    {/* NEW: Skills section */}
                     <div className="rounded-lg border w-full max-w-full overflow-hidden">
+                        <div className="flex items-center justify-between px-4 py-3">
+                            <p className="text-sm text-muted-foreground">Kỹ năng (skills) — {skills.length}</p>
+                            <div className="flex gap-2">
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => navigator.clipboard.writeText(JSON.stringify(skills, null, 2))}
+                                >
+                                    Copy list
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                        const blob = new Blob([JSON.stringify(skills, null, 2)], { type: "application/json" });
+                                        const url = URL.createObjectURL(blob);
+                                        const a = document.createElement("a");
+                                        a.href = url;
+                                        a.download = "skills.json";
+                                        a.click();
+                                        URL.revokeObjectURL(url);
+                                    }}
+                                >
+                                    Tải JSON
+                                </Button>
+                            </div>
+                        </div>
+                        <div className="px-4 pb-4">
+                            {skills.length === 0 ? (
+                                <p className="text-sm text-gray-500">No skills listed.</p>
+                            ) : (
+                                <div className="flex flex-wrap gap-2">
+                                    {skills.map((s) => (
+                                        <Badge key={s} variant="secondary" className="px-2 py-1">
+                                            {s}
+                                        </Badge>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                    {draft.evaluationComment ? (
+                        <div className="mt-3 rounded-md border border-blue-300 bg-blue-50 text-blue-900 px-3 py-2">
+                            <p className="text-sm font-medium">Nhận xét đánh giá</p>
+                            <p className="text-sm whitespace-pre-line">{draft.evaluationComment}</p>
+                        </div>
+                    ) : null}
+                    {/* Original parsedData viewer (kept) */}
+                    {/* <div className="rounded-lg border w-full max-w-full overflow-hidden">
                         <div className="flex items-center justify-between px-4 py-3">
                             <p className="text-sm text-muted-foreground">
                                 Chi tiết trích xuất (parsedData) — {draft.cvApplicantDetailsAddModels?.length ?? 0} mục
@@ -168,7 +261,7 @@ export default function CvApplicantDialog({
                         <pre className="w-full max-w-full min-w-0 max-h-[55vh] overflow-auto px-4 pb-4 text-xs whitespace-pre-wrap break-words">
                             {JSON.stringify((draft.cvApplicantDetailsAddModels?.slice?.(0, 100) ?? []), null, 2)}
                         </pre>
-                    </div>
+                    </div> */}
                 </div>
 
                 {/* Footer */}
