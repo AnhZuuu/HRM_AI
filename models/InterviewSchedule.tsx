@@ -10,4 +10,5 @@ interface InterviewSchedule {
   interviewTypeName?: string | null;
   notes: string | null;
   outcome?: InterviewOutcome[] | string;
+  interviewers : string;
 };
