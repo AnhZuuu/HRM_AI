@@ -12,6 +12,8 @@ import { Mail, Phone, MapPin, ExternalLink, FileText, ArrowLeft, CheckCircle2, X
 import { authFetch } from "@/app/utils/authFetch";
 import API from "@/api/api";
 
+
+
 // ---------- Types ----------
 type ApiEnvelope<T> = {
   code: number;
@@ -158,6 +160,7 @@ export default function CvApplicantDetailPage() {
 
   const sections = useMemo(() => groupDetails(item?.cvApplicantDetailModels), [item?.cvApplicantDetailModels]);
   const skills = useMemo(() => splitSkillValues(sections.skill), [sections.skill]);
+  
 
   return (
     <div className="p-6 space-y-6">
