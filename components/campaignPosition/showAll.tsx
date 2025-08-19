@@ -3,6 +3,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { CheckCircle, Loader2, XCircle } from "lucide-react";
 
 type UploadResult = {
     status: number;
@@ -160,6 +161,24 @@ export default function ShowAllDialog({
                                                 : "bg-emerald-100 text-emerald-700";
                                     const badgeText =
                                         it.status === "UPLOADING" ? "LOADING" : isFailed ? "FAILED" : "DONE";
+                                    const badgeNode =
+                                        it.status === "UPLOADING" ? (
+                                            <span className="inline-flex items-center gap-1 text-blue-600">
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                                <span>Đang xử lý</span>
+                                            </span>
+                                        ) : isFailed ? (
+                                            <span className="inline-flex items-center gap-1 text-red-600">
+                                                <XCircle className="h-4 w-4" />
+                                                <span>Thất bại</span>
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center gap-1 text-green-600">
+                                                <CheckCircle className="h-4 w-4" />
+                                                <span>Hoàn thành</span>
+                                            </span>
+                                        );
+
 
                                     // peek common fields when done
                                     const inner = it.payload?.data ?? it.payload?.Data ?? it.payload ?? {};
@@ -171,24 +190,23 @@ export default function ShowAllDialog({
                                             <div className="flex items-center justify-between gap-3">
                                                 <div className="min-w-0">
                                                     <p className="truncate text-sm font-medium">{it.fileName}</p>
-                                                    {typeof it.httpStatus === "number" && (
-                                                        <p className="text-xs text-muted-foreground">HTTP {it.httpStatus}</p>
-                                                    )}
+                                                    <br />
                                                     {isDone && (rating !== null || sim !== null) ? (
                                                         <div className="mt-1 flex gap-2 text-xs">
                                                             {rating !== null && (
-                                                                <Badge variant="outline">Điểm: {rating}/100</Badge>
+                                                                <Badge variant="outline" className="rounded-md ">Điểm: {rating}/100</Badge>
                                                             )}
                                                             {sim !== null && (
-                                                                <Badge variant="outline">Similarity: {sim}</Badge>
+                                                                <Badge variant="outline" className="rounded-md ">Độ tương đồng: {sim}</Badge>
                                                             )}
                                                         </div>
                                                     ) : null}
-                                                    {it.message ? <p className="mt-1 text-xs">{it.message}</p> : null}
+                                                    {it.message ? <p className="mt-1 text-base">{it.message}</p> : null}
                                                 </div>
 
                                                 <div className="flex items-center gap-2 shrink-0">
-                                                    <Badge className={badgeClass}>{badgeText}</Badge>
+                                                    <Badge variant="secondary">{badgeNode}</Badge>
+
                                                     <Button
                                                         size="sm"
                                                         variant="outline"

@@ -32,15 +32,15 @@ export default function CvApplicantDialog({
     draft: CvApplicantDraft | null;
 }) {
     const [saving, setSaving] = useState(false);
-    if (!draft) return null;
+    const safeDraft = draft ?? { cvApplicantDetailsAddModels: [] };
 
     // -------- NEW: compute skills from parsedData --------
     const skillRows = useMemo(
         () =>
-            (draft.cvApplicantDetailsAddModels ?? []).filter(
+            (draft?.cvApplicantDetailsAddModels ?? []).filter(
                 (d: any) => String(d.type ?? d.Type) === "skill"
             ),
-        [draft.cvApplicantDetailsAddModels]
+        [draft?.cvApplicantDetailsAddModels]
     );
 
     const skills = useMemo(() => {
@@ -56,7 +56,10 @@ export default function CvApplicantDialog({
         }
         return Array.from(set);
     }, [skillRows]);
+
+    if (!draft) return null;
     // -----------------------------------------------------
+    
 
     const saveApplicant = async () => {
         if (!draft) return;
