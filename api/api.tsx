@@ -9,8 +9,11 @@ export const API = {
     SIGNIN: `${API_BASE_URL}/authentication/sign-in`,
     SIGNUP: `${API_BASE_URL}/authentication/sign-up`,
     VERIFY_EMAIL: `${API_BASE_URL}/authentication/email/verify`,
-    RESET_VERIFICATION: `${API_BASE_URL}/authentication/email/resend-verification`,
-    CHANGE_PASSWORD: `${API_BASE_URL}/authentication/password/change`
+    RESET_VERIFICATION: `${API_BASE_URL}/authentication/email/resend-verification`,   
+  },
+  ACCOUNT: {
+    CHANGE_PASSWORD: `${API_BASE_URL}/authentication/password/change`,
+    PROFILE: `${API_BASE_URL}/authentication`
   },
 
   CAMPAIGN: {

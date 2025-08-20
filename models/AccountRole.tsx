@@ -1,9 +1,9 @@
 interface AccountRole {
     id : string;
-    totalReputation : number;
-    status : number | null;
-    role : number;
-    roleName : string;
+    totalReputation? : number;
+    status? : number | null;
+    role? : number;
+    roleName? : string;
 }
 
 // role = 0 -> roleName :

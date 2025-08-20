@@ -16,7 +16,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useToast } from "@/components/ui/use-toast";
-import { AlertCircle, ArrowLeft, Eye, EyeOff, KeyRound } from "lucide-react";
+import { AlertCircle, ArrowLeft, CheckCircle2, Eye, EyeOff, KeyRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import API from "@/api/api";
 import { authFetch } from "@/app/utils/authFetch";
@@ -39,6 +39,7 @@ const passwordSchema = z
 
 export default function ChangePasswordPage() {
   const [apiError, setApiError] = useState<string | null>(null);
+  const [apiSuccess, setApiSuccess] = useState<string | null>(null);
   const { toast } = useToast();
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
@@ -64,8 +65,9 @@ export default function ChangePasswordPage() {
   async function onSubmit(values: z.infer<typeof passwordSchema>) {
     setSubmitting(true);
     setApiError(null);
+    setApiSuccess(null);
     try {
-      const res = await authFetch(API.AUTH.CHANGE_PASSWORD, {
+      const res = await authFetch(API.ACCOUNT.CHANGE_PASSWORD, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -81,16 +83,13 @@ export default function ChangePasswordPage() {
           problem?.message ??
           problem?.detail ??
           `Gửi yêu cầu thất bại với lỗi ${res.status}`;
-        setApiError(msg); // ← show message under card
+        setApiError(msg);
         return;
       }
-      // toast({
-      //   title: "Mật khẩu đã được thay đổi",
-      //   description:
-      //     "Bạn có thể sử dụng mật khẩu mới trong lần đăng nhập kế tiếp.",
-      // });
-      // form.reset();
-      
+      form.reset();
+      setApiSuccess(
+        "Bạn có thể sử dụng mật khẩu mới trong lần đăng nhập kế tiếp."
+      );
     } catch (e: any) {
       setApiError(e?.message ?? "Vui lòng thử lại.");
     } finally {
@@ -119,6 +118,24 @@ export default function ChangePasswordPage() {
             Chọn mật khẩu mạnh để bảo mật tài khoản của bạn.
           </p>
         </div>
+        {apiError && (
+          <div className="mx-auto max-w-md p-4">
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Đổi mật khẩu thất bại</AlertTitle>
+              <AlertDescription>{apiError}</AlertDescription>
+            </Alert>
+          </div>
+        )}
+        {apiSuccess && (
+          <div className="mx-auto max-w-md p-4">
+            <Alert className="bg-green-500">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+              <AlertTitle>Đổi mật khẩu thành công</AlertTitle>
+              <AlertDescription>{apiSuccess}</AlertDescription>
+            </Alert>
+          </div>
+        )}
 
         <Card>
           <CardContent>
@@ -246,7 +263,7 @@ export default function ChangePasswordPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => form.reset()}
+                    onClick={() => {form.reset(); setApiSuccess(null);}}
                   >
                     Làm mới
                   </Button>
@@ -258,15 +275,6 @@ export default function ChangePasswordPage() {
             </Form>
           </CardContent>
         </Card>
-        {apiError && (
-          <div className="mx-auto max-w-md p-4">
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Đổi mật khẩu thất bại</AlertTitle>
-              <AlertDescription>{apiError}</AlertDescription>
-            </Alert>
-          </div>
-        )}
       </div>
     </div>
   );
