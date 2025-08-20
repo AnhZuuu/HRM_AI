@@ -27,7 +27,9 @@ export const API = {
   INTERVIEW : {
     TYPE :`${API_BASE_URL}/interview-types`,
     SCHEDULE :`${API_BASE_URL}/interview-schedules`,
-    OUTCOME :`${API_BASE_URL}/interview-outcomes`
+    OUTCOME :`${API_BASE_URL}/interview-outcomes`,
+    PROCESS :`${API_BASE_URL}/interview-processes`,
+    STAGE :`${API_BASE_URL}/interview-stages`,
   },
   MAIL : {
     BASE: `${API_BASE_URL}/emails`,

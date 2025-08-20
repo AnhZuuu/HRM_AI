@@ -37,6 +37,7 @@ type CvApplicant = {
   point: string; // "36/100"
   status: 0 | 1 | 2 | 3; // 0 Pending, 1 Reviewed, 2 Rejected, 3 Accepted
   campaignPositionId?: string | null;
+  campaignPositionDescription?: string | null;
   fileUrl?: string | null;
   fileAlt?: string | null;
   cvApplicantDetailModels?: CvApplicantDetail[];
@@ -208,7 +209,7 @@ export default function CvApplicantDetailPage() {
                       <Separator orientation="vertical" className="h-4" />
                       <span className="inline-flex items-center gap-1">
                         <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-xs">
-                          {shortId(item.campaignPositionId)}
+                          {item.campaignPositionDescription}
                         </span>
                         <span className="text-gray-400 text-xs">(position)</span>
                       </span>
