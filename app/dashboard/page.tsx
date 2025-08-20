@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -122,10 +122,10 @@ export default function Dashboard() {
           <h1 className="text-3xl font-bold text-gray-900">Recruitment Dashboard</h1>
           <p className="text-gray-600 mt-1">Overview of your recruitment pipeline</p>
         </div>
-        <Button className="bg-blue-600 hover:bg-blue-700">
+        {/* <Button className="bg-blue-600 hover:bg-blue-700">
           <Plus className="w-4 h-4 mr-2" />
           Add Candidate
-        </Button>
+        </Button> */}
       </div>
 
       {/* Stats Cards */}
