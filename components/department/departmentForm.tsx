@@ -4,7 +4,7 @@ import { useState } from "react";
 
 export interface DepartmentFormValues {
   departmentName: string;
-  code: string;
+  // code: string;
   description: string;
 }
 
@@ -23,7 +23,7 @@ export default function DepartmentForm({
 }) {
   const [form, setForm] = useState<DepartmentFormValues>({
     departmentName: initial?.departmentName ?? "",
-    code: (initial?.code ?? "").toString(),
+    // code: (initial?.code ?? "").toString(),
     description: initial?.description ?? "",
   });
 
@@ -36,7 +36,7 @@ export default function DepartmentForm({
   const validate = () => {
     const e: typeof errors = {};
     if (!form.departmentName.trim()) e.departmentName = "Tên phòng ban không được bỏ trống";
-    if (!form.code.trim()) e.code = "Mã phòng ban không được bỏ trống";
+    // if (!form.code.trim()) e.code = "Mã phòng ban không được bỏ trống";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -47,7 +47,7 @@ export default function DepartmentForm({
       setBusy(true);
       await onSubmit({
         departmentName: form.departmentName.trim(),
-        code: form.code.trim(),
+        // code: form.code.trim(),
         description: form.description.trim(),
       });
     } finally {
@@ -88,7 +88,7 @@ export default function DepartmentForm({
                 )}
               </div>
 
-              {/* Code */}
+              {/* Code
               <div>
                 <label className="block text-sm text-gray-700 mb-1">
                   Mã phòng ban <span className="text-red-500">*</span>
@@ -103,7 +103,7 @@ export default function DepartmentForm({
                   }
                 />
                 {errors.code && <p className="mt-1 text-xs text-red-500">{errors.code}</p>}
-              </div>
+              </div> */}
 
               {/* Description */}
               <div>

@@ -2,16 +2,44 @@ import API from "@/api/api";
 import DepartmentDetailClient from "@/components/department/detailDepartmentPage";
 import { notFound } from "next/navigation";
 
-// Match the API shape you showed
-export interface DepartmentDetail {
+// ===== Types aligned with your API response =====
+export type Employee = {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string | null;
+  phoneNumber: string | null;
+  status: number | null;
+  creationDate?: string | null;
+};
+
+export type CampaignPositionDetailModel = {
+  id: string;
+  campaignPositionId: string;
+  type: string | null;
+  key: string | null;
+  value: string | null;
+  groupIndex: number | null;
+  creationDate?: string | null;
+};
+
+export type CampaignPositionModel = {
+  id: string;
+  totalSlot: number;
+  description: string | null;
+  campaignPositionDetailModels: CampaignPositionDetailModel[];
+  creationDate?: string | null;
+};
+
+export type DepartmentDetail = {
   id: string;
   departmentName: string;
   code: string;
   description: string | null;
   numOfCampaignPosition: number;
   numOfEmployee: number;
-  // Optional fields the API may include
-  campaignPositionModels?: any[]; // keep if you want to render positions later
+  employees: Employee[];
+  campaignPositionModels: CampaignPositionModel[];
   creationDate?: string | null;
   createdById?: string | null;
   modificationDate?: string | null;
@@ -19,7 +47,7 @@ export interface DepartmentDetail {
   deletionDate?: string | null;
   deletedById?: string | null;
   isDeleted?: boolean;
-}
+};
 
 type ApiEnvelope<T> = {
   code: number;
@@ -28,20 +56,19 @@ type ApiEnvelope<T> = {
   data: T;
 };
 
-
-const unwrap = async (res: Response) => {
+const unwrap = async <T,>(res: Response): Promise<T> => {
   const txt = await res.text();
   const json = txt ? JSON.parse(txt) : null;
-  // detail endpoint should return { data: <object> } (not paginated)
-  return json?.data ?? json;
+  // Your API returns { code, status, message, data: {...} }
+  return (json?.data ?? json) as T;
 };
 
 export default async function DepartmentDetailPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: { id: string };
 }) {
-  const { id } = await params;
+  const { id } = params;
 
   const res = await fetch(`${API.DEPARTMENT.BASE}/${id}`, {
     cache: "no-store",
@@ -50,16 +77,17 @@ export default async function DepartmentDetailPage({
   if (res.status === 404) return notFound();
   if (!res.ok) return notFound();
 
-  const payload = (await unwrap(res)) as DepartmentDetail | ApiEnvelope<DepartmentDetail>;
-  // Support either raw object or envelope
+  const data = await unwrap<DepartmentDetail | ApiEnvelope<DepartmentDetail>>(res);
+
+  // Accept either envelope or raw object defensively
   const entity: DepartmentDetail =
-    (payload as any)?.departmentName
-      ? (payload as DepartmentDetail)
-      : ((payload as ApiEnvelope<DepartmentDetail>)?.data as DepartmentDetail);
+    (data as any)?.departmentName
+      ? (data as DepartmentDetail)
+      : ((data as ApiEnvelope<DepartmentDetail>)?.data as DepartmentDetail);
 
   if (!entity) return notFound();
 
-  // Make sure counts are always numbers (employees backend not ready => default 0)
+  // Normalize/defend against missing arrays or nullables
   const dept: DepartmentDetail = {
     id: entity.id,
     departmentName: entity.departmentName,
@@ -67,7 +95,10 @@ export default async function DepartmentDetailPage({
     description: entity.description ?? null,
     numOfCampaignPosition: Number(entity.numOfCampaignPosition ?? 0),
     numOfEmployee: Number(entity.numOfEmployee ?? 0),
-    campaignPositionModels: entity.campaignPositionModels ?? [],
+    employees: Array.isArray(entity.employees) ? entity.employees : [],
+    campaignPositionModels: Array.isArray(entity.campaignPositionModels)
+      ? entity.campaignPositionModels
+      : [],
     creationDate: entity.creationDate ?? null,
     createdById: entity.createdById ?? null,
     modificationDate: entity.modificationDate ?? null,
@@ -77,5 +108,5 @@ export default async function DepartmentDetailPage({
     isDeleted: Boolean(entity.isDeleted ?? false),
   };
 
-  return <DepartmentDetailClient dept={dept as any} />;
+  return <DepartmentDetailClient dept={dept} />;
 }
