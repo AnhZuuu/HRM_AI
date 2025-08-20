@@ -95,6 +95,8 @@ const LoginPage = () => {
       localStorage.setItem("accessToken", data.data.accessToken);
       localStorage.setItem("refreshToken", data.refreshToken);
       localStorage.setItem("refreshTokenExpires", data.refreshTokenExpires);
+      localStorage.setItem("email", data.data.email);
+      localStorage.setItem("name", data.data.name);
 
       console.log("Saved test token:", localStorage.getItem("accessToken"));
 

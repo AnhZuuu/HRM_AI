@@ -4,21 +4,25 @@ interface Account {
   lastName: string;
   username: string;
   email: string;
-  hashedPassword: string;
+  // hashedPassword: string;
 
-  gender: string | null;              
+  gender: number;              
   dateOfBirth: string | null;  
   phoneNumber: string | null;
   image: string | null;
 
   emailConfirmed: boolean;
   phoneNumberConfirmed: boolean;
-  status: string | null;          
+  // status: string | null;          
 
-  verificationCode: string | null;
-  verificationCodeExpiryTime: string | null; 
-  resetPasswordToken: string | null;
+  // verificationCode: string | null;
+  // verificationCodeExpiryTime: string | null; 
+  // resetPasswordToken: string | null;
 
-  departmentId: string;           
-  department: Department | null;
+  departmentId: string | null;           
+  // department: Department | null;
+  accountRoles : AccountRole[] | null;
+  isDeleted : boolean;
+  creationDate : string;
+  modificationDate : string;
 }

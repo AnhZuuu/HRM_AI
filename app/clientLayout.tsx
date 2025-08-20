@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, Suspense } from "react"
+import { useState, Suspense, useEffect } from "react"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { Button } from "@/components/ui/button"
@@ -105,7 +105,16 @@ export default function ClientLayout({
   children: React.ReactNode
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
-
+  const [name, setName] = useState<string>("");
+  const [email, setEmail] = useState<string>("");
+  useEffect(() => {
+    try {
+      setName(localStorage.getItem("name") ?? "");
+      setEmail(localStorage.getItem("email") ?? "");
+    } catch {
+      // ignore if blocked
+    }
+  }, []);
   return (
     <html lang="en">
       <body className={inter.className}>
@@ -187,14 +196,16 @@ export default function ClientLayout({
                       <DropdownMenuContent className="w-56" align="end" forceMount>
                         <DropdownMenuLabel className="font-normal">
                           <div className="flex flex-col space-y-1">
-                            <p className="text-sm font-medium leading-none">John Doe</p>
-                            <p className="text-xs leading-none text-muted-foreground">john@company.com</p>
+                            <p className="text-sm font-medium leading-none">{name || "—"}</p>
+                            <p className="text-xs leading-none text-muted-foreground">{email || "—"}</p>
                           </div>
                         </DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem>
                           <User className="mr-2 h-4 w-4" />
-                          <span>Profile</span>
+                          <Link href="/profile" >
+                            <span>Hồ sơ</span>
+                          </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem>
                           <Settings className="mr-2 h-4 w-4" />
@@ -204,7 +215,7 @@ export default function ClientLayout({
                         <DropdownMenuItem>
                           <LogOut className="mr-2 h-4 w-4" />
                           <Link href="/" >
-                            <span>Log out</span>
+                            <span>Đăng xuất</span>
                           </Link>
                         </DropdownMenuItem>
                       </DropdownMenuContent>
