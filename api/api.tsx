@@ -12,8 +12,9 @@ export const API = {
     RESET_VERIFICATION: `${API_BASE_URL}/authentication/email/resend-verification`,   
   },
   ACCOUNT: {
+    BASE: `${API_BASE_URL}/authentication`,
     CHANGE_PASSWORD: `${API_BASE_URL}/authentication/password/change`,
-    PROFILE: `${API_BASE_URL}/authentication`
+    
   },
 
   CAMPAIGN: {
