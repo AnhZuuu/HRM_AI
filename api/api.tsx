@@ -10,6 +10,7 @@ export const API = {
     SIGNUP: `${API_BASE_URL}/authentication/sign-up`,
     VERIFY_EMAIL: `${API_BASE_URL}/authentication/email/verify`,
     RESET_VERIFICATION: `${API_BASE_URL}/authentication/email/resend-verification`,
+    CHANGE_PASSWORD: `${API_BASE_URL}/authentication/password/change`
   },
 
   CAMPAIGN: {
