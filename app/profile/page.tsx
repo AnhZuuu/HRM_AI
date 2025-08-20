@@ -1,191 +1,150 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { Copy, Mail, Phone, ShieldCheck, ShieldAlert, User2, Calendar, IdCard, Building2, Edit3, KeyRound } from "lucide-react";
-import { copy, formatDate, formatDOB, initials } from "../utils/helper";
-import { genderLabel } from "../utils/enum";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useToast } from "@/components/ui/use-toast";
+import { useDecodedToken } from "@/components/auth/useDecodedToken";
 
-const demo: Account = {
-  firstName: "Tien",
-  lastName: "Le",
-  username: "TienLe",
-  email: "thuytienln238@gmail.com",
-  gender: 0,
-  dateOfBirth: "2000-08-20",
-  phoneNumber: "0987654321",
-  departmentId: null,
-  image: null,
-  emailConfirmed: true,
-  phoneNumberConfirmed: false,
-  accountRoles: [
-    {
-      totalReputation: 0,
-      status: 0,
-      role: 3,
-      roleName: "Employee",
-      id: "77f3881f-1e73-41f9-a8e5-08dddfc80cae"
-    },
-  ],
-  id: "8999bf0a-c863-458f-a8e4-08dddfc80cae",
-  creationDate: "2025-08-20T09:00:45.5484266",
-  modificationDate: "2025-08-20T09:01:31.4364312",
-  isDeleted: false,
+import { useToast } from "@/components/ui/use-toast";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { authFetch } from "@/app/utils/authFetch";
+import API from "@/api/api";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle, Loader2, RotateCcw } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ProfileCard } from "@/components/profile/page";
+
+type ApiResponse<T> = {
+  code: number;
+  status: boolean;
+  message?: string;
+  data: T;
 };
 
-export default function ProfilePage({ data = demo }: { data?: Account }) {
-  const fullName = useMemo(() => `${data.firstName} ${data.lastName}`.trim(), [data]);
-  const primaryRole = data.accountRoles?.[0];
-  const router = useRouter();
-const params = useSearchParams();
+export default function ProfilePage() {
   const { toast } = useToast();
-  
+  const router = useRouter();
+  const { claims, expired } = useDecodedToken();
+
+  const accountId = claims?.accountId ?? null;
+
+  const [data, setData] = useState<Account | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const endpoint = useMemo(
+    () => (accountId ? `${API.ACCOUNT.PROFILE}/${accountId}` : null),
+    [accountId]
+  );
+
+  const fetchProfile = useCallback(
+    async (signal?: AbortSignal) => {
+      if (!endpoint) return; // wait for id
+      try {
+        setLoading(true);
+        setError(null);
+
+        const res = await authFetch(endpoint, { method: "GET", signal });
+        console.log(res)
+
+        if (res.status === 401) {
+          toast({
+            title: "Phiên đăng nhập đã hết hạn",
+            description: "Vui lòng đăng nhập lại.",
+            variant: "destructive",
+          });
+          // router.replace("/?reason=expired");
+          return;
+        }
+
+        if (!res.ok) {
+          let message = `Không thể tải hồ sơ (HTTP ${res.status}).`;
+          try {
+            const problem = await res.json();
+            message = problem?.message ?? problem?.detail ?? message;
+          } catch {}
+          throw new Error(message);
+        }
+
+        const json = (await res.json()) as ApiResponse<Account>;
+        console.log(json);
+        setData(json.data);
+        setError(null);
+        setLoading(false);
+      } catch (e: any) {
+        if (signal?.aborted) return;
+        setError(e?.message ?? "Đã xảy ra lỗi khi tải hồ sơ.");
+        setData(null);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [endpoint, router, toast]
+  );
+
   useEffect(() => {
-    if (params.get("pwd") === "changed") {
+    if (expired) {
       toast({
-        title: "Đổi mật khẩu thành công",
-        description: "Bạn có thể dùng mật khẩu mới từ bây giờ.",
+        title: "Phiên đăng nhập đã hết hạn",
+        description: "Vui lòng đăng nhập lại.",
+        variant: "destructive",
       });
-      // remove the query param from the URL so it doesn't re-toast on refresh
-      router.replace("/profile");
+      // setTimeout(() => router.replace("/?reason=expired"), 50);
+      return;
     }
-  }, [params, router, toast]);
+    if (!endpoint) return; 
+    const ctrl = new AbortController();
+    fetchProfile(ctrl.signal);
+    return () => ctrl.abort();
+  }, [endpoint, expired, fetchProfile, router, toast]);
 
-  return (
-    <div className="mx-auto max-w-6xl p-4 md:p-8">
-      {/* Top banner */}
-      <div className="rounded-3xl border bg-gradient-to-br from-muted/40 to-background p-6 md:p-8">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-          <div className="flex items-center gap-5">
-            <Avatar className="h-20 w-20 rounded-2xl ring-1 ring-border">
-              {data.image ? (
-                <AvatarImage src={data.image} alt={fullName} />
-              ) : (
-                <AvatarFallback className="text-2xl font-semibold">
-                  {initials(data.firstName, data.lastName)}
-                </AvatarFallback>
-              )}
-            </Avatar>
-            <div>
-              <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">{fullName}</h1>
-                {primaryRole?.roleName && (
-                  <Badge variant="secondary" className="text-xs">{primaryRole.roleName}</Badge>
-                )}
-              </div>
-              <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                <User2 className="h-4 w-4" />
-                <span>@{data.username}</span>
-                <Separator orientation="vertical" className="h-4" />
-                <Calendar className="h-4 w-4" />
-                <span>{formatDOB(data.dateOfBirth ?? "")}</span>
-                <Separator orientation="vertical" className="h-4" />
-                <span>{genderLabel[data.gender] ?? "—"}</span>
-              </div>
-            </div>
-          </div>
+  if  (!accountId && !expired) {
+    return (
+      <div className="flex items-center justify-center p-12">
+        <Loader2 className="h-6 w-6 animate-spin" />
+        <span className="ml-3 text-sm text-muted-foreground">Đang khởi tạo…</span>
+      </div>
+    );
+  }
 
-          <div className="flex items-center gap-2">
-            <Button variant="default" size="sm" onClick={() => router.push("/profile/edit")}> 
-              <Edit3 className="h-4 w-4 mr-2" /> Chỉnh sửa
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => router.push("/profile/changePassword")}> 
-              <KeyRound className="h-4 w-4 mr-2" /> Đổi mật khẩu
-            </Button>
-          </div>
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-12">
+        <Loader2 className="h-6 w-6 animate-spin" />
+        <span className="ml-3 text-sm text-muted-foreground">Đang tải hồ sơ…</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-xl mx-auto p-4">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Lỗi tải hồ sơ</AlertTitle>
+          <AlertDescription className="mt-1">{error}</AlertDescription>
+        </Alert>
+        <div className="mt-4 flex justify-end">
+          <Button variant="outline" onClick={() => fetchProfile()}>
+            <RotateCcw className="h-4 w-4 mr-2" />
+            Thử lại
+          </Button>
         </div>
       </div>
+    );
+  }
 
-      {/* Details grid */}
-      <div className="mt-6 grid grid-cols-1 md:grid-cols-12 gap-6">
-        {/* Left column: Contact */}
-        <Card className="md:col-span-5 lg:col-span-5">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold">Liên lạc</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm">
-            <dl className="space-y-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-2 min-w-0">
-                  <Mail className="h-4 w-4 shrink-0" />
-                  <span className="truncate">{data.email}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {data.emailConfirmed ? (
-                    <Badge className="bg-emerald-600 hover:bg-emerald-600">
-                      <ShieldCheck className="h-3.5 w-3.5 mr-1" /> Đã xác minh
-                    </Badge>
-                  ) : (
-                    <Badge variant="destructive">
-                      <ShieldAlert className="h-3.5 w-3.5 mr-1" /> Chưa xác minh
-                    </Badge>
-                  )}
-                  <Button aria-label="Copy email" variant="ghost" size="icon" onClick={() => copy(data.email)}>
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-2 min-w-0">
-                  <Phone className="h-4 w-4 shrink-0" />
-                  <span className="truncate">{data.phoneNumber || "—"}</span>
-                </div>
-                {data.phoneNumber && (
-                  <Button aria-label="Copy phone" variant="ghost" size="icon" onClick={() => copy(data.phoneNumber ?? "")}>
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-            </dl>
-          </CardContent>
-        </Card>
-
-        {/* Right column: Account */}
-        <Card className="md:col-span-7 lg:col-span-7">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold">Account</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm">
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <div className="text-xs text-muted-foreground">Account ID</div>
-                <div className="flex items-center gap-2 min-w-0">
-                  <IdCard className="h-4 w-4 shrink-0" />
-                  <span className="truncate">{data.id}</span>
-                  <Button aria-label="Copy ID" variant="ghost" size="icon" onClick={() => copy(data.id)}>
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <div className="text-xs text-muted-foreground">Phòng ban</div>
-                <div className="flex items-center gap-2 min-w-0">
-                  <Building2 className="h-4 w-4 shrink-0" />
-                  <span className="truncate">{data.departmentId ?? "Chưa có phòng ban"}</span>
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <div className="text-xs text-muted-foreground">Tạo lúc</div>
-                <div>{formatDate(data.creationDate)}</div>
-              </div>
-
-              <div className="space-y-1">
-                <div className="text-xs text-muted-foreground">Chỉnh sửa lần cuối</div>
-                <div>{formatDate(data.modificationDate)}</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+  if (!data) {
+    return (
+      <div className="max-w-xl mx-auto p-8 text-sm text-muted-foreground">
+        Không có dữ liệu hồ sơ để hiển thị.
       </div>
-    </div>
+    );
+  }
+
+  return (
+    <ProfileCard
+      data={data!}
+      onEdit={() => router.push("/profile/edit")}
+      onChangePassword={() => router.push("/profile/changePassword")}
+    />
   );
 }

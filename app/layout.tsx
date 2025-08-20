@@ -1,5 +1,4 @@
 import type React from "react"
-import ClientLayout from "./clientLayout"
 
 export const metadata = {
   title: "HRM AI",
