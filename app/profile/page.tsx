@@ -31,7 +31,7 @@ export default function ProfilePage() {
   const [error, setError] = useState<string | null>(null);
 
   const endpoint = useMemo(
-    () => (accountId ? `${API.ACCOUNT.PROFILE}/${accountId}` : null),
+    () => (accountId ? `${API.ACCOUNT.BASE}/${accountId}` : null),
     [accountId]
   );
 

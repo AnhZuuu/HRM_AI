@@ -126,7 +126,7 @@ export default function EditProfilePage() {
         setLoading(true);
         setLoadError(null);
 
-        const res = await authFetch(`${API.ACCOUNT.PROFILE}/${accountId}`, {
+        const res = await authFetch(`${API.ACCOUNT.BASE}/${accountId}`, {
           method: "GET",
           signal: ctrl.signal,
         });
@@ -169,7 +169,7 @@ export default function EditProfilePage() {
     setSaveError(null);
     setSaveSuccess(null);
     try {
-      const res = await authFetch(`${API.ACCOUNT.PROFILE}/${accountId}`, {
+      const res = await authFetch(`${API.ACCOUNT.BASE}/${accountId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(toPayload(values)),
