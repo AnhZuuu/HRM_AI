@@ -32,6 +32,8 @@ const LABELS: Record<string, string> = {
   department: "Phòng ban",
   departments: "Phòng ban",
   interviewTypes: "Loại phỏng vấn",
+  interviewProcess: "Quy trình phỏng vấn",
+  interviewStage: "Vòng phỏng vấn",
 }
 
 function isLikelyId(seg: string) {
@@ -91,7 +93,7 @@ const inter = Inter({ subsets: ["latin"] })
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: Home },
-  { name: "Candidates", href: "/dashboard/candidates", icon: Users },
+  { name: "Ứng viên", href: "/dashboard/candidates", icon: Users },
   { name: "Mail", href: "/dashboard/mail", icon: Mail },
   { name: "Campaign", href: "/dashboard/campaigns", icon: Megaphone },
   { name: "Department", href: "/dashboard/departments", icon: Building2Icon },

@@ -17,6 +17,8 @@ import FlexibleFieldsForm from "./flexible-fields-form";
 import API from "@/api/api";
 
 type DepartmentOption = { id: string; name: string };
+// NEW: interview process option type
+type InterviewProcessOption = { id: string; name: string };
 
 const unwrap = async (res: Response) => {
   const txt = await res.text();
@@ -43,8 +45,22 @@ export default function AddPositionDialog({
   const [depsError, setDepsError] = useState<string | null>(null);
 
   // Form 1 state
-  const [form, setForm] = useState({ departmentId: "", totalSlot: 1, description: "" });
-  const [errors, setErrors] = useState<{ departmentId?: string; totalSlot?: string }>({});
+  const [form, setForm] = useState({
+    departmentId: "",
+    interviewProcessId: "", // NEW: selected process
+    totalSlot: 1,
+    description: "",
+  });
+  const [errors, setErrors] = useState<{
+    departmentId?: string;
+    interviewProcessId?: string; // NEW
+    totalSlot?: string;
+  }>({});
+
+  // NEW: interview processes fetched by department
+  const [procLoading, setProcLoading] = useState(false);
+  const [procError, setProcError] = useState<string | null>(null);
+  const [processes, setProcesses] = useState<InterviewProcessOption[]>([]);
 
   // Submission
   const [submitting, setSubmitting] = useState(false);
@@ -77,18 +93,63 @@ export default function AddPositionDialog({
     };
   }, [open, departmentOptions.length]);
 
+  // NEW: when department changes, fetch its detail to get interviewProcessModels
+  const fetchProcessesByDepartment = async (deptId: string) => {
+    if (!deptId) {
+      setProcesses([]);
+      setProcError(null);
+      return;
+    }
+    setProcLoading(true);
+    setProcError(null);
+    try {
+      // If you have a helper like API.DEPARTMENT.DETAIL(deptId) use it.
+      // Otherwise default to `${API.DEPARTMENT.BASE}/${deptId}`
+      const url = `${API.DEPARTMENT.BASE}/${deptId}`;
+
+      const res = await authFetch(url);
+      if (!res.ok) {
+        let msg = "Không thể tải quy trình phỏng vấn";
+        try {
+          const j = await res.json();
+          msg = j?.message || msg;
+        } catch {
+          msg = await res.text();
+        }
+        throw new Error(msg);
+      }
+
+      const data = await unwrap(res);
+      const arr = data?.interviewProcessModels ?? [];
+      const mapped: InterviewProcessOption[] = arr.map((p: any) => ({
+        id: p.id,
+        name: p.processName ?? "(không tên)",
+      }));
+      setProcesses(mapped);
+    } catch (e: any) {
+      setProcesses([]);
+      setProcError(e?.message ?? "Không thể tải quy trình phỏng vấn");
+    } finally {
+      setProcLoading(false);
+    }
+  };
+
   const validate = () => {
     const e: typeof errors = {};
     if (!form.departmentId) e.departmentId = "Hãy chọn phòng ban";
+    if (!form.interviewProcessId) e.interviewProcessId = "Hãy chọn quy trình phỏng vấn"; // NEW
     if (!form.totalSlot || form.totalSlot < 1) e.totalSlot = "Số lượng tối thiểu là 1";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
   const reset = () => {
-    setForm({ departmentId: "", totalSlot: 1, description: "" });
+    setForm({ departmentId: "", interviewProcessId: "", totalSlot: 1, description: "" });
     setErrors({});
     setShowFlexibleFields(false);
+    setProcesses([]);
+    setProcError(null);
+    setProcLoading(false);
   };
 
   // Step 1 → Step 2
@@ -104,16 +165,15 @@ export default function AddPositionDialog({
     value: string;
     groupIndex: number;
   }>) => {
-    // Optional guard: require at least one detail if your API does
-    // if (!details.length) { /* show toast/message */ return; }
-
     setSubmitting(true);
     try {
       const payload = {
         campaignId,
         departmentId: form.departmentId,
+        interviewProcessId: form.interviewProcessId, // NEW
         totalSlot: Number(form.totalSlot),
         description: form.description.trim(),
+        campaignPositionStatus: 0, // NEW: include if your API expects it
         campaignPositionDetailAddModels: details,
       };
 
@@ -193,9 +253,10 @@ export default function AddPositionDialog({
                 </Label>
                 <Select
                   value={form.departmentId}
-                  onValueChange={(v) => {
-                    setForm({ ...form, departmentId: v });
-                    setErrors((x) => ({ ...x, departmentId: "" }));
+                  onValueChange={async (v) => {
+                    setForm((prev) => ({ ...prev, departmentId: v, interviewProcessId: "" })); // reset process on change
+                    setErrors((x) => ({ ...x, departmentId: "", interviewProcessId: "" }));
+                    await fetchProcessesByDepartment(v); // NEW: fetch processes
                   }}
                   disabled={depsLoading}
                 >
@@ -221,6 +282,47 @@ export default function AddPositionDialog({
                   </SelectContent>
                 </Select>
                 {errors.departmentId && <p className="text-sm text-red-500">{errors.departmentId}</p>}
+              </div>
+
+              {/* NEW: Interview Process (dependent on Department) */}
+              <div className="space-y-2">
+                <Label>
+                  Quy trình phỏng vấn <span className="text-red-500">*</span>
+                </Label>
+                <Select
+                  value={form.interviewProcessId}
+                  onValueChange={(v) => {
+                    setForm((prev) => ({ ...prev, interviewProcessId: v }));
+                    setErrors((x) => ({ ...x, interviewProcessId: "" }));
+                  }}
+                  disabled={!form.departmentId || procLoading || !!procError || processes.length === 0}
+                >
+                  <SelectTrigger>
+                    <SelectValue
+                      placeholder={
+                        !form.departmentId
+                          ? "Chọn phòng ban trước"
+                          : procLoading
+                          ? "Đang tải quy trình…"
+                          : procError
+                          ? procError
+                          : processes.length === 0
+                          ? "Không có quy trình phỏng vấn"
+                          : "Chọn quy trình phỏng vấn"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {processes.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.interviewProcessId && (
+                  <p className="text-sm text-red-500">{errors.interviewProcessId}</p>
+                )}
               </div>
 
               {/* Total Slot */}
