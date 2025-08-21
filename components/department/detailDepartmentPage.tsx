@@ -8,6 +8,7 @@ import type {
   DepartmentDetail,
   CampaignPositionModel,
   Employee,
+  InterviewProcessModel
 } from "@/app/dashboard/departments/[id]/page";
 import PositionsTable from "./positionTable";
 import EmployeesTable from "./employeesTable";
@@ -17,6 +18,7 @@ import InterviewProcessTable from "./interviewProcessTable";
 export default function DepartmentDetailClient({ dept }: { dept: DepartmentDetail }) {
   const positions = (dept.campaignPositionModels ?? []) as CampaignPositionModel[];
   const employees = (dept.employees ?? []) as Employee[];
+  const processes = (dept.interviewProcessModels ?? []) as InterviewProcessModel[];
 
   return (
     <div className="p-6 space-y-6">
@@ -54,7 +56,7 @@ export default function DepartmentDetailClient({ dept }: { dept: DepartmentDetai
         <TabsList>
           <TabsTrigger value="positions">Vị trí ({positions.length})</TabsTrigger>
           <TabsTrigger value="employees">Nhân sự ({employees.length})</TabsTrigger>
-          <TabsTrigger value="interview-process">Quy trình phỏng vấn</TabsTrigger>
+          <TabsTrigger value="interview-process">Quy trình phỏng vấn ({processes.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="positions" className="mt-4">
@@ -66,8 +68,7 @@ export default function DepartmentDetailClient({ dept }: { dept: DepartmentDetai
         </TabsContent>
 
         <TabsContent value="interview-process" className="mt-4">
-          {/* Sử dụng sample data trong component, bạn có thể truyền props nếu sau này fetch thật */}
-          <InterviewProcessTable />
+          <InterviewProcessTable items={processes} />
         </TabsContent>
       </Tabs>
     </div>
