@@ -1,24 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { useForm, UseFormReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter, useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
-import { toDateInput } from "@/app/utils/helper";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
-  AlertCircle,
   ArrowLeft,
   CheckCircle2,
   Loader2,
   RotateCcw,
+  AlertCircle,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+
 import { authFetch } from "@/app/utils/authFetch";
+import { toDateInput } from "@/app/utils/helper";
 import API from "@/api/api";
-import { useDecodedToken } from "@/components/auth/useDecodedToken";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { EditProfileFormCard } from "@/components/profile/editProfileFormCard";
 
 const profileSchema = z.object({
@@ -29,10 +28,7 @@ const profileSchema = z.object({
     .trim()
     .min(3, "Tên người dùng phải có ít nhất 3 ký tự")
     .max(32)
-    .regex(
-      /^[a-zA-Z0-9_\.]+$/,
-      "Chỉ được phép sử dụng chữ cái, số, dấu gạch dưới và dấu chấm"
-    ),
+    .regex(/^[a-zA-Z0-9_\.]+$/, "Chỉ dùng chữ, số, gạch dưới và dấu chấm"),
   email: z.string().email(),
   phoneNumber: z
     .string()
@@ -57,19 +53,17 @@ type ApiResponse<T> = {
   message?: string;
   data: T;
 };
-export default function EditProfilePage() {
+
+export default function AccountEditPage() {
   const router = useRouter();
-  const { toast } = useToast();
-  const { claims, expired } = useDecodedToken(); // read id from JWT
-  console.log(claims);
-  console.log("EXPIREEEEEEEEEEEEd:" + expired);
-  const accountId = claims?.accountId ?? null;
+  const { id } = useParams<{ id: string }>();
 
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const originalDeptRef = useRef<string | null>(null);
 
   const form = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
@@ -100,29 +94,31 @@ export default function EditProfilePage() {
   }
 
   useEffect(() => {
-    if (!accountId) return; 
+    if (!id) return;
+
     const ctrl = new AbortController();
     (async () => {
       try {
         setLoading(true);
         setLoadError(null);
 
-        const res = await authFetch(`${API.ACCOUNT.BASE}/${accountId}`, {
+        const res = await authFetch(`${API.ACCOUNT.BASE}/${id}`, {
           method: "GET",
           signal: ctrl.signal,
         });
-
         if (!res.ok) {
           let msg = `Không thể tải hồ sơ (HTTP ${res.status}).`;
           try {
-            const problem = await res.json();
-            msg = problem?.message ?? problem?.detail ?? msg;
+            const p = await res.json();
+            msg = p?.message ?? p?.detail ?? msg;
           } catch {}
           throw new Error(msg);
         }
 
         const json = (await res.json()) as ApiResponse<Account> | Account;
-        const acc: Account = (json as any).data ?? json;
+        const acc: Account = (json as any).data ?? (json as Account);
+
+        originalDeptRef.current = acc.departmentId ?? null;
 
         form.reset({
           firstName: acc.firstName?.trim() ?? "",
@@ -131,7 +127,7 @@ export default function EditProfilePage() {
           email: acc.email?.trim() ?? "",
           phoneNumber: acc.phoneNumber ?? "",
           dateOfBirth: toDateInput(acc.dateOfBirth),
-          departmentId: acc.departmentId ?? "",
+          departmentId: acc.departmentId ?? null,
           gender: Number(acc.gender ?? 0),
         });
       } catch (e: any) {
@@ -143,14 +139,14 @@ export default function EditProfilePage() {
     })();
 
     return () => ctrl.abort();
-  }, [accountId, form, router, toast]);
+  }, [id, form]);
 
   async function onSubmit(values: z.infer<typeof profileSchema>) {
     setSubmitting(true);
     setSaveError(null);
     setSaveSuccess(null);
     try {
-      const res = await authFetch(`${API.ACCOUNT.BASE}/${accountId}`, {
+      const res = await authFetch(`${API.ACCOUNT.BASE}/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(toPayload(values)),
@@ -165,39 +161,56 @@ export default function EditProfilePage() {
         throw new Error(msg);
       }
 
-      let updated: Account | null = null;
-
       const text = await res.text();
-      if (text) {
-        const json = JSON.parse(text);
-        const candidate = json?.data ?? json;
-        if (
-          candidate &&
-          typeof candidate === "object" &&
-          "firstName" in candidate
-        ) {
-          updated = candidate as Account;
-        }
+      const nextDept =
+        values.departmentId && values.departmentId !== "__none__"
+          ? values.departmentId
+          : null;
+      if (nextDept && nextDept !== originalDeptRef.current) {
+        await authFetch(
+          `${API.ACCOUNT.ADD_TO_DEPARTMENT}?departmentId=${encodeURIComponent(
+            nextDept
+          )}`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify([id]), 
+          }
+        ).catch((e) => console.warn("Assign dept failed:", e));
       }
-
-      if (updated) {
-        form.reset({
-          firstName: updated.firstName?.trim() ?? "",
-          lastName: updated.lastName?.trim() ?? "",
-          username: updated.username?.trim() ?? "",
-          email: updated.email?.trim() ?? "",
-          phoneNumber: updated.phoneNumber ?? "",
-          dateOfBirth: toDateInput(updated.dateOfBirth),
-          departmentId: updated.departmentId ?? "",
-          gender: Number(updated.gender ?? 0),
-        });
+      
+      if (text) {
+        try {
+          const json = JSON.parse(text);
+          const updated: Account | undefined = json?.data ?? json;
+          if (
+            updated &&
+            typeof updated === "object" &&
+            "firstName" in updated
+          ) {
+            form.reset({
+              firstName: updated.firstName?.trim() ?? "",
+              lastName: updated.lastName?.trim() ?? "",
+              username: updated.username?.trim() ?? "",
+              email: updated.email?.trim() ?? "",
+              phoneNumber: updated.phoneNumber ?? "",
+              dateOfBirth: toDateInput(updated.dateOfBirth),
+              departmentId: updated.departmentId ?? "",
+              gender: Number(updated.gender ?? 0),
+            });
+          } else {
+            form.reset(values);
+          }
+        } catch {
+          form.reset(values);
+        }
       } else {
         form.reset(values);
       }
-      setSaveSuccess("Những thay đổi của bạn đã được lưu.");
+
+      setSaveSuccess("Đã lưu thay đổi cho tài khoản.");
     } catch (e: any) {
-      const msg = e?.message ?? "Vui lòng thử lại.";
-      setSaveError(msg);
+      setSaveError(e?.message ?? "Vui lòng thử lại.");
     } finally {
       setSubmitting(false);
     }
@@ -213,6 +226,7 @@ export default function EditProfilePage() {
       </div>
     );
   }
+
   if (loadError) {
     return (
       <div className="max-w-xl mx-auto p-4">
@@ -222,7 +236,7 @@ export default function EditProfilePage() {
           <AlertDescription className="mt-1">{loadError}</AlertDescription>
         </Alert>
         <div className="mt-4 flex justify-end">
-          <Button variant="outline" onClick={() => router.refresh()}>
+          <Button variant="outline" onClick={() => location.reload()}>
             <RotateCcw className="h-4 w-4 mr-2" />
             Thử lại
           </Button>
@@ -232,17 +246,17 @@ export default function EditProfilePage() {
   }
 
   return (
-    <div className="flex">      
+    <div className="flex">
       <div className="mx-auto max-w-3xl p-4 md:p-8 space-y-6">
         <div>
           <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">
-            Chỉnh sửa thông tin cá nhân
+            Chỉnh sửa tài khoản
           </h1>
           <p className="text-muted-foreground">
-            Chỉnh sửa thông tin cá nhân cơ bản của tài khoản và thông tin liên
-            hệ.
+            Cập nhật thông tin cơ bản và liên hệ của tài khoản.
           </p>
         </div>
+
         {saveSuccess && (
           <div className="max-w-3xl">
             <Alert className="border-emerald-600/30 bg-green-500">
@@ -262,15 +276,20 @@ export default function EditProfilePage() {
             </Alert>
           </div>
         )}
-         <EditProfileFormCard
+
+        <EditProfileFormCard
           form={form as any as UseFormReturn<Account>}
           submitting={submitting}
-          onSubmit={onSubmit as (v: Account) => Promise<void>}
+          onSubmit={onSubmit}
           onCancel={() => form.reset()}
         />
       </div>
       <div className="p-6 gap-3">
-        <Button variant="outline" onClick={() => router.back()}>
+        <Button
+          variant="outline"
+          onClick={() => router.back()}
+          className="gap-2"
+        >
           <ArrowLeft className="h-4 w-4" />
           Quay lại
         </Button>
