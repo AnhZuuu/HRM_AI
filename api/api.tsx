@@ -1,6 +1,5 @@
-// api.ts
 
-const API_BASE_URL = "http://localhost:7064/api/v1";
+const API_BASE_URL = "https://hrm-ai-dwf8gxeqfvfgdvdy.malaysiawest-01.azurewebsites.net/api/v1";
 
 export const API = {
   BASE_URL: API_BASE_URL,
@@ -10,10 +9,10 @@ export const API = {
     SIGNUP: `${API_BASE_URL}/authentication/sign-up`,
     VERIFY_EMAIL: `${API_BASE_URL}/authentication/email/verify`,
     RESET_VERIFICATION: `${API_BASE_URL}/authentication/email/resend-verification`,   
+    CHANGE_PASSWORD: `${API_BASE_URL}/authentication/password/change`,
   },
   ACCOUNT: {
-    BASE: `${API_BASE_URL}/authentication`,
-    CHANGE_PASSWORD: `${API_BASE_URL}/authentication/password/change`,
+    BASE: `${API_BASE_URL}/accounts`,
     
   },
 
