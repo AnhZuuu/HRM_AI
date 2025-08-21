@@ -1,4 +1,5 @@
 import API from "@/api/api";
+import { authFetch } from "@/app/utils/authFetch";
 import DepartmentDetailClient from "@/components/department/detailDepartmentPage";
 import { notFound } from "next/navigation";
 
@@ -31,6 +32,33 @@ export type CampaignPositionModel = {
   creationDate?: string | null;
 };
 
+// New types for interview process
+export type InterviewStageModel = {
+  id: string;
+  name?: string | null;
+  description?: string | null;
+  order?: number | null;
+  duration?: number | null;
+  type?: string | null;
+};
+
+export type InterviewProcessModel = {
+  id: string;
+  departmentId: string;
+  processName: string;
+  description: string | null;
+  departmentName: string | null;
+  countOfStage: number;
+  interviewStageModels: InterviewStageModel[];
+  creationDate?: string | null;
+  createdById?: string | null;
+  modificationDate?: string | null;
+  modifiedById?: string | null;
+  deletionDate?: string | null;
+  deletedById?: string | null;
+  isDeleted?: boolean;
+};
+
 export type DepartmentDetail = {
   id: string;
   departmentName: string;
@@ -40,6 +68,7 @@ export type DepartmentDetail = {
   numOfEmployee: number;
   employees: Employee[];
   campaignPositionModels: CampaignPositionModel[];
+  interviewProcessModels: InterviewProcessModel[]; // <-- added
   creationDate?: string | null;
   createdById?: string | null;
   modificationDate?: string | null;
@@ -59,18 +88,17 @@ type ApiEnvelope<T> = {
 const unwrap = async <T,>(res: Response): Promise<T> => {
   const txt = await res.text();
   const json = txt ? JSON.parse(txt) : null;
-  // Your API returns { code, status, message, data: {...} }
   return (json?.data ?? json) as T;
 };
 
 export default async function DepartmentDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const { id } = params;
+  const { id } = await params;
 
-  const res = await fetch(`${API.DEPARTMENT.BASE}/${id}`, {
+  const res = await authFetch(`${API.DEPARTMENT.BASE}/${id}`, {
     cache: "no-store",
   });
 
@@ -79,7 +107,6 @@ export default async function DepartmentDetailPage({
 
   const data = await unwrap<DepartmentDetail | ApiEnvelope<DepartmentDetail>>(res);
 
-  // Accept either envelope or raw object defensively
   const entity: DepartmentDetail =
     (data as any)?.departmentName
       ? (data as DepartmentDetail)
@@ -87,7 +114,7 @@ export default async function DepartmentDetailPage({
 
   if (!entity) return notFound();
 
-  // Normalize/defend against missing arrays or nullables
+  // Normalize defensive fields
   const dept: DepartmentDetail = {
     id: entity.id,
     departmentName: entity.departmentName,
@@ -98,6 +125,9 @@ export default async function DepartmentDetailPage({
     employees: Array.isArray(entity.employees) ? entity.employees : [],
     campaignPositionModels: Array.isArray(entity.campaignPositionModels)
       ? entity.campaignPositionModels
+      : [],
+    interviewProcessModels: Array.isArray(entity.interviewProcessModels)
+      ? entity.interviewProcessModels
       : [],
     creationDate: entity.creationDate ?? null,
     createdById: entity.createdById ?? null,
