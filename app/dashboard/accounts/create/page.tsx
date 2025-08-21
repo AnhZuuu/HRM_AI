@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
 import { useForm, UseFormReturn } from "react-hook-form";
@@ -11,7 +11,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ArrowLeft, CheckCircle2, AlertCircle } from "lucide-react";
 import { authFetch } from "@/app/utils/authFetch";
 import API from "@/api/api";
-import CreateAccountFormCard, { CreateAccountFormValues, RoleOption } from "@/components/account/createAccountForm";
+import CreateAccountFormCard, { CreateAccountFormValues, DepartmentOption, RoleOption } from "@/components/account/createAccountForm";
 
 const ROLE_OPTIONS: RoleOption[] = [
   { value: 1, label: "HR" },
@@ -49,6 +49,7 @@ const schema = z
       }),
     address: z.string().trim().optional(),
     roles: z.array(z.number().int().min(0).max(10)).min(1, "Chọn ít nhất 1 vai trò"),
+    departmentId: z.string().optional().nullable(), 
   })
   .refine((data) => data.password === data.confirmPassword, {
     path: ["confirmPassword"],
@@ -62,6 +63,8 @@ export default function CreateAccountPage() {
   const [submitting, setSubmitting] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
+  const [departments, setDepartments] = useState<DepartmentOption[]>([]);
+  const [depLoading, setDepLoading] = useState(true);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -77,14 +80,41 @@ export default function CreateAccountPage() {
       phoneNumber: "",
       address: "",
       roles: [], 
+      departmentId: null,
     },
     mode: "onTouched",
   });
+
+  useEffect(() => {
+    const ctrl = new AbortController();
+    (async () => {
+      try {
+        setDepLoading(true);
+        const res = await authFetch(`${API.DEPARTMENT.BASE}`, { signal: ctrl.signal });
+        const payload = await res.json();
+        const arr: any[] =
+          Array.isArray(payload?.data?.data) ? payload.data.data
+          : Array.isArray(payload?.data) ? payload.data
+          : Array.isArray(payload) ? payload
+          : [];
+        setDepartments(arr.map((d) => ({ id: d.id, departmentName: d.departmentName })));
+      } catch {
+        setDepartments([]);
+      } finally {
+        setDepLoading(false);
+      }
+    })();
+    return () => ctrl.abort();
+  }, []);
 
   async function onSubmit(values: FormValues) {
     setSubmitting(true);
     setSaveError(null);
     setSaveSuccess(null);
+
+    const selectedDept = values.departmentId && values.departmentId !== "__none__"
+      ? values.departmentId
+      : null;
 
     const payload = {
       firstName: values.firstName.trim(),
@@ -98,6 +128,7 @@ export default function CreateAccountPage() {
       phoneNumber: values.phoneNumber?.trim() || null,
       address: values.address?.trim() || "string",
       roles: values.roles, 
+      
     };
 
     try {
@@ -126,6 +157,20 @@ export default function CreateAccountPage() {
             createdId = obj.id as string;
           }
         } catch {}
+      }
+
+       if (createdId && selectedDept) {
+        const assign = await authFetch(
+          `${API.ACCOUNT.ADD_TO_DEPARTMENT}?departmentId=${encodeURIComponent(selectedDept)}`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify([createdId]),
+          }
+        );
+        if (!assign.ok) {
+          console.warn("Assign department failed:", assign.status);
+        }
       }
 
       setSaveSuccess("Tạo tài khoản thành công.");
@@ -175,6 +220,8 @@ export default function CreateAccountPage() {
         onSubmit={onSubmit as (v: CreateAccountFormValues) => Promise<void>}
         onCancel={() => router.push("/dashboard/accounts")}
         roleOptions={ROLE_OPTIONS}
+        departments={departments}
+        departmentsLoading={depLoading}
       />
     </div>
   );

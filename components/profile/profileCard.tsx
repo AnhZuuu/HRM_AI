@@ -174,7 +174,7 @@ export function ProfileCard({ data, onEdit, onChangePassword, showEdit = true, s
                 <div className="text-xs text-muted-foreground">Phòng ban</div>
                 <div className="flex items-center gap-2 min-w-0">
                   <Building2 className="h-4 w-4 shrink-0" />
-                  <span className="truncate">{data.departmentName ?? data.departmentId ?? "Chưa có phòng ban"}</span>
+                  <span className="truncate">{data.departmentName ?? "Chưa có phòng ban"}</span>
                 </div>
               </div>
 

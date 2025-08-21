@@ -13,7 +13,7 @@ export const API = {
   },
   ACCOUNT: {
     BASE: `${API_BASE_URL}/accounts`,
-    
+    ADD_TO_DEPARTMENT: `${API_BASE_URL}/accounts/add-to-department`,
   },
 
   CAMPAIGN: {

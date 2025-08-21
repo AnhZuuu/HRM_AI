@@ -7,6 +7,7 @@ import {
   Eye,
   Edit,
   Building2,
+  LockKeyhole,
 } from "lucide-react";
 import {
   Table,
@@ -28,6 +29,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useRouter } from "next/navigation";
+import { Separator } from "../ui/separator";
+import { useState } from "react";
+import ConfirmBlockDialog from "./handleBlockAccount";
 
 interface AccountTableProps {
   accounts: Account[];
@@ -44,7 +48,13 @@ function statusBadgeClass(deleted: boolean) {
 
 export function AccountTable({ accounts }: AccountTableProps) {
   const router = useRouter();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [target, setTarget] = useState<Account | null>(null);
 
+  const openBlockDialog = (acc: Account) => {
+    setTarget(acc);
+    setDialogOpen(true);
+  };
   return (
     <div className="overflow-x-auto">
       <Table>
@@ -138,6 +148,12 @@ export function AccountTable({ accounts }: AccountTableProps) {
                       <Edit className="mr-2 h-4 w-4" />
                       Chỉnh sửa
                     </DropdownMenuItem>
+                    <Separator/>
+                    <DropdownMenuItem onClick={() => openBlockDialog(a)}
+                        className={a.isDeleted ? "" : "text-red-600 focus:text-red-700"}>
+                      <LockKeyhole className="mr-2 h-4 w-4 text-red-500" />                      
+                      <a className="text-red-500">Khóa tài khoản</a>
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </TableCell>
@@ -155,6 +171,29 @@ export function AccountTable({ accounts }: AccountTableProps) {
           )}
         </TableBody>
       </Table>
+
+      <ConfirmBlockDialog
+  open={dialogOpen}
+  onOpenChange={setDialogOpen}
+  target={
+    target ? { id: target.id, username: target.username, isDeleted: target.isDeleted } : null
+  }
+  // Khi có API thật, bật cấu hình dưới:
+  // apiConfig={{
+  //   url: (id, next) => `${API.ACCOUNT.BASE}/${id}`,
+  //   method: "PATCH",
+  //   makeBody: (_id, next) => ({ isDeleted: next }),
+  // }}
+  onCompleted={(next) => {
+    // Cập nhật UI tại chỗ hoặc refresh:
+    // 1) Nếu đang giữ state cục bộ: mutate mảng accounts tại parent và set lại
+    // 2) Hoặc đơn giản: router.refresh()
+    if (target) {
+      // ví dụ đơn giản: cập nhật tạm trong mảng nếu bạn đang giữ ở parent
+      // (ở Table không có state danh sách nên thường sẽ gọi parent làm mới)
+    }
+  }}
+/>
     </div>
   );
 }

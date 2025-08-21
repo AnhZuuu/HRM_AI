@@ -24,10 +24,12 @@ export type CreateAccountFormValues = {
   dateOfBirth?: string;   
   phoneNumber?: string;
   address?: string;
-  roles: number[];          
+  roles: number[];  
+  departmentId?: string | null;         
 };
 
 export type RoleOption = { value: number; label: string };
+export type DepartmentOption = { id: string; departmentName: string };
 
 type Props = {
   form: UseFormReturn<CreateAccountFormValues>;
@@ -35,6 +37,8 @@ type Props = {
   onSubmit: (values: CreateAccountFormValues) => void | Promise<void>;
   onCancel?: () => void;
   roleOptions: RoleOption[];
+  departments?: DepartmentOption[];     // NEW
+  departmentsLoading?: boolean; 
 };
 
 export default function CreateAccountFormCard({
@@ -43,6 +47,8 @@ export default function CreateAccountFormCard({
   onSubmit,
   onCancel,
   roleOptions,
+  departments = [],
+  departmentsLoading = false,
 }: Props) {
   return (
     <Card className="overflow-hidden">
@@ -230,6 +236,32 @@ export default function CreateAccountFormCard({
                           <SelectItem key={r.value} value={String(r.value)}>
                             {r.label}
                           </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+              <FormField name="departmentId" control={form.control}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Phòng ban (tùy chọn)</FormLabel>
+                  <FormControl>
+                    <Select
+                      value={field.value ?? undefined}
+                      onValueChange={(v) => field.onChange(v)}
+                      disabled={departmentsLoading}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={departmentsLoading ? "Đang tải..." : "Chọn phòng ban"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={"__none__"}>— Không chọn —</SelectItem>
+                        {departments.map((d) => (
+                          <SelectItem key={d.id} value={d.id}>{d.departmentName}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>

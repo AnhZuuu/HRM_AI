@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { useForm, UseFormReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -63,6 +63,7 @@ export default function AccountEditPage() {
   const [submitting, setSubmitting] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const originalDeptRef = useRef<string | null>(null);
 
   const form = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
@@ -117,6 +118,8 @@ export default function AccountEditPage() {
         const json = (await res.json()) as ApiResponse<Account> | Account;
         const acc: Account = (json as any).data ?? (json as Account);
 
+        originalDeptRef.current = acc.departmentId ?? null;
+
         form.reset({
           firstName: acc.firstName?.trim() ?? "",
           lastName: acc.lastName?.trim() ?? "",
@@ -124,7 +127,7 @@ export default function AccountEditPage() {
           email: acc.email?.trim() ?? "",
           phoneNumber: acc.phoneNumber ?? "",
           dateOfBirth: toDateInput(acc.dateOfBirth),
-          departmentId: acc.departmentId ?? "",
+          departmentId: acc.departmentId ?? null,
           gender: Number(acc.gender ?? 0),
         });
       } catch (e: any) {
@@ -159,6 +162,23 @@ export default function AccountEditPage() {
       }
 
       const text = await res.text();
+      const nextDept =
+        values.departmentId && values.departmentId !== "__none__"
+          ? values.departmentId
+          : null;
+      if (nextDept && nextDept !== originalDeptRef.current) {
+        await authFetch(
+          `${API.ACCOUNT.ADD_TO_DEPARTMENT}?departmentId=${encodeURIComponent(
+            nextDept
+          )}`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify([id]), 
+          }
+        ).catch((e) => console.warn("Assign dept failed:", e));
+      }
+      
       if (text) {
         try {
           const json = JSON.parse(text);
