@@ -12,7 +12,7 @@ interface Account {
   image: string | null;
 
   emailConfirmed: boolean;
-  phoneNumberConfirmed: boolean;
+  phoneNumberConfirmed?: boolean;
   // status: string | null;          
 
   // verificationCode: string | null;
