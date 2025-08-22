@@ -3,8 +3,10 @@ import { FaEnvelope, FaLock } from "react-icons/fa";
 import RegisterForm from "./registerForm";
 import VerificationForm from "./verificationForm";
 import API from "@/api/api";
+import { useRouter } from "next/navigation";
 
 const LoginPage = () => {
+  const router = useRouter();
   // React.useEffect(() => {
   //   const handleVisibilityChange = () => {
   //     if (document.hidden) {
@@ -23,22 +25,7 @@ const LoginPage = () => {
     rememberMe: false
   });
 
-  const [showRegister, setShowRegister] = useState(false);
   const [showVerify, setShowVerify] = useState(false);
-
-  const [registerData, setRegisterData] = useState({
-    firstName: "",
-    lastName: "",
-    username: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-    gender: "",
-    dateOfBirth: "",
-    phoneNumber: "",
-    address: "",
-    roles: [1]
-  });
 
   const [verifyData, setVerifyData] = useState({
     email: "",
@@ -49,12 +36,6 @@ const LoginPage = () => {
     const { name, value, type, checked } = e.target;
     const val = type === "checkbox" ? checked : value;
     setFormData(prev => ({ ...prev, [name]: val }));
-  };
-
-  const handleRegisterInputChange = (e: any) => {
-    const { name, value, type, checked } = e.target;
-    const val = type === "checkbox" ? checked : value;
-    setRegisterData(prev => ({ ...prev, [name]: val }));
   };
 
   const handleVerifyInputChange = (e: any) => {
@@ -108,33 +89,9 @@ const LoginPage = () => {
     }
   };
 
-  // const handleRegisterSubmit = (e: any) => {
-  //   e.preventDefault();
-  //   if (registerData.password.length < 8 || registerData.password.length > 28) {
-  //     return alert("Password must be 8-28 characters long");
-  //   }
-  //   if (registerData.password !== registerData.confirmPassword) {
-  //     return alert("Passwords do not match");
-  //   }
-  //   if (!/^\d{10}$/.test(registerData.phoneNumber)) {
-  //     return alert("Phone number must be exactly 10 digits");
-  //   }
-  //   console.log("Register submitted:", registerData);
-  //   setShowRegister(false);
-  // };
-
   return (
     <div className="min-h-screen bg-gray-200 flex items-center justify-center p-4 relative">
-      {/* Register Popup */}
-      {showRegister && (
-        <RegisterForm
-          onClose={() => setShowRegister(false)}
-          onChange={handleRegisterInputChange}
-          formData={registerData}
-        />
-      )}
 
-      {/* Verify Popup */}
       {showVerify && (
         <VerificationForm
           onClose={() => setShowVerify(false)}
@@ -162,19 +119,24 @@ const LoginPage = () => {
                 <input type="checkbox" name="rememberMe" checked={formData.rememberMe} onChange={handleLoginInputChange} className="h-4 w-4 text-indigo-600 border-gray-300 rounded" />
                 <span className="ml-2 text-sm text-gray-600">Ghi nhớ</span>
               </label>
-              <button type="button" className="text-sm text-indigo-600 hover:text-indigo-500">Quên mật khẩu?</button>
+              <button type="button" className="text-sm text-indigo-600 hover:text-indigo-500" onClick={() => router.push("/forgotPassword")}>Quên mật khẩu?</button>
             </div>
             <button type="submit" className="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700">Đăng nhập</button>
           </form>
 
-          <div className="mt-4 space-y-1">
-            <div className="text-sm text-gray-600 cursor-pointer" onClick={() => setShowRegister(true)}>Đăng ký tạm thời</div>
-            <div className="text-sm text-gray-600 cursor-pointer" onClick={() => setShowVerify(true)}>Xác minh tài khoản</div>
+          <div className="text-center text-sm text-gray-500 mt-4">            
+            <button
+              type="button"
+              className="text-blue-600 hover:underline"
+              onClick={() => setShowVerify(true)}
+            >
+              Xác minh tài khoản
+            </button>
+             {" "}khi đăng nhập lần đầu
           </div>
         </div>
       </div>
 
-      {/* Simple animation keyframe */}
       <style jsx>{`
         @keyframes fadeIn {
           from { opacity: 0; transform: scale(0.95); }
