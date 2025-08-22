@@ -67,7 +67,7 @@ export default function ChangePasswordPage() {
     setApiError(null);
     setApiSuccess(null);
     try {
-      const res = await authFetch(API.ACCOUNT.CHANGE_PASSWORD, {
+      const res = await authFetch(API.AUTH.CHANGE_PASSWORD, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
