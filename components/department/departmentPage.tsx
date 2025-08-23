@@ -55,7 +55,6 @@ export default function DepartmentPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [selectedDept, setSelectedDept] = useState<Department | null>(null);
 
-  // Fetch real data
   useEffect(() => {
     (async () => {
       try {

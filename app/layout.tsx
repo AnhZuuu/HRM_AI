@@ -15,7 +15,6 @@ export default function RootLayout({
     <html lang="en">
       <body>
         {/* <Header/> */}
-        
         {children}
         {/* <Footer/> */}
       </body>
@@ -25,3 +24,4 @@ export default function RootLayout({
 
 
 import './globals.css'
+import ClientLayout from "./clientLayout"

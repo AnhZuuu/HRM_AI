@@ -1,6 +1,7 @@
-
+"use client"
 import API from "@/api/api";
 import React, { useState, useEffect } from "react";
+import { toast } from "react-toastify";
 
 interface VerificationFormProps {
   onClose: () => void;
@@ -48,43 +49,47 @@ const VerificationForm: React.FC<VerificationFormProps> = ({ onClose, onChange }
         throw new Error(result.message || "Verification failed");
       }
 
+      // toast.success("Verification successful!");
       alert("Verification successful!");
       onClose();
     } catch (error: any) {
+      // toast.error("Verification error: " + error.message);
       alert("Verification error: " + error.message);
       console.error("Verification failed:", error);
     }
   };
 
   const handleResendCode = async () => {
-  try {
-    const response = await fetch(API.AUTH.RESET_VERIFICATION, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ email: formData.email })
-    });
+    try {
+      const response = await fetch(API.AUTH.RESET_VERIFICATION, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ email: formData.email })
+      });
 
-    const result = await response.json();
+      const result = await response.json();
 
-    if (!response.ok) {
-      throw new Error(result.message || "Không gửi được mã xác nhận");
+      if (!response.ok) {
+        throw new Error(result.message || "Không gửi được mã xác nhận");
+      }
+
+      // show the message returned from backend
+      if (result?.message) {
+        // alert(result.message + " Email đã được xác minh");
+        // toast.info(result.message);
+        alert(result.message);
+      } else {
+        // toast.success("Yêu cầu đã được xử lý!");
+        alert("Yêu cầu đã được xử lý!");
+      }
+
+    } catch (error: any) {
+      alert("Lỗi gửi lại mã: " + error.message);
+      console.error("Resend error:", error);
     }
-
-    // show the message returned from backend
-    if (result?.message) {
-      // alert(result.message + " Email đã được xác minh");
-      alert(result.message );
-    } else {
-      alert("Yêu cầu đã được xử lý!");
-    }
-
-  } catch (error: any) {
-    alert("Lỗi gửi lại mã: " + error.message);
-    console.error("Resend error:", error);
-  }
-};
+  };
 
 
   return (
@@ -102,7 +107,7 @@ const VerificationForm: React.FC<VerificationFormProps> = ({ onClose, onChange }
             onChange={handleInputChange}
             required
           />
-
+          
           {/* Conditional resend button */}
           {isEmailValid && (
             <button
