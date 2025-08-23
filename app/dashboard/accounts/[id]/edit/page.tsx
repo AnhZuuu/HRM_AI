@@ -45,7 +45,12 @@ const profileSchema = z.object({
       message: "Ngày không hợp lệ",
     }),
   departmentId: z.string().nullable().optional(),
+  accountRoles: z
+    .array(z.number().int().min(0).max(10))
+    .min(1, "Chọn ít nhất 1 vai trò"),
 });
+
+export type EditAccountFormValues = z.infer<typeof profileSchema>;
 
 type ApiResponse<T> = {
   code: number;
@@ -65,7 +70,7 @@ export default function AccountEditPage() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const originalDeptRef = useRef<string | null>(null);
 
-  const form = useForm<z.infer<typeof profileSchema>>({
+  const form = useForm<EditAccountFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
       firstName: "",
@@ -76,11 +81,12 @@ export default function AccountEditPage() {
       dateOfBirth: "",
       departmentId: "",
       gender: 0,
+      accountRoles: [],
     },
     mode: "onTouched",
   });
 
-  function toPayload(values: z.infer<typeof profileSchema>) {
+  function toPayload(values: EditAccountFormValues) {
     return {
       firstName: values.firstName.trim(),
       lastName: values.lastName.trim(),
@@ -90,6 +96,7 @@ export default function AccountEditPage() {
       gender: Number(values.gender),
       dateOfBirth: values.dateOfBirth || null,
       departmentId: values.departmentId || null,
+      accountRoles: values.accountRoles,
     };
   }
 
@@ -120,6 +127,15 @@ export default function AccountEditPage() {
 
         originalDeptRef.current = acc.departmentId ?? null;
 
+      const parsedRoles: number[] =
+         Array.isArray((acc as any).accountRoles)
+          ? (acc as any).accountRoles.map((r: any) => Number(r?.id ?? r)).filter(Number.isFinite)
+          : typeof (acc as any).accountRoles === "string"
+          ? (acc as any).accountRoles.split(",").map((s: string) => Number(s.trim())).filter(Number.isFinite)
+          : typeof (acc as any).accountRoles === "number"
+          ? [Number((acc as any).accountRoles)]
+          : [];
+
         form.reset({
           firstName: acc.firstName?.trim() ?? "",
           lastName: acc.lastName?.trim() ?? "",
@@ -129,6 +145,7 @@ export default function AccountEditPage() {
           dateOfBirth: toDateInput(acc.dateOfBirth),
           departmentId: acc.departmentId ?? null,
           gender: Number(acc.gender ?? 0),
+          accountRoles: parsedRoles,
         });
       } catch (e: any) {
         if (ctrl.signal.aborted) return;
@@ -174,15 +191,21 @@ export default function AccountEditPage() {
           {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify([id]), 
+            body: JSON.stringify([id]),
           }
         ).catch((e) => console.warn("Assign dept failed:", e));
       }
-      
+
       if (text) {
         try {
           const json = JSON.parse(text);
           const updated: Account | undefined = json?.data ?? json;
+          const parsedRolesUpdated: number[] =
+            Array.isArray((updated as any).accountRoles)
+              ? (updated as any).accountRoles.map((r: any) => Number(r?.id ?? r)).filter(Number.isFinite)
+              : typeof (updated as any).accountRoles === "number"
+              ? [Number((updated as any).accountRoles)]
+              : values.accountRoles;
           if (
             updated &&
             typeof updated === "object" &&
@@ -197,6 +220,7 @@ export default function AccountEditPage() {
               dateOfBirth: toDateInput(updated.dateOfBirth),
               departmentId: updated.departmentId ?? "",
               gender: Number(updated.gender ?? 0),
+              accountRoles: parsedRolesUpdated,
             });
           } else {
             form.reset(values);
@@ -278,7 +302,7 @@ export default function AccountEditPage() {
         )}
 
         <EditProfileFormCard
-          form={form as any as UseFormReturn<Account>}
+          form={form}
           submitting={submitting}
           onSubmit={onSubmit}
           onCancel={() => form.reset()}
