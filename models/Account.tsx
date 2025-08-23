@@ -7,9 +7,9 @@ interface Account {
   // hashedPassword: string;
 
   gender: number;              
-  dateOfBirth: string | null;  
-  phoneNumber: string | null;
-  image: string | null;
+  dateOfBirth?: string;  
+  phoneNumber?: string;
+  image?: string;
 
   emailConfirmed: boolean;
   phoneNumberConfirmed?: boolean;
@@ -19,9 +19,9 @@ interface Account {
   // verificationCodeExpiryTime: string | null; 
   // resetPasswordToken: string | null;
 
-  departmentId: string | null;           
-  // department: Department | null;
-  accountRoles : AccountRole[] | null;
+  departmentId?: string;           
+  departmentName?: string;
+  accountRoles? : AccountRole[];
   isDeleted : boolean;
   creationDate : string;
   modificationDate : string;

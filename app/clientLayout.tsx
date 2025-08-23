@@ -17,7 +17,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import {
   Home, Users, Mail, Megaphone, Building2Icon, CalendarRange, Shapes,
-  Settings, Bell, Search, Menu, X, User, LogOut, Plus
+  Settings, Bell, Search, Menu, X, User, LogOut, Plus,
+  BookUser
 } from "lucide-react"
 import "react-toastify/dist/ReactToastify.css"
 import { ToastContainer, toast } from "react-toastify"
@@ -96,6 +97,7 @@ const inter = Inter({ subsets: ["latin"] })
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: Home },
+  { name: "Tài khoản", href: "/dashboard/accounts", icon: BookUser  },
   { name: "Ứng viên", href: "/dashboard/candidates", icon: Users },
   { name: "Mail", href: "/dashboard/mail", icon: Mail },
   { name: "Campaign", href: "/dashboard/campaigns", icon: Megaphone },
