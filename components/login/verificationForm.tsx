@@ -1,6 +1,8 @@
-"use client";
 
+"use client"
 import API from "@/api/api";
+import { toast } from "react-toastify";
+
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
 interface VerificationFormProps {
@@ -87,11 +89,13 @@ const VerificationForm: React.FC<VerificationFormProps> = ({ onClose, onChange }
         throw new Error(result?.message || "Verification failed");
       }
 
+
       setMsg({ type: "success", text: "Xác minh thành công. Cảm ơn bạn!" });
 
       setTimeout(() => onClose(), 1200);
     } catch (error: any) {
       setMsg({ type: "error", text: error?.message || "Xác minh thất bại. Vui lòng thử lại." });
+
       console.error("Verification failed:", error);
     } finally {
       setLoading(false);
@@ -99,6 +103,7 @@ const VerificationForm: React.FC<VerificationFormProps> = ({ onClose, onChange }
   };
 
   const handleResendCode = async () => {
+
     setMsg(null);
 
     if (!isEmailValid) {
@@ -174,6 +179,7 @@ const VerificationForm: React.FC<VerificationFormProps> = ({ onClose, onChange }
         )}
 
         <form className="space-y-4" onSubmit={handleVerify}>
+
           <div>
             <input
               ref={emailRef}
@@ -223,6 +229,7 @@ const VerificationForm: React.FC<VerificationFormProps> = ({ onClose, onChange }
             className="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 disabled:opacity-60"
           >
             {loading ? "Đang xác minh…" : "Xác minh"}
+
           </button>
         </form>
       </div>
