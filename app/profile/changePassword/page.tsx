@@ -214,7 +214,7 @@ export default function ChangePasswordPage() {
                         </Button>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Phải bao gồm ít nhất 8 ký tự, một số, chữ hoa và chữ
+                        Phải bao gồm ít nhất 8 ký tự, một số và chữ
                         thường.
                       </p>
                       <FormMessage />

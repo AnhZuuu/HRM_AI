@@ -23,6 +23,8 @@ import {
 } from "@/components/ui/select";
 import API from "@/api/api";
 import { authFetch } from "@/app/utils/authFetch";
+import { ROLE_OPTIONS } from "@/app/utils/enum";
+import { EditAccountFormValues } from "@/app/dashboard/accounts/[id]/edit/page";
 
 type DepartmentOption = {
   id: string;
@@ -30,10 +32,11 @@ type DepartmentOption = {
 };
 const NONE_DEPT = "__none__";
 
+
 type EditProfileFormCardProps = {
-  form: UseFormReturn<Account>;
+  form: UseFormReturn<EditAccountFormValues>;
   submitting?: boolean;
-  onSubmit: (values: Account) => Promise<void> | void;
+  onSubmit: (values: EditAccountFormValues) => Promise<void> | void;
   onCancel?: () => void;
   departments?: DepartmentOption[];
   loadDepartments?: boolean;
@@ -170,6 +173,8 @@ export function EditProfileFormCard({
                       <Input
                         type="email"
                         placeholder="johndoe@gmail.com"
+                        className="py-2 px-4 border rounded disabled:opacity-50" 
+                        disabled
                         {...field}
                       />
                     </FormControl>
@@ -298,6 +303,35 @@ export function EditProfileFormCard({
                 )}
               />
             </div>
+
+            <FormField
+              control={form.control}
+              name="accountRoles"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Vai trò</FormLabel>
+                  <FormControl>
+                    <Select
+                      value={field.value?.length ? String(field.value[0]) : undefined}
+                      onValueChange={(v) => field.onChange([Number(v)])}
+                      disabled={submitting}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Chọn 1 vai trò" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ROLE_OPTIONS.map((r) => (
+                          <SelectItem key={r.value} value={String(r.value)}>
+                            {r.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <Separator />
 

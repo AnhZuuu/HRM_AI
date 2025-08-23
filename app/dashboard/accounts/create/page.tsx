@@ -12,13 +12,9 @@ import { ArrowLeft, CheckCircle2, AlertCircle } from "lucide-react";
 import { authFetch } from "@/app/utils/authFetch";
 import API from "@/api/api";
 import CreateAccountFormCard, { CreateAccountFormValues, DepartmentOption, RoleOption } from "@/components/account/createAccountForm";
+import { ROLE_OPTIONS } from "@/app/utils/enum";
 
-const ROLE_OPTIONS: RoleOption[] = [
-  { value: 1, label: "HR" },
-  { value: 2, label: "Department Manager" },
-  { value: 3, label: "Employee" },
-  { value: 4, label: "Admin" },
-];
+
 
 const schema = z
   .object({
