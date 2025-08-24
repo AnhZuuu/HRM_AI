@@ -106,6 +106,7 @@ export default async function DepartmentDetailPage({
   if (!res.ok) return notFound();
 
   const data = await unwrap<DepartmentDetail | ApiEnvelope<DepartmentDetail>>(res);
+  console.log("Fetched department data:", data);
 
   const entity: DepartmentDetail =
     (data as any)?.departmentName

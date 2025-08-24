@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Mail, Phone, MapPin, ExternalLink, FileText, ArrowLeft, CheckCircle2, XCircle, Clock, Star } from "lucide-react";
 import { authFetch } from "@/app/utils/authFetch";
 import API from "@/api/api";
+import { formatISODate } from "@/app/utils/helper";
 
 
 
@@ -108,15 +109,7 @@ function field(rows: CvApplicantDetail[], key: string) {
   return rows.find((r) => r.key === key)?.value ?? "";
 }
 
-function formatISODate(iso?: string) {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
-}
+
 
 // ---------- Page ----------
 export default function CvApplicantDetailPage() {
@@ -167,14 +160,14 @@ export default function CvApplicantDetailPage() {
     <div className="p-6 space-y-6">
       <div className="flex items-center gap-3">
         <Button variant="outline" onClick={() => router.back()} className="gap-2">
-          <ArrowLeft className="h-4 w-4" />
-          Back
+            <ArrowLeft className="h-4 w-4" />
+            Quay lại
         </Button>
-        <h1 className="text-2xl font-semibold">Candidate Detail</h1>
+        <h1 className="text-2xl font-semibold">Chi tiết ứng viên</h1>
       </div>
 
       {/* Loading / Error */}
-      {loading && <div className="text-sm text-gray-500 p-4">Loading profile…</div>}
+      {loading && <div className="text-sm text-gray-500 p-4">Đang tải hồ sơ…</div>}
       {!loading && err && (
         <div className="text-sm text-red-600 p-4">
           {err}
@@ -211,7 +204,7 @@ export default function CvApplicantDetailPage() {
                         <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-xs">
                           {item.campaignPositionDescription}
                         </span>
-                        <span className="text-gray-400 text-xs">(position)</span>
+                        <span className="text-gray-400 text-xs">(Vị trí)</span>
                       </span>
                     </div>
                   </div>
@@ -222,7 +215,7 @@ export default function CvApplicantDetailPage() {
                     <Button asChild className="gap-2">
                       <a href={item.fileUrl} target="_blank" rel="noopener noreferrer">
                         <ExternalLink className="h-4 w-4" />
-                        Open CV File
+                        Mở CV
                       </a>
                     </Button>
                   )}
@@ -258,7 +251,7 @@ export default function CvApplicantDetailPage() {
               {(sections.objective.length > 0 || field(sections.objective, "objective")) && (
                 <Card>
                   <CardHeader>
-                    <CardTitle>Objective</CardTitle>
+                    <CardTitle>Mục tiêu</CardTitle>
                   </CardHeader>
                   <CardContent className="prose prose-sm max-w-none">
                     <p className="whitespace-pre-wrap">
@@ -271,11 +264,11 @@ export default function CvApplicantDetailPage() {
               {/* Experience */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Experience</CardTitle>
+                  <CardTitle>Kinh nghiệm</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {sections.experience.length === 0 ? (
-                    <div className="text-sm text-gray-500">No experience listed.</div>
+                    <div className="text-sm text-gray-500">Không có kinh nghiệm nào được liệt kê.</div>
                   ) : (
                     <ul className="space-y-5">
                       {/* Group experience pairs by groupIndex (company/position) */}
@@ -310,11 +303,11 @@ export default function CvApplicantDetailPage() {
               {/* Education */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Education</CardTitle>
+                  <CardTitle>Học vấn</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {sections.education.length === 0 ? (
-                    <div className="text-sm text-gray-500">No education listed.</div>
+                    <div className="text-sm text-gray-500">Không có học vấn nào được liệt kê.</div>
                   ) : (
                     <>
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
@@ -339,23 +332,23 @@ export default function CvApplicantDetailPage() {
               {/* Personal Info */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Personal Info</CardTitle>
+                  <CardTitle>Thông tin cá nhân</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
-                  <Row label="Full name" value={field(sections.personal_info, "full_name") || item.fullName || "—"} />
-                  <Row label="Date of birth" value={field(sections.personal_info, "dob") || "—"} />
-                  <Row label="Gender" value={field(sections.personal_info, "gender") || "—"} />
+                  <Row label="Họ và tên" value={field(sections.personal_info, "full_name") || item.fullName || "—"} />
+                  <Row label="Ngày sinh" value={field(sections.personal_info, "dob") || "—"} />
+                  <Row label="Giới tính" value={field(sections.personal_info, "gender") || "—"} />
                 </CardContent>
               </Card>
 
               {/* Skills */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Skills</CardTitle>
+                  <CardTitle>Kỹ năng</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {skills.length === 0 ? (
-                    <div className="text-sm text-gray-500">No skills listed.</div>
+                    <div className="text-sm text-gray-500">Không có kỹ năng nào được liệt kê.</div>
                   ) : (
                     <div className="flex flex-wrap gap-2">
                       {skills.map((s) => (
@@ -399,13 +392,13 @@ export default function CvApplicantDetailPage() {
               {/* Status Legend */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Status</CardTitle>
+                  <CardTitle>Trạng thái</CardTitle>
                 </CardHeader>
                 <CardContent className="grid grid-cols-2 gap-2 text-sm">
-                  <LegendRow icon={<Clock className="h-4 w-4" />} label="Pending" cls="bg-blue-100 text-blue-800" />
-                  <LegendRow icon={<CheckCircle2 className="h-4 w-4" />} label="Accepted" cls="bg-green-100 text-green-800" />
-                  <LegendRow icon={<Clock className="h-4 w-4" />} label="Reviewed" cls="bg-purple-100 text-purple-800" />
-                  <LegendRow icon={<XCircle className="h-4 w-4" />} label="Rejected" cls="bg-red-100 text-red-800" />
+                  <LegendRow icon={<Clock className="h-4 w-4" />} label="Đang chờ" cls="bg-blue-100 text-blue-800" />
+                  <LegendRow icon={<CheckCircle2 className="h-4 w-4" />} label="Đã chấp nhận" cls="bg-green-100 text-green-800" />
+                  <LegendRow icon={<Clock className="h-4 w-4" />} label="Đã xem" cls="bg-purple-100 text-purple-800" />
+                  <LegendRow icon={<XCircle className="h-4 w-4" />} label="Bị từ chối" cls="bg-red-100 text-red-800" />
                 </CardContent>
               </Card>
             </div>

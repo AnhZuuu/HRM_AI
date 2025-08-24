@@ -8,5 +8,6 @@ interface CampaignPosition {
     totalSlot: number;
     description: string;
     cvApplicants?: CVApplicant[];
+    cvApplicantModels?: CVApplicantModel[]; 
 
 }

@@ -24,7 +24,7 @@ import AddCampaignDialog from "./handleAddCampaign";
 import DeleteCampaignDialog from "./handleDeleteCampaign";
 
 import { authFetch } from "@/app/utils/authFetch";
-import { formatDMYHM, toIsoFromDateInput } from "@/app/utils/helper";
+import { formatDMYHM, toIsoFromDateInput, toMidnight } from "@/app/utils/helper";
 
 import { useRouter } from "next/navigation";
 import API from "@/api/api";
@@ -150,10 +150,7 @@ export default function CampaignPage() {
   const { toast } = useToast();
   const router = useRouter();
 
-  const toMidnight = (d: string | Date) => {
-    const date = typeof d === "string" ? new Date(d) : d;
-    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  };
+  
 
   const getCampaignStatus = (start: string, end: string, today = new Date()) => {
     const dToday = toMidnight(today);

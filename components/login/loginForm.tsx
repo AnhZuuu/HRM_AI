@@ -105,8 +105,8 @@ const LoginPage = () => {
       window.location.href = "/dashboard";
     } catch (error: any) {
       // toast.error("Login failed: " + error.message);
-      alert("Login failed: " + error.message);
-      console.error("Login error:", error);
+      alert("Đăng nhập thất bại: " + error.message);
+      console.error("Đăng nhập thất bại:", error);
     }
   };
 
