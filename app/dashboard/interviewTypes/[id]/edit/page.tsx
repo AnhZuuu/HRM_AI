@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Save, X } from "lucide-react";
 import { getInterviewTypeById, updateInterviewType } from "@/components/interviewType/interviewTypeRepo";
+import { toast } from "react-toastify";
 
 export default function EditInterviewTypePage() {
   const router = useRouter();
@@ -21,7 +22,7 @@ export default function EditInterviewTypePage() {
   useEffect(() => {
     (async () => {
       const rec = await getInterviewTypeById(id);
-      if (!rec) { alert("Không tìm thấy."); router.back(); return; }
+      if (!rec) { toast.warning("Không tìm thấy."); router.back(); return; }
       setCode(rec.code);
       setName(rec.name);
       setDescription(rec.description ?? "");
@@ -33,7 +34,7 @@ export default function EditInterviewTypePage() {
       setErr("");
       if (!name.trim()) { setErr("Bắt buộc nhập tên."); return; }
       await updateInterviewType(id, { name: name.trim(), description: description?.trim() || undefined });
-      alert("Updated.");
+      toast.success("Cập nhật thành công.");
       router.push("/dashboard/interviewTypes");
     } catch (e: any) {
       setErr(e?.message ?? "Cập nhập thất bại.");

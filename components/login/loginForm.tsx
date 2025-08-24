@@ -2,8 +2,12 @@ import React, { useState } from "react";
 import { FaEnvelope, FaLock } from "react-icons/fa";
 import VerificationForm from "./verificationForm";
 import API from "@/api/api";
+
+import { toast } from "react-toastify";
+
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
+
 
 const LoginPage = () => {
   const router = useRouter();
@@ -91,7 +95,9 @@ const LoginPage = () => {
       // Navigate to dashboard
       window.location.href = "/dashboard";
     } catch (error: any) {
+
       setError(error?.message ?? "Không thể đăng nhập lúc này");
+
       console.error("Login error:", error);
     }
   };
