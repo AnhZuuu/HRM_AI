@@ -1,448 +1,237 @@
 "use client";
-import React, { useState } from "react";
-import { Badge } from "@/components/ui/badge";
+
+import { useEffect, useMemo, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Calendar as CalendarIcon,
-  Paperclip,
-  FileText,
-  Check,
-  X,
-  Lock,
-  User,
-  PencilLine,
-  Users,
-  MapPin,
-} from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RefreshCw, Search } from "lucide-react";
+import { authFetch } from "@/app/utils/authFetch";
+import API from "@/api/api";
+import OnboardTable, { SortDir, SortKey } from "@/components/onboard/onboardTable";
 
-function fmtDateTime(iso?: string, mode: "date" | "datetime" = "date") {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  const date = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
-    d.getDate()
-  )}`;
-  if (mode === "date") return date;
-  return `${date} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+type ApiResponse<T> = { code: number; status: boolean; message?: string; data: T };
+
+function normalizeFilter(v: string): number | undefined {
+  if (v === "all" || v === "" || v == null) return undefined;
+  const n = Number(v);
+  return Number.isNaN(n) ? undefined : n;
 }
 
-// ---------------------------------------------
-// Types
-// ---------------------------------------------
-export type SalaryType = "Hourly" | "Monthly" | "Yearly";
-export type OnboardRequestStatus =
-  | "Pending"
-  | "Approved"
-  | "Rejected"
-  | "Draft";
+export default function OnboardListPage() {
+  const [raw, setRaw] = useState<Onboard[]>([]);
+  const [reloadTick, setReloadTick] = useState(0);
+ 
+  const [query, setQuery] = useState("");
+  const [status, setStatus] = useState("all");   
+  const [salType, setSalType] = useState("all"); 
+  const [sortKey, setSortKey] = useState<SortKey>("start"); 
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
-export interface RequestOnboardHistoryModel {
-  id: string;
-  step: number;
-  title: string;
-  note?: string | null;
-  date: string; // ISO string
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [debouncedQuery, setDebouncedQuery] = useState(query);
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(query), 300);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  useEffect(() => {
+  const ctl = new AbortController();
+  async function load() {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await authFetch(API.ONBOARD.BASE, { signal: ctl.signal });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = (await res.json()) as ApiResponse<Onboard[]>;
+      setRaw(Array.isArray(json?.data) ? json.data : []);
+    } catch (e: any) {
+      if (e?.name !== "AbortError") setError(e?.message || "Failed to load");
+    } finally {
+      setLoading(false);
+    }
+  }
+  load();
+  return () => ctl.abort();
+}, [debouncedQuery, reloadTick]);
+
+  const filtered = useMemo(() => {
+    let arr = raw;
+
+    const q = query.trim().toLowerCase();
+    if (q) {
+      arr = arr.filter((r) =>
+        (r.cvApplicantModel?.fullName ?? "").toLowerCase().includes(q) ||
+        (r.id ?? "").toLowerCase().includes(q)
+      );
+    }
+
+    const st = normalizeFilter(status);
+    if (st !== undefined) arr = arr.filter((r) => Number(r.status) === st);
+
+    const stype = normalizeFilter(salType);
+    if (stype !== undefined) arr = arr.filter((r) => Number(r.salaryType) === stype);
+
+    return arr;
+  }, [raw, query, status, salType]);
+
+  const sorted = useMemo(() => {
+    const arr = [...filtered];
+    if (sortKey === "salary") {
+      arr.sort(
+        (a, b) =>
+          (Number(a.proposedSalary) - Number(b.proposedSalary)) *
+          (sortDir === "asc" ? 1 : -1)
+      );
+    } else {
+      // "start"
+      arr.sort(
+        (a, b) =>
+          (new Date(a.proposedStartDate).getTime() - new Date(b.proposedStartDate).getTime()) *
+          (sortDir === "asc" ? 1 : -1)
+      );
+    }
+    return arr;
+  }, [filtered, sortKey, sortDir]);
+
+  const total = sorted.length;
+  const paged = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return sorted.slice(start, start + pageSize);
+  }, [sorted, page, pageSize]);
+
+  function resetFilters() {
+    setQuery("");
+    setStatus("all");
+    setSalType("all");
+    setPage(1);
+  }
+  function onToggleSort(key: SortKey) {
+    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  }
+
+  function handleStatusChanged() {
+  setReloadTick((t) => t + 1); 
 }
-
-export interface ApplicantSummary {
-  id: string;
-  fullName: string;
-  avatarUrl?: string | null;
-  summary?: string | null;
-}
-
-export interface InterviewSchedule {
-  id?: string;
-  stageOrder?: number;
-  stageName?: string;
-  startTime?: string; // ISO
-  endTime?: string; // ISO
-  interviewerNames?: string[];
-  location?: string | null;
-}
-
-export interface InterviewOutcome {
-  id: string;
-  interviewScheduleId: string;
-  interviewSchedule: InterviewSchedule | null;
-  createdBy: string | null;
-  feedback: string;
-}
-
-export interface RequestOnboardModelUi {
-  id: string;
-  interviewOutcomeId?: string | null;
-  applicant: ApplicantSummary;
-  proposedSalary?: number | null;
-  salaryType?: SalaryType | null;
-  proposedStartDate?: string | null; // yyyy-mm-dd
-  status: OnboardRequestStatus;
-  histories: RequestOnboardHistoryModel[];
-  interviewOutcomes: InterviewOutcome[];
-}
-
-// ---------------------------------------------
-// Demo data (remove when wiring to API)
-// ---------------------------------------------
-const demo: RequestOnboardModelUi = {
-  id: "req-001",
-  applicant: {
-    id: "cand-01",
-    fullName: "John Doe",
-    avatarUrl: "https://api.dicebear.com/7.x/initials/svg?seed=JD",
-    summary: "Candidate for Frontend Engineer",
-  },
-  proposedSalary: 65000,
-  salaryType: "Yearly",
-  proposedStartDate: "2025-09-01",
-  interviewOutcomeId: "pass-strong",
-  status: "Pending",
-  histories: [
-    {
-      id: "h1",
-      step: 1,
-      title: "Created",
-      note: "Initial request created.",
-      date: "2025-08-01",
-    },
-    {
-      id: "h2",
-      step: 2,
-      title: "Reviewed",
-      note: "HR reviewed details.",
-      date: "2025-08-05",
-    },
-  ],
-  interviewOutcomes: [
-    {
-      id: "o1",
-      interviewScheduleId: "s1",
-      createdBy: "hr.lead@company.com",
-      feedback: "Strong fundamentals, good culture fit. Recommend proceed.",
-      interviewSchedule: {
-        id: "s1",
-        stageOrder: 1,
-        stageName: "Screening",
-        startTime: "2025-07-30T09:00:00",
-        interviewerNames: ["Alice"],
-        location: "Google Meet",
-      },
-    },
-    {
-      id: "o2",
-      interviewScheduleId: "s2",
-      createdBy: "frontend.lead@company.com",
-      feedback: "Solved tasks with minor hints. Good JS knowledge.",
-      interviewSchedule: {
-        id: "s2",
-        stageOrder: 2,
-        stageName: "Technical",
-        startTime: "2025-08-02T14:00:00",
-        interviewerNames: ["Bob", "Carol"],
-        location: "Office A",
-      },
-    },
-    {
-      id: "o3",
-      interviewScheduleId: "s3",
-      createdBy: "cto@company.com",
-      feedback: "Alignment on roadmap and expectations.",
-      interviewSchedule: {
-        id: "s3",
-        stageOrder: 3,
-        stageName: "Final",
-        startTime: "2025-08-05T16:30:00",
-        interviewerNames: ["Dana"],
-        location: "Office B",
-      },
-    },
-  ],
-};
-
-export default function OnboardRequestDetailPage() {
-  const [model, setModel] = useState<RequestOnboardModelUi>(demo);
-  const [notes, setNotes] = useState("");
-  const disableActions =
-    model.status === "Approved" || model.status === "Rejected";
 
   return (
-    <div className="min-h-[90vh] w-full bg-muted/30 p-4 md:p-8">
-      {/* OUTER CARD (single panel like sample) */}
-      <Card className="mx-auto max-w-6xl rounded-2xl shadow-sm">
-        <div className="grid grid-cols-1 md:grid-cols-[280px_1fr_320px]">
-          {/* LEFT SIDEBAR */}
-          <div className="border-b md:border-b-0 md:border-r p-6">
-            <div className="flex flex-col items-center text-center">
-              <div className="relative h-24 w-24 rounded-full bg-gradient-to-b from-blue-100 to-blue-200 overflow-hidden">
-                <img
-                  src={
-                    model.applicant.avatarUrl ||
-                    "https://api.dicebear.com/7.x/initials/svg?seed=NA"
-                  }
-                  alt={model.applicant.fullName}
-                  className="h-full w-full rounded-full object-cover mix-blend-multiply"
-                />
-              </div>
-              <h3 className="mt-4 text-lg font-semibold leading-tight">
-                {model.applicant.fullName}
-              </h3>
-              <p className="mt-1 max-w-[220px] text-sm leading-relaxed text-muted-foreground">
-                {model.applicant.summary ||
-                  "Lorem ipsum dolori at amet, consectetur"}
-              </p>
-            </div>
-
-            <div className="my-6 h-px bg-border" />
-
-            <button className="flex w-full items-center gap-2 text-left text-sm text-primary underline-offset-4 hover:underline">
-              <FileText className="h-4 w-4" /> View interview outcome
-            </button>
-
-            <div className="my-6 h-px bg-border" />
-
-            <div className="text-sm font-medium text-foreground/80">
-              Attachments
-            </div>
-          </div>
-
-          <div className="p-4 md:p-6">
-            <div className="mb-4 text-lg font-semibold">
-              Onboarding Request / Request
-            </div>
-
-            {/* Tabs with underline style */}
-            <Tabs defaultValue="details" className="w-full">
-              <div className="border-b">
-                <TabsList className="h-auto gap-6 bg-transparent p-0">
-                  <TabsTrigger
-                    value="details"
-                    className="rounded-none bg-transparent px-0 pb-3 text-sm font-medium data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary"
-                  >
-                    Details
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="history"
-                    className="rounded-none bg-transparent px-0 pb-3 text-sm font-medium data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary"
-                  >
-                    History
-                  </TabsTrigger>
-                </TabsList>
-              </div>
-
-              {/* DETAILS TAB */}
-              <TabsContent value="details" className="mt-6 space-y-5">
-                {/* Interview outcome */}
-                <div className="space-y-2">
-                  <Label>Interview Outcome</Label>
-                  <Select
-                    value={model.interviewOutcomeId || ""}
-                    onValueChange={(v) =>
-                      setModel((m) => ({
-                        ...m,
-                        interviewOutcomeId: v || undefined,
-                      }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Please select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      <SelectItem value="pass-strong">Pass – strong</SelectItem>
-                      <SelectItem value="pass">Pass</SelectItem>
-                      <SelectItem value="hold">Hold</SelectItem>
-                      <SelectItem value="reject">Reject</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Proposed salary with $ prefix */}
-                <div className="space-y-2">
-                  <Label>Proposed Salary</Label>
-                  <div className="relative">
-                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                      $
-                    </span>
-                    <Input
-                      inputMode="numeric"
-                      className="pl-7"
-                      value={model.proposedSalary ?? ""}
-                      onChange={(e) =>
-                        setModel((m) => ({
-                          ...m,
-                          proposedSalary: Number(e.target.value || 0),
-                        }))
-                      }
-                      placeholder="65,000"
-                    />
-                  </div>
-                </div>
-
-                {/* Salary type + start date with icons */}
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label>Salary Type</Label>
-                    <Select
-                      value={model.salaryType || undefined}
-                      onValueChange={(v: SalaryType) =>
-                        setModel((m) => ({ ...m, salaryType: v }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Hourly">Hourly</SelectItem>
-                        <SelectItem value="Monthly">Monthly</SelectItem>
-                        <SelectItem value="Yearly">Yearly</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Proposed Start Date</Label>
-                    <div className="relative">
-                      <Input
-                        type="date"
-                        value={model.proposedStartDate || ""}
-                        onChange={(e) =>
-                          setModel((m) => ({
-                            ...m,
-                            proposedStartDate: e.target.value,
-                          }))
-                        }
-                      />
-                      <CalendarIcon className="pointer-events-none absolute right-9 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-                      <Lock className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Comments */}
-                <div className="space-y-2">
-                  <Label>Comments</Label>
-                  <Textarea
-                    placeholder="Type your comment here"
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                  />
-                </div>
-              </TabsContent>
-
-              {/* HISTORY TAB (center) */}
-              <TabsContent value="history" className="mt-6 space-y-3">
-                {model.histories.map((h) => (
-                  <div key={h.id} className="rounded-lg border p-3">
-                    <div className="flex items-center justify-between">
-                      <div className="font-medium">
-                        Step {h.step}: {h.title}
-                      </div>
-                      <span className="text-xs text-muted-foreground">
-                        {h.date}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {h.note}
-                    </p>
-                  </div>
-                ))}
-              </TabsContent>
-            </Tabs>
-
-            {/* ACTIONS */}
-            <CardFooter className="mt-6 flex flex-wrap gap-3 px-0">
-              <Button disabled={disableActions} className="gap-2">
-                <Check className="h-4 w-4" />
-                Xác nhận và gửi mail
-              </Button>
-              <Button
-                variant="destructive"
-                disabled={disableActions}
-                className="gap-2"
-              >
-                <X className="h-4 w-4" />
-                Reject
-              </Button>
-            </CardFooter>
-          </div>
-          {/* RIGHT SIDEBAR – Interview Outcomes */}
-          <div className="border-t md:border-t-0 md:border-l p-4 md:p-6">
-            <CardHeader className="p-0 pb-4">
-              <CardTitle className="text-base">
-                Interview Outcome Histories
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              {model.interviewOutcomes?.length ? (
-                <ol className="relative border-s pl-6">
-                  {model.interviewOutcomes.map((o, idx) => (
-                    <li key={o.id} className="mb-8 ms-4">
-                      <span className="absolute -start-2 grid h-4 w-4 place-items-center rounded-full border bg-blue-50 border-blue-200">
-                        <span className="h-2 w-2 rounded-[4px] bg-blue-500" />
-                      </span>
-
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium">
-                          {`Stage ${
-                            o.interviewSchedule?.stageOrder ?? idx + 1
-                          }`}
-                          {o.interviewSchedule?.stageName
-                            ? ` · ${o.interviewSchedule.stageName}`
-                            : ""}
-                        </p>
-                        <span className="text-xs text-muted-foreground">
-                          {fmtDateTime(o.interviewSchedule?.startTime)}
-                        </span>
-                      </div>
-                      <div className="mt-2 space-y-2 text-sm text-muted-foreground bg-gray-100 border-b rounded-2xl shadow-sm p-2">
-                        {o.interviewSchedule?.interviewerNames?.length ? (
-                          <div className="flex items-center gap-2">
-                            <Users className="h-4 w-4" />
-                            {o.interviewSchedule.interviewerNames.join(", ")}
-                          </div>
-                        ) : null}
-                        {o.interviewSchedule?.location ? (
-                          <div className="flex items-center gap-2">
-                            <MapPin className="h-4 w-4" />{" "}
-                            {o.interviewSchedule.location}
-                          </div>
-                        ) : null}
-                        <div className="flex items-center gap-2">
-                          <PencilLine className="h-4 w-4" />
-                          <p className="mt-1 whitespace-pre-wrap text-muted-foreground">
-                            {o.feedback}
-                          </p>
-                        </div>
-                      </div>
-                    </li>
-                  ))}
-                </ol>
-              ) : (
-                <div className="text-sm text-muted-foreground">
-                  No outcomes yet.
-                </div>
-              )}
-            </CardContent>
-          </div>
+    <div className="p-4 md:p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Danh sách yêu cầu Onboard</h1>
+          <p className="text-slate-600">Quản lý ngày bắt đầu đề xuất, mức lương và quy trình phê duyệt.</p>
         </div>
+      </div>
+
+      {/* Filters */}
+      <Card>
+        <CardHeader>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <div className="relative w-full md:w-80">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                  value={query}
+                  onChange={(e) => { setQuery(e.target.value); setPage(1); }}
+                  placeholder="Search by applicant id or onboard id..."
+                  className="pl-9"
+                />
+              </div>              
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2">
+                <Label className="text-slate-600">Trạng thái</Label>
+                <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}>
+                  <SelectTrigger className="w-[160px]"><SelectValue placeholder="All" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tất cả</SelectItem>
+                    <SelectItem value="0">Pending</SelectItem>
+                    <SelectItem value="1">Approved</SelectItem>
+                    <SelectItem value="2">Rejected</SelectItem>
+                    <SelectItem value="3">Cancelled</SelectItem>
+                    <SelectItem value="4">Completed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Label className="text-slate-600">Loại lương</Label>
+                <Select value={salType} onValueChange={(v) => { setSalType(v); setPage(1); }}>
+                  <SelectTrigger className="w-[160px]"><SelectValue placeholder="All" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tất cả</SelectItem>
+                    <SelectItem value="0">Net</SelectItem>
+                    <SelectItem value="1">Gross</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <Button variant="outline" onClick={resetFilters} className="shrink-0">
+              <RefreshCw className="h-4 w-4 mr-2" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Results */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Tất cả onboard {loading ? "(Đang tải...)" : `(${total})`}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {error ? (
+            <div className="text-sm text-rose-600">{error}</div>
+          ) : (
+            <>
+              <OnboardTable
+                data={paged}
+                page={page}
+                pageSize={pageSize}
+                total={total}
+                loading={loading}
+                sortKey={sortKey}
+                sortDir={sortDir}
+                onToggleSort={onToggleSort}
+                onStatusChanged={handleStatusChanged}  
+              />
+
+              {/* Pagination */}
+              <div className="flex items-center justify-between pt-4">
+                <div className="text-sm text-slate-600">Trang {page} / {Math.max(1, Math.ceil(total / pageSize))}</div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page === 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  >
+                    Trước
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page * pageSize >= total}
+                    onClick={() => setPage((p) => p + 1)}
+                  >
+                    Sau
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </CardContent>
       </Card>
     </div>
   );

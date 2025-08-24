@@ -146,10 +146,7 @@ export function ProfileCard({ data, onEdit, onChangePassword, showEdit = true, s
         <Card className="md:col-span-7 lg:col-span-7">
           <CardHeader className="pb-3">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-             <CardTitle className="text-base font-semibold">Thông tin tài khoản</CardTitle>
-             <Button variant="default" size="sm" onClick={onEdit}>
-              <Link className="h-4 w-4" /> Hồ sơ ứng tuyển
-            </Button>
+             <CardTitle className="text-base font-semibold">Thông tin tài khoản</CardTitle>             
             </div>
           </CardHeader>
           <CardContent className="text-sm">
