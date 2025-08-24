@@ -18,7 +18,8 @@ import {
 import {
   Home, Users, Mail, Megaphone, Building2Icon, CalendarRange, Shapes,
   Settings, Bell, Search, Menu, X, User, LogOut, Plus,
-  BookUser
+  BookUser,
+  ReceiptText
 } from "lucide-react"
 import "react-toastify/dist/ReactToastify.css"
 import { ToastContainer, toast } from "react-toastify"
@@ -37,6 +38,7 @@ const LABELS: Record<string, string> = {
   interviewTypes: "Loại phỏng vấn",
   interviewProcess: "Quy trình phỏng vấn",
   interviewStage: "Vòng phỏng vấn",
+  onboards: "on-board",
   campaignPosition: "Vị trí ứng tuyển",
 }
 
@@ -105,6 +107,7 @@ const navigation = [
   { name: "Department", href: "/dashboard/departments", icon: Building2Icon },
   { name: "Schedule", href: "/dashboard/schedules", icon: CalendarRange },
   { name: "Interview Type", href: "/dashboard/interviewTypes", icon: Shapes },
+  { name: "Onboard", href: "/dashboard/onboards", icon: ReceiptText },
 ]
 
 

@@ -85,5 +85,21 @@ export const  initials = (first?: string, last?: string) => {
 export const toDateInput = (iso?: string | null) => {
   if (!iso) return "";
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10); // yyyy-mm-dd
+  return Number.isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10); 
 };
+
+export const fmtVnd = (n?: number | null) => {
+  if (n == null) return "—";
+  try {
+    return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(n);
+  } catch {
+    return `${n} VND`;
+  }
+}
+
+export const fmtDate = (s?: string | null) => {
+  if (!s) return "—";
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return s;
+  return d.toLocaleDateString("vi-VN", { year: "numeric", month: "2-digit", day: "2-digit" });
+}

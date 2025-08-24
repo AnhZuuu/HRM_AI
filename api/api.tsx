@@ -40,6 +40,9 @@ export const API = {
   },
   MAIL : {
     BASE: `${API_BASE_URL}/emails`,
+  },
+  ONBOARD : {
+    BASE: `${API_BASE_URL}/request-onboards`
   }
 };
 
