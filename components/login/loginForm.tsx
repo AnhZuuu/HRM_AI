@@ -96,9 +96,10 @@ const LoginPage = () => {
       window.location.href = "/dashboard";
     } catch (error: any) {
 
-      setError(error?.message ?? "Không thể đăng nhập lúc này");
+      // toast.error("Login failed: " + error.message);
+      alert("Đăng nhập thất bại: " + error.message);
+      console.error("Đăng nhập thất bại:", error);
 
-      console.error("Login error:", error);
     }
   };
 

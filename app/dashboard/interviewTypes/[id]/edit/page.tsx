@@ -35,7 +35,8 @@ export default function EditInterviewTypePage() {
       if (!name.trim()) { setErr("Bắt buộc nhập tên."); return; }
       await updateInterviewType(id, { name: name.trim(), description: description?.trim() || undefined });
       toast.success("Cập nhật thành công.");
-      router.push("/dashboard/interviewTypes");
+      // router.push("/dashboard/interviewTypes");
+      setTimeout(() => router.push("/dashboard/interviewTypes"), 500);
     } catch (e: any) {
       setErr(e?.message ?? "Cập nhập thất bại.");
     }

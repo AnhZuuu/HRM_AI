@@ -39,7 +39,7 @@ export default function ScheduleDialog({
 
   function confirm() {
     if (!dlgDate || !dlgTime || dlgDuration === "" || dlgSelected.size === 0 || !interviewTypeId) {
-      toast.warning("Chọn loại PV, ngày/giờ/thời lượng và ít nhất 1 người phỏng vấn.");
+      toast.warning("Chọn loại Phỏng Vấn, ngày/giờ/thời lượng và ít nhất 1 người phỏng vấn.");
       return;
     }
     onConfirm({

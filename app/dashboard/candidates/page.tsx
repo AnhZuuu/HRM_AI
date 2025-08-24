@@ -19,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, Filter, MoreHorizontal, Mail, Phone, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { authFetch } from "@/app/utils/authFetch";
+import { formatISODate } from "@/app/utils/helper";
 import API from "@/api/api";
 
 // ---------- Types ----------
@@ -83,19 +84,7 @@ const statusBadgeClass = (s: CvApplicant["status"]) => {
 
 const shortId = (id?: string | null) => (id ? `${id.slice(0, 8)}…` : "—");
 
-const formatISODate = (iso?: string) => {
-  if (!iso) return "—";
-  try {
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return "—";
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const dd = String(d.getDate()).padStart(2, "0");
-    return `${yyyy}-${mm}-${dd}`;
-  } catch {
-    return "—";
-  }
-};
+
 
 // ---------- Component ----------
 export default function CandidatesPage() {
@@ -174,8 +163,8 @@ export default function CandidatesPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Candidates</h1>
-          <p className="text-gray-600 mt-1">Manage your candidate pipeline</p>
+          <h1 className="text-3xl font-bold text-gray-900">Trang ứng viên</h1>
+          <p className="text-gray-600 mt-1">Quản lý ứng viên của bạn</p>
         </div>
 
         {/* (Optional) Actions on header — kept minimal for read-only list */}
@@ -203,11 +192,11 @@ export default function CandidatesPage() {
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="0">Pending</SelectItem>
-                  <SelectItem value="1">Reviewed</SelectItem>
-                  <SelectItem value="2">Rejected</SelectItem>
-                  <SelectItem value="3">Accepted</SelectItem>
+                  <SelectItem value="all">Tất cả trạng thái</SelectItem>
+                  <SelectItem value="0">Đang chờ</SelectItem>
+                  <SelectItem value="1">Đã xem</SelectItem>
+                  <SelectItem value="2">Bị từ chối</SelectItem>
+                  <SelectItem value="3">Đã chấp nhận</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -219,7 +208,7 @@ export default function CandidatesPage() {
       <Card>
         <CardHeader>
           <CardTitle>
-            All Candidates{" "}
+            Tất cả ứng viên{" "}
             {!loading && !error ? (
               <span className="text-gray-500">({filtered.length} of {items.length})</span>
             ) : null}
@@ -228,21 +217,21 @@ export default function CandidatesPage() {
         <CardContent>
           {/* Loading / Error states */}
           {loading ? (
-            <div className="p-6 text-sm text-gray-500">Loading candidates…</div>
+            <div className="p-6 text-sm text-gray-500">Đang tải ứng viên…</div>
           ) : error ? (
-            <div className="p-6 text-sm text-red-600">Error: {error}</div>
+            <div className="p-6 text-sm text-red-600">Lỗi: {error}</div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Full Name</TableHead>
+                    <TableHead>Họ tên</TableHead>
                     <TableHead>Email</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Point</TableHead>
-                    <TableHead>Campaign Position</TableHead>
-                    <TableHead>Applied</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead>Trạng thái</TableHead>
+                    <TableHead>Điểm</TableHead>
+                    <TableHead>Vị trí ứng tuyển</TableHead>
+                    <TableHead>Ngày nộp</TableHead>
+                    <TableHead className="text-right">Hành động</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -282,12 +271,12 @@ export default function CandidatesPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuLabel>Hành động</DropdownMenuLabel>
                             <DropdownMenuItem
                               onClick={() => router.push(`/dashboard/candidates/${c.id}`)}
                             >
                               <Eye className="mr-2 h-4 w-4" />
-                              View Details
+                              Xem chi tiết
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
@@ -307,7 +296,7 @@ export default function CandidatesPage() {
                   {filtered.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center text-sm text-gray-500 py-8">
-                        No candidates found.
+                        Không tìm thấy ứng viên nào.
                       </TableCell>
                     </TableRow>
                   )}

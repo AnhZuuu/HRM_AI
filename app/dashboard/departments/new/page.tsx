@@ -12,11 +12,15 @@ export default function NewDepartmentPage() {
     // TODO: replace with real API call
     await authFetch(`${API.DEPARTMENT.BASE}`, { method: "POST", body: JSON.stringify(values) });
     toast.success("Tạo thành công");
-    router.push("/dashboard/departments");
+    // router.push("/dashboard/departments");
+    setTimeout(() => router.push("/dashboard/departments"), 500);
   };
 
   return (
     <div className="container mx-auto p-6 space-y-6">
+      {/* <button type="button" onClick={() => toast.info("Test toast from modal!")}>
+  Test Toast
+</button> */}
       <DepartmentForm title="Tạo phòng ban" onSubmit={handleCreate} submitText="Tạo mới" onCancel={() => router.back()} />
     </div>
   );

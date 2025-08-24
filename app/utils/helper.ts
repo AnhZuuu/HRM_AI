@@ -36,6 +36,21 @@ export const formatDMYHM = (s?: string | null): string => {
   return `${dd}-${mm}-${yyyy} ${hh}:${mi}`;
 };
 
+export const formatISODate = (iso?: string) => {
+  if (!iso) return "—";
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "—";
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    // return `${yyyy}-${mm}-${dd}`;
+    return `${dd}/${mm}/${yyyy}`;
+  } catch {
+    return "—";
+  }
+};
+
 export const toMidnight = (d: string | Date) => {
     const date = typeof d === "string" ? new Date(d) : d;
     return new Date(date.getFullYear(), date.getMonth(), date.getDate());

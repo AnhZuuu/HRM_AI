@@ -36,13 +36,23 @@ function getPositionStatus(campaignStatus: string, pos: CampaignPosition) {
     return { label: "Đóng", tone: "bg-zinc-100 text-zinc-700" };
   }
   const applied = pos.cvApplicants?.length ?? 0;
-  if (applied >= pos.totalSlot) return { label: "Đóng", tone: "bg-red-100 text-red-700" };
+  // if (applied >= pos.totalSlot) return { label: "Đóng", tone: "bg-red-100 text-red-700" };
   return { label: "Mở", tone: "bg-emerald-100 text-emerald-700" };
 }
 
 export default function CampaignPositions(
   { positions, campaignStatus }: { positions: CampaignPosition[]; campaignStatus: string }
 ) {
+  // console.log("ALOOOOOOOOOOOOOO" + positions);
+  // console.log("MMMMMMMMMMMMMMMM" + campaignStatus);
+  // console.log("positions:", positions);
+
+  //this work
+  // if (Array.isArray(positions) && positions[0]) {
+  //   console.log("first position keys:", Object.keys(positions[0]));
+  //   console.log("first position:", JSON.stringify(positions[0], null, 2));
+  // }
+
   // dialogs + selection
   const [uploadOpen, setUploadOpen] = React.useState(false);
   const [listOpen, setListOpen] = React.useState(false);
@@ -60,7 +70,10 @@ export default function CampaignPositions(
   // optional: keep but unused if you want to show a global spinner elsewhere
   const [loadingOpen] = React.useState(false);
 
-  const appliedCount = (p: CampaignPosition) => p.cvApplicants?.length ?? 0;
+  const appliedCount = (p: CampaignPosition) =>
+  (p.cvApplicantModels?.length ??
+    p.cvApplicants?.length ??
+    0);
 
   const openUpload = (p: CampaignPosition) => {
     console.log("Upload CV for position ID:", p.id);
@@ -250,6 +263,7 @@ export default function CampaignPositions(
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Phòng ban</p>
                   <p className="text-base font-medium">{pos.department ?? "—"}</p>
+                  {/* <p className="text-base font-medium">{(pos as any).departmentName ?? "—"}</p> */}
                 </div>
 
                 <div className="grid grid-cols-3 gap-4">
@@ -306,7 +320,7 @@ export default function CampaignPositions(
                 onChange={(e) => setFiles(e.target.files)}
               />
               <p className="text-xs text-muted-foreground">
-                Hỗ trợ PDF/DOC/DOCX. Có thể chọn nhiều file.
+                Hỗ trợ PDF/PNG. Có thể chọn nhiều file.
               </p>
             </div>
           </div>
@@ -354,7 +368,14 @@ export default function CampaignPositions(
               <ul className="space-y-2">
                 {activePos.cvApplicants.map((cv, i) => (
                   <li key={i} className="flex items-center justify-between rounded-md border p-2">
-                    <span>{cv.fullName}</span>
+                    <a
+                      href={cv.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline cursor-pointer"
+                    >
+                      {cv.fullName}
+                    </a>
                   </li>
                 ))}
               </ul>
