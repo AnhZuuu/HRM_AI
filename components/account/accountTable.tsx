@@ -8,6 +8,8 @@ import {
   Edit,
   Building2,
   LockKeyhole,
+  Lock,
+  LockOpen,
 } from "lucide-react";
 import {
   Table,
@@ -30,8 +32,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useRouter } from "next/navigation";
 import { Separator } from "../ui/separator";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ConfirmBlockDialog from "./handleBlockAccount";
+import API from "@/api/api";
 
 interface AccountTableProps {
   accounts: Account[];
@@ -50,11 +53,14 @@ export function AccountTable({ accounts }: AccountTableProps) {
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [target, setTarget] = useState<Account | null>(null);
+  const [rows, setRows] = useState<Account[]>(accounts);
+  useEffect(() => setRows(accounts), [accounts]);
 
   const openBlockDialog = (acc: Account) => {
     setTarget(acc);
     setDialogOpen(true);
   };
+
   return (
     <div className="overflow-x-auto">
       <Table>
@@ -69,7 +75,7 @@ export function AccountTable({ accounts }: AccountTableProps) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {accounts.map((a) => (
+          {rows.map((a) => (
             <TableRow key={a.id}>
               <TableCell className="flex items-center gap-2">
                 <Avatar className="h-8 w-8">
@@ -149,17 +155,32 @@ export function AccountTable({ accounts }: AccountTableProps) {
                       Chỉnh sửa
                     </DropdownMenuItem>
                     <Separator/>
-                    <DropdownMenuItem onClick={() => openBlockDialog(a)}
-                        className={a.isDeleted ? "" : "text-red-600 focus:text-red-700"}>
-                      <LockKeyhole className="mr-2 h-4 w-4 text-red-500" />                      
-                      <a className="text-red-500">Khóa tài khoản</a>
-                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => openBlockDialog(a)}
+                      className={
+                        a.isDeleted
+                          ? "text-emerald-600 focus:text-emerald-700"
+                          : "text-red-600 focus:text-red-700"
+                      }
+                    >
+                      {a.isDeleted ? (
+                        <>
+                          <LockOpen className="mr-2 h-4 w-4" />
+                          <span>Mở khóa tài khoản</span>
+                        </>
+                      ) : (
+                        <>
+                          <Lock className="mr-2 h-4 w-4" />
+                          <span>Khóa tài khoản</span>
+                        </>
+                      )}
+                  </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </TableCell>
             </TableRow>
           ))}
-          {accounts.length === 0 && (
+          {rows.length === 0 && (
             <TableRow>
               <TableCell
                 colSpan={7}
@@ -173,27 +194,22 @@ export function AccountTable({ accounts }: AccountTableProps) {
       </Table>
 
       <ConfirmBlockDialog
-  open={dialogOpen}
-  onOpenChange={setDialogOpen}
-  target={
-    target ? { id: target.id, username: target.username, isDeleted: target.isDeleted } : null
-  }
-  // Khi có API thật, bật cấu hình dưới:
-  // apiConfig={{
-  //   url: (id, next) => `${API.ACCOUNT.BASE}/${id}`,
-  //   method: "PATCH",
-  //   makeBody: (_id, next) => ({ isDeleted: next }),
-  // }}
-  onCompleted={(next) => {
-    // Cập nhật UI tại chỗ hoặc refresh:
-    // 1) Nếu đang giữ state cục bộ: mutate mảng accounts tại parent và set lại
-    // 2) Hoặc đơn giản: router.refresh()
-    if (target) {
-      // ví dụ đơn giản: cập nhật tạm trong mảng nếu bạn đang giữ ở parent
-      // (ở Table không có state danh sách nên thường sẽ gọi parent làm mới)
-    }
-  }}
-/>
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        target={
+          target ? { id: target.id, username: target.username, isDeleted: target.isDeleted } : null
+        }
+        apiConfig={{
+          url: (id, next) => `${API.ACCOUNT.BASE}/${id}/change-status`,
+          method: "PUT",
+        }}
+        onCompleted={(next) => {
+          if (!target) return;
+          setRows((prev) =>
+            prev.map((x) => (x.id === target.id ? { ...x, isDeleted: next } : x))
+          );
+          router.refresh();}}
+      />
     </div>
   );
 }

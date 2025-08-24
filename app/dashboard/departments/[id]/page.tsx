@@ -12,6 +12,7 @@ export type Employee = {
   phoneNumber: string | null;
   status: number | null;
   creationDate?: string | null;
+  roleName?: string;
 };
 
 export type CampaignPositionDetailModel = {
