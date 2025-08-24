@@ -67,7 +67,7 @@ export default function ChangePasswordPage() {
     setApiError(null);
     setApiSuccess(null);
     try {
-      const res = await authFetch(API.ACCOUNT.CHANGE_PASSWORD, {
+      const res = await authFetch(API.AUTH.CHANGE_PASSWORD, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -214,7 +214,7 @@ export default function ChangePasswordPage() {
                         </Button>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Phải bao gồm ít nhất 8 ký tự, một số, chữ hoa và chữ
+                        Phải bao gồm ít nhất 8 ký tự, một số và chữ
                         thường.
                       </p>
                       <FormMessage />

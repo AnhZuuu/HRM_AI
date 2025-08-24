@@ -10,7 +10,7 @@ import API from "@/api/api";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, Loader2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ProfileCard } from "@/components/profile/page";
+import { ProfileCard } from "@/components/profile/profileCard";
 
 type ApiResponse<T> = {
   code: number;

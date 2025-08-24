@@ -1,7 +1,24 @@
 "use client";
 
-import { MoreHorizontal, Mail, Phone, Eye, Copy } from "lucide-react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  MoreHorizontal,
+  Mail,
+  Phone,
+  Eye,
+  Edit,
+  Building2,
+  LockKeyhole,
+  Lock,
+  LockOpen,
+} from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,7 +31,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useRouter } from "next/navigation";
-import { useToast } from "@/components/ui/use-toast";
+import { Separator } from "../ui/separator";
+import { useEffect, useState } from "react";
+import ConfirmBlockDialog from "./handleBlockAccount";
+import API from "@/api/api";
 
 interface AccountTableProps {
   accounts: Account[];
@@ -26,14 +46,20 @@ function formatDate(date: string | null) {
 }
 
 function statusBadgeClass(deleted: boolean) {
-  return deleted
-    ? "bg-red-100 text-red-700"
-    : "bg-green-100 text-green-700";
+  return deleted ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700";
 }
 
 export function AccountTable({ accounts }: AccountTableProps) {
   const router = useRouter();
-  const { toast } = useToast();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [target, setTarget] = useState<Account | null>(null);
+  const [rows, setRows] = useState<Account[]>(accounts);
+  useEffect(() => setRows(accounts), [accounts]);
+
+  const openBlockDialog = (acc: Account) => {
+    setTarget(acc);
+    setDialogOpen(true);
+  };
 
   return (
     <div className="overflow-x-auto">
@@ -41,15 +67,15 @@ export function AccountTable({ accounts }: AccountTableProps) {
         <TableHeader>
           <TableRow>
             <TableHead>Tên người dùng</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Số điện thoại</TableHead>
+            <TableHead>Email / Số điện thoại</TableHead>
+            <TableHead>Phòng ban</TableHead>
             <TableHead>Vai trò</TableHead>
             <TableHead>Trạng thái</TableHead>
             <TableHead>Ngày tạo</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {accounts.map((a) => (
+          {rows.map((a) => (
             <TableRow key={a.id}>
               <TableCell className="flex items-center gap-2">
                 <Avatar className="h-8 w-8">
@@ -60,14 +86,10 @@ export function AccountTable({ accounts }: AccountTableProps) {
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <div className="font-medium">{a.firstName} {a.lastName}</div>
+                  <div className="font-medium">
+                    {a.firstName} {a.lastName}
+                  </div>
                   <div className="text-xs text-gray-500">@{a.username}</div>
-                </div>
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center gap-2 text-sm">
-                  <Mail className="h-3 w-3" />
-                  {a.email}
                 </div>
               </TableCell>
               <TableCell>
@@ -79,17 +101,29 @@ export function AccountTable({ accounts }: AccountTableProps) {
                 ) : (
                   "—"
                 )}
+                <div className="flex items-center gap-2 text-xs">
+                  <Mail className="h-3 w-3" />
+                  {a.email}
+                </div>
               </TableCell>
               <TableCell>
-                {a.accountRoles?.length ? (
-                  a.accountRoles.map((r) => (
-                    <Badge key={r.id} className="mr-1">
-                      {r.roleName}
-                    </Badge>
-                  ))
+                {a.departmentName ? (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Building2 className="h-3 w-5" />
+                    {a.departmentName}
+                  </div>
                 ) : (
                   "—"
                 )}
+              </TableCell>
+              <TableCell>
+                {a.accountRoles?.length
+                  ? a.accountRoles.map((r) => (
+                      <Badge key={r.id} className="mr-1">
+                        {r.roleName}
+                      </Badge>
+                    ))
+                  : "—"}
               </TableCell>
               <TableCell>
                 <Badge className={statusBadgeClass(a.isDeleted)}>
@@ -114,28 +148,68 @@ export function AccountTable({ accounts }: AccountTableProps) {
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onClick={() =>
-                        navigator.clipboard.writeText(a.id).then(() =>
-                          toast({ title: "Copied ID" })
-                        )
+                        router.push(`/dashboard/accounts/${a.id}/edit`)
                       }
                     >
-                      <Copy className="mr-2 h-4 w-4" />
-                      Lưu ID
+                      <Edit className="mr-2 h-4 w-4" />
+                      Chỉnh sửa
                     </DropdownMenuItem>
+                    <Separator/>
+                    <DropdownMenuItem
+                      onClick={() => openBlockDialog(a)}
+                      className={
+                        a.isDeleted
+                          ? "text-emerald-600 focus:text-emerald-700"
+                          : "text-red-600 focus:text-red-700"
+                      }
+                    >
+                      {a.isDeleted ? (
+                        <>
+                          <LockOpen className="mr-2 h-4 w-4" />
+                          <span>Mở khóa tài khoản</span>
+                        </>
+                      ) : (
+                        <>
+                          <Lock className="mr-2 h-4 w-4" />
+                          <span>Khóa tài khoản</span>
+                        </>
+                      )}
+                  </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </TableCell>
             </TableRow>
           ))}
-          {accounts.length === 0 && (
+          {rows.length === 0 && (
             <TableRow>
-              <TableCell colSpan={7} className="text-center text-sm text-gray-500 py-8">
+              <TableCell
+                colSpan={7}
+                className="text-center text-sm text-gray-500 py-8"
+              >
                 Không tìm thấy tài khoản.
               </TableCell>
             </TableRow>
           )}
         </TableBody>
       </Table>
+
+      <ConfirmBlockDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        target={
+          target ? { id: target.id, username: target.username, isDeleted: target.isDeleted } : null
+        }
+        apiConfig={{
+          url: (id, next) => `${API.ACCOUNT.BASE}/${id}/change-status`,
+          method: "PUT",
+        }}
+        onCompleted={(next) => {
+          if (!target) return;
+          setRows((prev) =>
+            prev.map((x) => (x.id === target.id ? { ...x, isDeleted: next } : x))
+          );
+          router.refresh();}}
+      />
     </div>
   );
 }

@@ -6,8 +6,8 @@ interface AccountRole {
     roleName? : string;
 }
 
-// role = 0 -> roleName :
-// role = 1 -> roleName :
-// role = 2 -> roleName :
+// role = 1 -> roleName : HR
+// role = 2 -> roleName : Department Manager
 // role = 3 -> roleName : Employee
+// role = 4 -> roleName : Admin
 
