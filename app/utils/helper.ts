@@ -69,7 +69,19 @@ export const formatDate = (dateStr?: string) => {
   }).format(d);
 }
 
+export const nowVietnamLocal = () => {
+  const now = new Date();
+  // Lấy giờ hiện tại của máy tính, rồi ép sang VN timezone
+  const vnDate = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" }));
 
+  const year = vnDate.getFullYear();
+  const month = String(vnDate.getMonth() + 1).padStart(2, "0");
+  const day = String(vnDate.getDate()).padStart(2, "0");
+  const hours = String(vnDate.getHours()).padStart(2, "0");
+  const minutes = String(vnDate.getMinutes()).padStart(2, "0");
+
+  return `${year}-${month}-${day}T${hours}:${minutes}`; // yyyy-MM-ddTHH:mm
+}
 
 export const  formatDOB = (dateStr?: string) => {
   if (!dateStr) return "—";
