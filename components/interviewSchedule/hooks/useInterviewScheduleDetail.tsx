@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import API from "@/api/api";
 import { authFetch } from "@/app/utils/authFetch";
+import { toast } from "react-toastify";
 
 /* ===== Types ===== */
 export type UUID = string;
@@ -55,12 +56,10 @@ export interface UiInterviewOutcome {
   id: UUID;
   feedback: string | null;
   createdAt: string | null;
+  interviewScheduleId?: string;
   interviewSchedule?: UiInterviewSchedule | null;
   interviewOutcomeStatus?: number | null;
 }
-
-/* ===== Utils (export để UI có thể dùng nếu muốn) ===== */
-
 
 export function fmt(iso?: string | null, withTime = true) {
   if (!iso) return "—";
@@ -201,6 +200,12 @@ export function useInterviewScheduleDetail(scheduleId: string) {
     }
   }
 
+  function patchOutcome(id: UUID, patch: Partial<UiInterviewOutcome>) {
+  setOutcomes(prev => prev.map(o => (o.id === id ? { ...o, ...patch } : o)));
+  setLastSubmitted(prev => (prev?.id === id ? { ...prev, ...patch } : prev));
+}
+
+
   return {
     // data
     schedule,
@@ -220,5 +225,7 @@ export function useInterviewScheduleDetail(scheduleId: string) {
     setFeedback,
     setComposerOpen,
     submitFeedback,
+    
+    patchOutcome,
   };
 }
