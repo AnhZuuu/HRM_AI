@@ -10,7 +10,7 @@ type Props = {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onCreate: (newCampaign: Campaign) => void | Promise<void>;
-  nextId: number;                 
+  nextId: number;
   defaultCreatedBy?: string | null;
 };
 
@@ -55,9 +55,10 @@ export default function AddCampaignDialog({
         endTime: form.endTime,
         description: form.description?.trim() || "",
         createdBy: defaultCreatedBy,
+        createdByName: defaultCreatedBy ? defaultCreatedBy.split(" ")[0] : "Người dùng không xác định",
       };
 
-      
+
       await onCreate(payload);
 
       reset();
@@ -66,7 +67,7 @@ export default function AddCampaignDialog({
       setSubmitting(false);
     }
   };
-
+  const today = new Date().toISOString().split("T")[0];
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
       <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
@@ -94,6 +95,7 @@ export default function AddCampaignDialog({
                 id="start"
                 type="date"
                 value={form.startTime}
+                min={today}
                 max={form.endTime || undefined}
                 onChange={(e) => { setForm({ ...form, startTime: e.target.value }); setErrors((x) => ({ ...x, startTime: "" })); }}
               />
