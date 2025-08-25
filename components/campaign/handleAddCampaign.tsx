@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { toast, ToastContainer } from "react-toastify";
 
 type Props = {
   open: boolean;
@@ -45,30 +46,35 @@ export default function AddCampaignDialog({
   };
 
   const handleSubmit = async () => {
-    if (!validate()) return;
-    setSubmitting(true);
-    try {
-      const payload: Campaign = {
-        id: nextId.toString(),
-        name: form.name.trim(),
-        startTime: form.startTime,
-        endTime: form.endTime,
-        description: form.description?.trim() || "",
-        createdBy: defaultCreatedBy,
-        createdByName: defaultCreatedBy ? defaultCreatedBy.split(" ")[0] : "Người dùng không xác định",
-      };
+  if (!validate()) return;
+  setSubmitting(true);
+  try {
+    const payload: Campaign = {
+      id: nextId.toString(),
+      name: form.name.trim(),
+      startTime: form.startTime,
+      endTime: form.endTime,
+      description: form.description?.trim() || "",
+      createdBy: defaultCreatedBy,
+      createdByName: defaultCreatedBy
+        ? defaultCreatedBy.split(" ")[0]
+        : "Người dùng không xác định",
+    };
 
+    await onCreate(payload);
 
-      await onCreate(payload);
+    toast.success("Chiến dịch đã được tạo thành công!"); // <-- success toast here
 
-      reset();
-      onOpenChange(false);
-    } finally {
-      setSubmitting(false);
-    }
-  };
+    reset();
+    onOpenChange(false);
+  } catch (err: any) {
+    toast.error(err?.message || "Không thể tạo chiến dịch."); // <-- error toast here
+  } finally {
+    setSubmitting(false);
+  }
+};
   const today = new Date().toISOString().split("T")[0];
-  return (
+  return (<>
     <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
       <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
         <DialogHeader>
@@ -132,5 +138,7 @@ export default function AddCampaignDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+     <ToastContainer position="top-right" autoClose={3000} />
+    </>
   );
 }

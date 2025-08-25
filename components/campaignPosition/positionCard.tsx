@@ -15,6 +15,7 @@ import API from "@/api/api";
 import LoadingDialog from "./loading";
 import ShowAllDialog, { LiveUploadItem } from "./showAll";
 import CvApplicantDialog from "./cvApplicant";
+import { toast, ToastContainer } from "react-toastify";
 
 type CvApplicantDraft = {
   fileUrl: string;
@@ -181,25 +182,29 @@ export default function CampaignPositions(
   // Start live/async uploads for all selected files
   const handleUpload = async () => {
     if (!activePos || !files?.length) return;
+    try {
+      toast.success("Tải CV lên thành công!");
+      console.log("Uploading CV(s) for campaignPositionId:", activePos.id);
+      // seed live items & open the live dialog right away
+      const seeded: LiveUploadItem[] = Array.from(files).map((file) => ({
+        fileName: file.name,
+        fileUrl: URL.createObjectURL(file),
+        originalFile: file,
+        status: "UPLOADING",
+      }));
+      setLiveItems(seeded);
+      setResultOpen(true);
+      setUploadOpen(false);
+      setFiles(null);
 
-    console.log("Uploading CV(s) for campaignPositionId:", activePos.id);
+      // kick off each upload concurrently
+      seeded.forEach((it, idx) => {
+        uploadOne(it.originalFile, idx, activePos.id);
+      });
+    } catch {
+      toast.error("Không thể tải lên file.");
+    }
 
-    // seed live items & open the live dialog right away
-    const seeded: LiveUploadItem[] = Array.from(files).map((file) => ({
-      fileName: file.name,
-      fileUrl: URL.createObjectURL(file),
-      originalFile: file,
-      status: "UPLOADING",
-    }));
-    setLiveItems(seeded);
-    setResultOpen(true);
-    setUploadOpen(false);
-    setFiles(null);
-
-    // kick off each upload concurrently
-    seeded.forEach((it, idx) => {
-      uploadOne(it.originalFile, idx, activePos.id);
-    });
   };
 
   // “Chi tiết” handler from the live dialog
@@ -389,6 +394,8 @@ export default function CampaignPositions(
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ToastContainer position="top-right" autoClose={3000} />
     </>
   );
 }

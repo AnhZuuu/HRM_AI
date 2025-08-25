@@ -99,7 +99,7 @@ const inter = Inter({ subsets: ["latin"] })
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: Home },
-  { name: "Tài khoản", href: "/dashboard/accounts", icon: BookUser  },
+  { name: "Tài khoản", href: "/dashboard/accounts", icon: BookUser },
   { name: "Ứng viên", href: "/dashboard/candidates", icon: Users },
   { name: "Mail", href: "/dashboard/mail", icon: Mail },
   { name: "Campaign", href: "/dashboard/campaigns", icon: Megaphone },
@@ -189,7 +189,7 @@ export default function ClientLayout({
                 <div className="flex flex-1 items-center justify-between">
                   <div className="flex flex-1 items-center">
                     <div className="w-full max-w-lg lg:max-w-xs">
-                      <div className="relative">
+                      {/* <div className="relative">
                         <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                           <Search className="h-5 w-5 text-gray-400" />
                         </div>
@@ -198,7 +198,7 @@ export default function ClientLayout({
                           placeholder="Search candidates..."
                           type="search"
                         />
-                      </div>
+                      </div> */}
                     </div>
                   </div>
 
@@ -208,12 +208,12 @@ export default function ClientLayout({
                       Add Candidate
                     </Button> */}
 
-                    <Button variant="ghost" size="sm" className="relative">
+                    {/* <Button variant="ghost" size="sm" className="relative">
                       <Bell className="h-5 w-5" />
                       <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-xs text-white flex items-center justify-center">
                         3
                       </Badge>
-                    </Button>
+                    </Button> */}
 
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>

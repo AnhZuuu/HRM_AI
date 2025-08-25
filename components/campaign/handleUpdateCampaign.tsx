@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { toast, ToastContainer } from "react-toastify";
 
 type Props = {
   open: boolean;
@@ -67,79 +68,89 @@ export default function UpdateCampaignDialog({ open, onOpenChange, campaign, onS
   const handleSave = () => {
     if (!form || !campaign) return;
     if (!validate()) return;
-    onSave({
-      ...campaign,
-      name: form.name.trim(),
-      startTime: form.startTime,
-      endTime: form.endTime,
-      description: form.description || "",
-    });
-    onOpenChange(false);
+    try {
+      onSave({
+        ...campaign,
+        name: form.name.trim(),
+        startTime: form.startTime,
+        endTime: form.endTime,
+        description: form.description || "",
+      });
+
+      toast.success("Sửa thành công!"); // success popup
+
+      onOpenChange(false);
+    } catch (err: any) {
+      toast.error(err?.message || "Không thể lưu chiến dịch.");
+    }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Sửa đợt tuyển dụng</DialogTitle>
-          <DialogDescription>Cập nhật thông tin đợt tuyển dụng</DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Sửa đợt tuyển dụng</DialogTitle>
+            <DialogDescription>Cập nhật thông tin đợt tuyển dụng</DialogDescription>
+          </DialogHeader>
 
-        <div className="grid gap-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Tên đợt tuyển dụng <span className="text-red-500">*</span></Label>
-            <Input
-              id="name"
-              value={form?.name ?? ""}
-              onChange={(e) => setForm((s) => (s ? { ...s, name: e.target.value } : s))}
-              placeholder="Tên đợt tuyển dụng"
-            />
-            {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid gap-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="start">Bắt đầu từ: <span className="text-red-500">*</span></Label>
+              <Label htmlFor="name">Tên đợt tuyển dụng <span className="text-red-500">*</span></Label>
               <Input
-                id="start"
-                type="date"
-                value={form?.startTime ?? ""}
-                min={today}
-                max={form?.endTime || undefined}
-                onChange={(e) => setForm((s) => (s ? { ...s, startTime: e.target.value } : s))}
+                id="name"
+                value={form?.name ?? ""}
+                onChange={(e) => setForm((s) => (s ? { ...s, name: e.target.value } : s))}
+                placeholder="Tên đợt tuyển dụng"
               />
-              {errors.startTime && <p className="text-red-500 text-sm">{errors.startTime}</p>}
+              {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
             </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="start">Bắt đầu từ: <span className="text-red-500">*</span></Label>
+                <Input
+                  id="start"
+                  type="date"
+                  value={form?.startTime ?? ""}
+                  min={today}
+                  max={form?.endTime || undefined}
+                  onChange={(e) => setForm((s) => (s ? { ...s, startTime: e.target.value } : s))}
+                />
+                {errors.startTime && <p className="text-red-500 text-sm">{errors.startTime}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="end">Kết thúc vào: <span className="text-red-500">*</span></Label>
+                <Input
+                  id="end"
+                  type="date"
+                  value={form?.endTime ?? ""}
+                  min={form?.startTime || undefined}
+                  onChange={(e) => setForm((s) => (s ? { ...s, endTime: e.target.value } : s))}
+                />
+                {errors.endTime && <p className="text-red-500 text-sm">{errors.endTime}</p>}
+              </div>
+            </div>
+
             <div className="space-y-2">
-              <Label htmlFor="end">Kết thúc vào: <span className="text-red-500">*</span></Label>
-              <Input
-                id="end"
-                type="date"
-                value={form?.endTime ?? ""}
-                min={form?.startTime || undefined}
-                onChange={(e) => setForm((s) => (s ? { ...s, endTime: e.target.value } : s))}
+              <Label htmlFor="desc">Mô tả</Label>
+              <Textarea
+                id="desc"
+                rows={3}
+                value={form?.description ?? ""}
+                onChange={(e) => setForm((s) => (s ? { ...s, description: e.target.value } : s))}
+                placeholder="Thêm mô tả về đợt tuyển dụng này..."
               />
-              {errors.endTime && <p className="text-red-500 text-sm">{errors.endTime}</p>}
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="desc">Mô tả</Label>
-            <Textarea
-              id="desc"
-              rows={3}
-              value={form?.description ?? ""}
-              onChange={(e) => setForm((s) => (s ? { ...s, description: e.target.value } : s))}
-              placeholder="Thêm mô tả về đợt tuyển dụng này..."
-            />
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Hủy</Button>
-          <Button onClick={handleSave} disabled={!isDirty}>Lưu thay đổi</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>Hủy</Button>
+            <Button onClick={handleSave} disabled={!isDirty}>Lưu thay đổi</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <ToastContainer position="top-right" autoClose={3000} />
+    </>
   );
 }
