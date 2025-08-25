@@ -73,7 +73,7 @@ const LoginPage = () => {
         try {
           const prob = await response.json();
           message = prob?.message ?? prob?.detail ?? message;
-        } catch {}
+        } catch { }
         throw new Error(message);
       }
 
@@ -89,7 +89,12 @@ const LoginPage = () => {
       localStorage.setItem("refreshTokenExpires", data.refreshTokenExpires);
       localStorage.setItem("email", data.data.email);
       localStorage.setItem("name", data.data.name);
+
+      // Save full roles for reference
       localStorage.setItem("roles", JSON.stringify(data.data.roles));
+      // Also save numeric role IDs for fast checks
+      const roleIds = data.data.roles.map((r: { role: number }) => r.role);
+      localStorage.setItem("roleIds", JSON.stringify(roleIds));
 
       console.log("Saved test token:", localStorage.getItem("accessToken"));
 

@@ -37,7 +37,7 @@ export default function AccountPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(10);
+  const [pageSize] = useState(5);
   const [totalPages, setTotalPages] = useState(1);
   const [deptFilter, setDeptFilter] = useState<string>("all");
   const [departments, setDepartments] = useState<Department[]>([]);
