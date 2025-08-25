@@ -4,14 +4,27 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, FileText, MapPin, PencilLine, Users } from "lucide-react";
+import {
+  ArrowLeft,
+  Calendar,
+  FileText,
+  MapPin,
+  PencilLine,
+  Users,
+} from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { initials } from "@/app/utils/helper";
-import { ApiInterviewSchedule, fmt, UiInterviewOutcome } from "../useInterviewScheduleDetail";
+import {
+  ApiInterviewSchedule,
+  fmt,
+  UiInterviewOutcome,
+} from "../useInterviewScheduleDetail";
 import { INTERVIEW_STATUS_MAP } from "@/app/utils/enum";
 import { FancyTextarea } from "./fancyTextarea";
-import { Dispatch, SetStateAction } from "react";
-
+import { Dispatch, SetStateAction, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { authFetch } from "@/app/utils/authFetch";
+import API from "@/api/api";
 
 type Props = {
   schedule: ApiInterviewSchedule | null;
@@ -31,6 +44,13 @@ type Props = {
   submitFeedback: () => Promise<void> | void;
 };
 
+type ApiOutcomeItem = {
+  interviewScheduleId: string;
+  feedback: string | null;
+  id: string;
+  creationDate: string | null;
+};
+
 export default function InterviewScheduleDetailView({
   schedule,
   outcomes,
@@ -46,14 +66,81 @@ export default function InterviewScheduleDetailView({
   setComposerOpen,
   submitFeedback,
 }: Props) {
+  const router = useRouter();
+  const [existingOutcome, setExistingOutcome] =
+    useState<UiInterviewOutcome | null>(null);
+  const [loadingExisting, setLoadingExisting] = useState(false);
+  const [existingErr, setExistingErr] = useState<string | null>(null);
+  const outcomeToShow = lastSubmitted ?? existingOutcome;
+
+  useEffect(() => {
+    if (!schedule?.id) return;
+    if (lastSubmitted) return; // vừa submit thì ưu tiên cái vừa gửi
+
+    let alive = true;
+    (async () => {
+      setLoadingExisting(true);
+      setExistingErr(null);
+      try {
+        const res = await authFetch(`${API.INTERVIEW.OUTCOME}`, {
+          method: "GET",
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+
+        const list: ApiOutcomeItem[] = Array.isArray(json?.data?.data)
+          ? json.data.data
+          : Array.isArray(json?.data)
+          ? json.data
+          : [];
+
+        const m = list.find((o) => o.interviewScheduleId === schedule.id);
+        if (alive && m) {
+          setExistingOutcome({
+            id: m.id,
+            feedback: m.feedback ?? "",
+            createdAt: m.creationDate ?? "",
+            interviewSchedule: {
+              id: schedule.id,
+              stageOrder: schedule.interviewStageModel?.order ?? null,
+              stageName: schedule.interviewStageModel?.stageName ?? null,
+              startTime: schedule.startTime,
+              endTime: schedule.endTime,
+              location: schedule.departmentModel?.departmentName ?? null,
+              interviewerNames:
+                schedule.interviewerModels?.map((i) => i.name) ?? [],
+            },
+            interviewOutcomeStatus: 1,
+          });
+          setComposerOpen(false); // có outcome thì ẩn form
+        }
+      } catch (e: any) {
+        if (alive)
+          setExistingErr(e?.message || "Không tải được đánh giá hiện có.");
+      } finally {
+        if (alive) setLoadingExisting(false);
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [schedule?.id, lastSubmitted]);
+
   return (
     <div className="min-h-[90vh] w-full bg-muted/30 p-4 md:p-8">
+      <Button variant="outline" onClick={() => router.back()}>
+        <ArrowLeft className="h-4 w-4" />
+        Quay lại
+      </Button>
       <Card className="mx-auto max-w-6xl rounded-2xl shadow-sm">
         <div className="grid grid-cols-1 md:grid-cols-[280px_1fr_320px]">
           {/* LEFT — Applicant */}
           <div className="border-b md:border-b-0 md:border-r p-6">
             <div className="flex flex-col items-center text-center">
-              <div className="mb-4 text-lg font-semibold">Thông tin ứng viên</div>
+              <div className="mb-4 text-lg font-semibold">
+                Thông tin ứng viên
+              </div>
               <div className="relative h-24 w-24 rounded-full bg-gradient-to-b from-blue-100 to-blue-200 overflow-hidden">
                 <Avatar className="h-24 w-24 rounded-2xl ring-1 ring-border">
                   <AvatarFallback className="text-2xl font-semibold">
@@ -67,7 +154,8 @@ export default function InterviewScheduleDetailView({
               </h3>
 
               <p className="mt-1 max-w-[220px] text-sm leading-relaxed text-muted-foreground">
-                Ứng tuyển vào vị trí {schedule?.campaignPositionModel?.description}
+                Ứng tuyển vào vị trí{" "}
+                {schedule?.campaignPositionModel?.description}
               </p>
             </div>
 
@@ -75,10 +163,15 @@ export default function InterviewScheduleDetailView({
 
             <div className="space-y-2 text-sm mb-2">
               <div className="text-muted-foreground">Email</div>
-              <div className="font-medium">{schedule?.cvApplicantModel.email || "—"}</div>
+              <div className="font-medium">
+                {schedule?.cvApplicantModel.email || "—"}
+              </div>
             </div>
 
-            <a className="flex w-full items-center gap-2 text-left text-sm text-primary underline-offset-4 hover:underline" href={schedule?.cvApplicantModel.fileUrl}>
+            <a
+              className="flex w-full items-center gap-2 text-left text-sm text-primary underline-offset-4 hover:underline"
+              href={schedule?.cvApplicantModel.fileUrl}
+            >
               <FileText className="h-4 w-4" /> CV đính kèm
             </a>
 
@@ -87,23 +180,36 @@ export default function InterviewScheduleDetailView({
 
           {/* CENTER */}
           <div className="p-4 md:p-6">
-            <div className="mb-4 text-lg font-semibold">Thông tin cuộc phỏng vấn</div>
+            <div className="mb-4 text-lg font-semibold">
+              Thông tin cuộc phỏng vấn
+            </div>
 
             {loading ? (
-              <div className="text-sm text-muted-foreground">Đang tải dữ liệu…</div>
+              <div className="text-sm text-muted-foreground">
+                Đang tải dữ liệu…
+              </div>
             ) : loadErr ? (
               <div className="text-sm text-rose-600">{loadErr}</div>
             ) : (
               <Tabs defaultValue="overview" className="w-full">
                 <div className="border-b">
                   <TabsList className="h-auto gap-6 bg-transparent p-0">
-                    <TabsTrigger value="overview" className="rounded-none bg-transparent px-0 pb-3 text-sm font-medium data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary">
+                    <TabsTrigger
+                      value="overview"
+                      className="rounded-none bg-transparent px-0 pb-3 text-sm font-medium data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary"
+                    >
                       Cơ bản
                     </TabsTrigger>
-                    <TabsTrigger value="panel" className="rounded-none bg-transparent px-0 pb-3 text-sm font-medium data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary">
+                    <TabsTrigger
+                      value="panel"
+                      className="rounded-none bg-transparent px-0 pb-3 text-sm font-medium data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary"
+                    >
                       Chi tiết
                     </TabsTrigger>
-                    <TabsTrigger value="feedback" className="rounded-none bg-transparent px-0 pb-3 text-sm font-medium data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary">
+                    <TabsTrigger
+                      value="feedback"
+                      className="rounded-none bg-transparent px-0 pb-3 text-sm font-medium data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary"
+                    >
                       Đánh giá
                     </TabsTrigger>
                   </TabsList>
@@ -113,16 +219,27 @@ export default function InterviewScheduleDetailView({
                 <TabsContent value="overview" className="mt-6 space-y-6">
                   <SectionCard title="Basic Information">
                     <InfoRow label="Interview Type" value={"—"} />
-                    <InfoRow label="Round" value={schedule?.interviewStageModel?.order} />
+                    <InfoRow
+                      label="Round"
+                      value={schedule?.interviewStageModel?.order}
+                    />
                     <InfoRow
                       label="Status"
                       value={
-                        <Badge className={INTERVIEW_STATUS_MAP[schedule?.status ?? 0].className}>
+                        <Badge
+                          className={
+                            INTERVIEW_STATUS_MAP[schedule?.status ?? 0]
+                              .className
+                          }
+                        >
                           {INTERVIEW_STATUS_MAP[schedule?.status ?? 0].label}
                         </Badge>
                       }
                     />
-                    <InfoRow label="Duration" value={`${durationMin} minutes`} />
+                    <InfoRow
+                      label="Duration"
+                      value={`${durationMin} minutes`}
+                    />
                   </SectionCard>
 
                   <SectionCard title="Schedule Timing">
@@ -150,8 +267,16 @@ export default function InterviewScheduleDetailView({
                 {/* PANEL */}
                 <TabsContent value="panel" className="mt-6 space-y-4">
                   <SectionCard title="Department & Position">
-                    <InfoRow label="Department" value={schedule?.departmentModel?.departmentName || "—"} />
-                    <InfoRow label="Position" value={schedule?.campaignPositionModel?.description ?? "—"} />
+                    <InfoRow
+                      label="Department"
+                      value={schedule?.departmentModel?.departmentName || "—"}
+                    />
+                    <InfoRow
+                      label="Position"
+                      value={
+                        schedule?.campaignPositionModel?.description ?? "—"
+                      }
+                    />
                   </SectionCard>
 
                   <SectionCard title="Interview Panel">
@@ -161,20 +286,28 @@ export default function InterviewScheduleDetailView({
                           key={i.id}
                           label={
                             <span className="inline-flex items-center gap-2">
-                              <Users className="h-4 w-4 text-muted-foreground" /> Interv.
+                              <Users className="h-4 w-4 text-muted-foreground" />{" "}
+                              Interv.
                             </span>
                           }
                           value={i.name}
                         />
                       ))
                     ) : (
-                      <InfoRow label="Interv." value="No interviewers assigned." />
+                      <InfoRow
+                        label="Interv."
+                        value="No interviewers assigned."
+                      />
                     )}
                   </SectionCard>
 
                   <SectionCard title="Notes">
-                    <div className="text-sm text-muted-foreground whitespace-pre-wrap">{schedule?.notes || "No notes provided."}</div>
-                    <div className="mt-3 text-xs text-muted-foreground">Tạo vào: {fmt(schedule?.creationDate)}</div>
+                    <div className="text-sm text-muted-foreground whitespace-pre-wrap">
+                      {schedule?.notes || "No notes provided."}
+                    </div>
+                    <div className="mt-3 text-xs text-muted-foreground">
+                      Tạo vào: {fmt(schedule?.creationDate)}
+                    </div>
                   </SectionCard>
                 </TabsContent>
 
@@ -182,27 +315,23 @@ export default function InterviewScheduleDetailView({
                 <TabsContent value="feedback" className="mt-6">
                   <Card className="rounded-xl border bg-card shadow-sm">
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-base font-semibold">{composerOpen ? "Đánh giá ứng viên" : "Đánh giá đã gửi"}</CardTitle>
+                      <CardTitle className="text-base font-semibold">
+                        {outcomeToShow ? "Đánh giá đã có" : "Đánh giá ứng viên"}
+                      </CardTitle>
                     </CardHeader>
+
                     <CardContent className="space-y-4">
-                      {composerOpen ? (
-                        <>
-                          <FancyTextarea value={feedback} onChange={setFeedback} placeholder="Viết đánh giá về cuộc phỏng vấn..." maxLength={1000} />
-                          <div className="flex items-center justify-between gap-3">
-                            {submitErr ? <div className="text-sm text-rose-600">{submitErr}</div> : <span />}
-                            <div className="flex items-center gap-3">
-                              <Button variant="secondary" onClick={() => setFeedback("")} type="button">Làm mới</Button>
-                              <Button onClick={submitFeedback} type="button" disabled={submitting || !feedback.trim()} className="gap-2">
-                                {submitting ? "Đang gửi…" : "Nộp đánh giá"}
-                              </Button>
-                            </div>
-                          </div>
-                        </>
-                      ) : (
+                      {outcomeToShow ? (
                         <div className="space-y-3">
-                          <div className="text-sm text-muted-foreground">Gửi lúc: {fmt(lastSubmitted?.createdAt ?? undefined)}</div>
-                          <div className="rounded-xl border bg-muted/40 p-3 text-sm whitespace-pre-wrap">{lastSubmitted?.feedback || "—"}</div>
-                          <div className="flex items-center justify-end">
+                          <div className="text-sm text-muted-foreground">
+                            Gửi lúc:{" "}
+                            {fmt(outcomeToShow?.createdAt ?? undefined)}
+                          </div>
+                          <div className="rounded-xl border bg-muted/40 p-3 text-sm whitespace-pre-wrap">
+                            {outcomeToShow?.feedback || "—"}
+                          </div>
+
+                          <div className="flex items-center gap-2">
                             <Button
                               variant="outline"
                               type="button"
@@ -213,8 +342,71 @@ export default function InterviewScheduleDetailView({
                             >
                               Viết đánh giá khác
                             </Button>
+
+                            <Button
+                              type="button"
+                              disabled={
+                                !outcomeToShow?.id ||
+                                !schedule?.cvApplicantModel?.id
+                              }
+                              onClick={() => {
+                                const outcomeId = outcomeToShow!.id;
+                                const applicantId =
+                                  schedule!.cvApplicantModel!.fullName;
+                                router.push(
+                                  `/dashboard/onboards/new?outcomeId=${outcomeId}&applicantId=${applicantId}`
+                                );
+                              }}
+                            >
+                              Tạo onboard
+                            </Button>
                           </div>
                         </div>
+                      ) : loadingExisting ? (
+                        <div className="text-sm text-muted-foreground">
+                          Đang kiểm tra đánh giá hiện có…
+                        </div>
+                      ) : (
+                        <>
+                          {existingErr ? (
+                            <div className="text-sm text-amber-600">
+                              {existingErr}
+                            </div>
+                          ) : null}
+
+                          <FancyTextarea
+                            value={feedback}
+                            onChange={setFeedback}
+                            placeholder="Viết đánh giá về cuộc phỏng vấn..."
+                            maxLength={1000}
+                          />
+                          <div className="flex items-center justify-between gap-3">
+                            {submitErr ? (
+                              <div className="text-sm text-rose-600">
+                                {submitErr}
+                              </div>
+                            ) : (
+                              <span />
+                            )}
+                            <div className="flex items-center gap-3">
+                              <Button
+                                variant="secondary"
+                                onClick={() => setFeedback("")}
+                                type="button"
+                              >
+                                Làm mới
+                              </Button>
+                              <Button
+                                onClick={submitFeedback}
+                                type="button"
+                                disabled={submitting || !feedback.trim()}
+                                className="gap-2"
+                              >
+                                {submitting ? "Đang gửi…" : "Nộp đánh giá"}
+                              </Button>
+                            </div>
+                          </div>
+                        </>
                       )}
                     </CardContent>
                   </Card>
@@ -232,7 +424,13 @@ export default function InterviewScheduleDetailView({
 }
 
 /* ===== Mini components ===== */
-function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
+function SectionCard({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
     <Card className="rounded-xl border bg-card shadow-sm">
       <CardHeader className="pb-2">
@@ -243,10 +441,18 @@ function SectionCard({ title, children }: { title: string; children: React.React
   );
 }
 
-function InfoRow({ label, value }: { label: React.ReactNode; value: React.ReactNode }) {
+function InfoRow({
+  label,
+  value,
+}: {
+  label: React.ReactNode;
+  value: React.ReactNode;
+}) {
   return (
     <div className="flex flex-col gap-1 py-2 md:grid md:grid-cols-[180px_1fr] md:gap-4 md:py-2 border-b last:border-b-0">
-      <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground md:pt-1">{label}</div>
+      <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground md:pt-1">
+        {label}
+      </div>
       <div className="text-sm leading-6">{value ?? "—"}</div>
     </div>
   );
@@ -270,9 +476,13 @@ function RightTimeline({ outcomes }: { outcomes: UiInterviewOutcome[] }) {
                 <div className="flex items-center gap-2">
                   <p className="font-medium">
                     {`Stage ${o.interviewSchedule?.stageOrder ?? idx + 1}`}
-                    {o.interviewSchedule?.stageName ? ` · ${o.interviewSchedule.stageName}` : ""}
+                    {o.interviewSchedule?.stageName
+                      ? ` · ${o.interviewSchedule.stageName}`
+                      : ""}
                   </p>
-                  <span className="text-xs text-muted-foreground">{fmt(o.interviewSchedule?.startTime ?? undefined)}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {fmt(o.interviewSchedule?.startTime ?? undefined)}
+                  </span>
                 </div>
 
                 <div className="mt-2 space-y-2 text-sm text-muted-foreground bg-gray-100 border-b rounded-2xl shadow-sm p-2">
@@ -292,7 +502,9 @@ function RightTimeline({ outcomes }: { outcomes: UiInterviewOutcome[] }) {
 
                   <div className="flex items-center gap-2">
                     <PencilLine className="h-4 w-4" />
-                    <p className="mt-1 whitespace-pre-wrap">{o.feedback || "—"}</p>
+                    <p className="mt-1 whitespace-pre-wrap">
+                      {o.feedback || "—"}
+                    </p>
                   </div>
                 </div>
               </li>
