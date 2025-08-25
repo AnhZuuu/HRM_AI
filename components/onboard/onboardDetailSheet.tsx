@@ -8,8 +8,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Calendar, ClipboardList, History, Eye } from "lucide-react";
-import { useState } from "react";
+import { Calendar, ClipboardList, History, Eye, PencilLine } from "lucide-react";
+import { useEffect, useState } from "react";
+
+type ApiResponse<T> = {
+  code: number;
+  status: boolean;
+  message?: string;
+  data: T;
+};
 
 function coerceStatusLabel(status: number | string): { key: number | null; label: string } {
   if (typeof status === "number") return { key: status, label: OnboardRequestStatus[status] ?? String(status) };
@@ -30,6 +37,35 @@ export default function OnboardDetailSheet({ row, onStatusChanged, }: { row: Onb
 
   const [submitting, setSubmitting] = useState<"approve" | "reject" | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const [outcomes, setOutcomes] = useState<InterviewOutcome[]>([]);
+  const [outcomeError, setOutcomeError] = useState<string | null>(null);
+  const [loadingOutcomes, setLoadingOutcomes] = useState(false);
+
+    async function fetchOutcomes() {
+    setLoadingOutcomes(true);
+    setOutcomeError(null);
+    try {
+      const url = `${API.CV.APPLICANT}/${row.cvApplicantId}/outcomes`;
+      const res = await authFetch(url, { method: "GET" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = (await res.json()) as ApiResponse<InterviewOutcome>;
+      const items: InterviewOutcome[] = Array.isArray(json?.data) ? json.data : [];
+      console.log(items)
+      setOutcomes(items);
+    } catch (e: any) {
+      setOutcomeError(e?.message || "Failed to load outcomes");
+      setOutcomes([]);
+    } finally {
+      setLoadingOutcomes(false);
+    }
+  }
+
+    useEffect(() => {
+    if (outcomes.length === 0 && applicant?.id) {
+      void fetchOutcomes();
+    }
+  }, []);
 
     async function updateStatus(id: string, status: number) {
     const url = `${API.ONBOARD.BASE}/${id}/status`;
@@ -74,12 +110,13 @@ export default function OnboardDetailSheet({ row, onStatusChanged, }: { row: Onb
       <SheetTrigger asChild>
         <Button variant="ghost" size="sm"><Eye className="h-4 w-4 mr-2" /> Chi tiết</Button>
       </SheetTrigger>
-      <SheetContent className="w-full sm:max-w-xl" aria-describedby={undefined}>
-        <SheetHeader>
+      <SheetContent className="w-full sm:max-w-xl p-0 overflow-y-auto" aria-describedby={undefined}>
+        <SheetHeader className="px-6 pt-6 pb-2">
           <SheetTitle>Onboard - {applicant?.fullName ?? "—"}</SheetTitle>
         </SheetHeader>
 
-        <div className="mt-4 space-y-6">
+        <div className="px-6 pb-6">
+          <div className="space-y-6 h-[calc(100dvh-140px)] overflow-y-auto">
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Thông tin offer</CardTitle>
@@ -98,7 +135,7 @@ export default function OnboardDetailSheet({ row, onStatusChanged, }: { row: Onb
 
               <div className="text-slate-500">Ngày bắt đầu đi làm</div>
               <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4" /> {fmtDate(row.proposedStartDate)}
+                {fmtDate(row.proposedStartDate)}
               </div>
 
               <div className="text-slate-500">Trạng thái</div>
@@ -115,7 +152,36 @@ export default function OnboardDetailSheet({ row, onStatusChanged, }: { row: Onb
               <CardTitle className="text-base flex items-center gap-2"><ClipboardList className="h-4 w-4" /> Kết quả phỏng vấn</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-sm text-slate-500">Không có kết quả phỏng vấn.</div>
+             {loadingOutcomes ? (
+                <div className="text-sm text-muted-foreground">Đang tải kết quả…</div>
+              ) : outcomeError ? (
+                <div className="text-sm text-rose-600">{outcomeError}</div>
+              ) : outcomes.length ? (
+                <ol className="relative border-s pl-6">
+                  {outcomes.map((o, idx) => (
+                    <li key={o.id} className="mb-8 ms-4">
+                      <span className="absolute -start-2 grid h-4 w-4 place-items-center rounded-full border bg-blue-50 border-blue-200">
+                        <span className="h-2 w-2 rounded-[4px] bg-blue-500" />
+                      </span>
+
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">{`Vòng ${idx + 1}`}</p>                        
+                      </div>
+
+                      <div className="mt-2 space-y-2 text-sm text-muted-foreground bg-gray-100 border-b rounded-2xl shadow-sm p-2">
+                        <div className="text-slate-500">Đánh giá của người phỏng vấn </div>
+                        
+                        <div className="flex items-center gap-2">
+                          <PencilLine className="h-4 w-4" />
+                          <p className="mt-1 whitespace-pre-wrap">{o.feedback || "—"}</p>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <div className="text-sm text-muted-foreground">Chưa có đánh giá.</div>
+              )}
             </CardContent>
           </Card>
 
@@ -160,6 +226,7 @@ export default function OnboardDetailSheet({ row, onStatusChanged, }: { row: Onb
             >
               {submitting === "reject" ? "Đang từ chối..." : "Từ chối"}
             </Button>
+          </div>
           </div>
         </div>        
       </SheetContent>

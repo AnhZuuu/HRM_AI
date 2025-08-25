@@ -4,7 +4,7 @@ interface InterviewSchedule {
   cvApplicant: CVApplicant | null;
   startTime: string;        
   endTime: string | null;  
-  status: string | null;
+  status?: string | number;
   round: number | null;
   interviewTypeId: string;
   interviewTypeName?: string | null;
