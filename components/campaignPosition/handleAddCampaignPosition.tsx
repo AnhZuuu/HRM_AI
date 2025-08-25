@@ -103,8 +103,7 @@ export default function AddPositionDialog({
     setProcLoading(true);
     setProcError(null);
     try {
-      // If you have a helper like API.DEPARTMENT.DETAIL(deptId) use it.
-      // Otherwise default to `${API.DEPARTMENT.BASE}/${deptId}`
+     
       const url = `${API.DEPARTMENT.BASE}/${deptId}`;
 
       const res = await authFetch(url);

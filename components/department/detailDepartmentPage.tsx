@@ -22,7 +22,6 @@ export default function DepartmentDetailClient({ dept }: { dept: DepartmentDetai
 
   return (
     <div className="p-6 space-y-6">
-      {/* Card thông tin phòng ban giữ nguyên */}
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl">
@@ -55,8 +54,9 @@ export default function DepartmentDetailClient({ dept }: { dept: DepartmentDetai
       <Tabs defaultValue="positions" className="w-full">
         <TabsList>
           <TabsTrigger value="positions">Vị trí ({positions.length})</TabsTrigger>
-          <TabsTrigger value="employees">Nhân sự ({employees.length})</TabsTrigger>
           <TabsTrigger value="interview-process">Quy trình phỏng vấn ({processes.length})</TabsTrigger>
+          <TabsTrigger value="employees">Nhân sự ({employees.length})</TabsTrigger>
+
         </TabsList>
 
         <TabsContent value="positions" className="mt-4">
@@ -64,7 +64,7 @@ export default function DepartmentDetailClient({ dept }: { dept: DepartmentDetai
         </TabsContent>
 
         <TabsContent value="employees" className="mt-4">
-          <EmployeesTable items={employees} />
+          <EmployeesTable items={employees} departmentId={dept.id}/>
         </TabsContent>
 
         <TabsContent value="interview-process" className="mt-4">

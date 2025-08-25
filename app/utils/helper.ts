@@ -36,6 +36,21 @@ export const formatDMYHM = (s?: string | null): string => {
   return `${dd}-${mm}-${yyyy} ${hh}:${mi}`;
 };
 
+export const formatISODate = (iso?: string) => {
+  if (!iso) return "—";
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "—";
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    // return `${yyyy}-${mm}-${dd}`;
+    return `${dd}/${mm}/${yyyy}`;
+  } catch {
+    return "—";
+  }
+};
+
 export const toMidnight = (d: string | Date) => {
     const date = typeof d === "string" ? new Date(d) : d;
     return new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -85,5 +100,21 @@ export const  initials = (first?: string, last?: string) => {
 export const toDateInput = (iso?: string | null) => {
   if (!iso) return "";
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10); // yyyy-mm-dd
+  return Number.isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10); 
 };
+
+export const fmtVnd = (n?: number | null) => {
+  if (n == null) return "—";
+  try {
+    return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(n);
+  } catch {
+    return `${n} VND`;
+  }
+}
+
+export const fmtDate = (s?: string | null) => {
+  if (!s) return "—";
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return s;
+  return d.toLocaleDateString("vi-VN", { year: "numeric", month: "2-digit", day: "2-digit" });
+}

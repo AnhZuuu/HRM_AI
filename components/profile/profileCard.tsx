@@ -18,6 +18,7 @@ import {
   Building2,
   Edit3,
   KeyRound,
+  Link,
 } from "lucide-react";
 
 // Update these paths to match your project
@@ -28,10 +29,11 @@ type ProfileCardProps = {
   data: Account;
   onEdit?: () => void;
   onChangePassword?: () => void;
+  showEdit?: boolean;           
+  showChangePassword?: boolean;
 };
 
-export function ProfileCard({ data, onEdit, onChangePassword }: ProfileCardProps) {
-  // const fullName = useMemo(() => `${data.firstName} ${data.lastName}`.trim(), [data]);
+export function ProfileCard({ data, onEdit, onChangePassword, showEdit = true, showChangePassword = true, }: ProfileCardProps) {
   const primaryRole = data.accountRoles?.[0];
 
   return (
@@ -71,12 +73,16 @@ export function ProfileCard({ data, onEdit, onChangePassword }: ProfileCardProps
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="default" size="sm" onClick={onEdit}>
-              <Edit3 className="h-4 w-4 mr-2" /> Chỉnh sửa
-            </Button>
-            <Button variant="outline" size="sm" onClick={onChangePassword}>
-              <KeyRound className="h-4 w-4 mr-2" /> Đổi mật khẩu
-            </Button>
+            {showEdit && (
+              <Button variant="default" size="sm" onClick={onEdit}>
+                <Edit3 className="h-4 w-4 mr-2" /> Chỉnh sửa
+              </Button>
+            )}
+            {showChangePassword && (
+              <Button variant="outline" size="sm" onClick={onChangePassword}>
+                <KeyRound className="h-4 w-4 mr-2" /> Đổi mật khẩu
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -139,7 +145,9 @@ export function ProfileCard({ data, onEdit, onChangePassword }: ProfileCardProps
         {/* Right column: Account */}
         <Card className="md:col-span-7 lg:col-span-7">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold">Account</CardTitle>
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+             <CardTitle className="text-base font-semibold">Thông tin tài khoản</CardTitle>             
+            </div>
           </CardHeader>
           <CardContent className="text-sm">
             <div className="grid sm:grid-cols-2 gap-4">
@@ -163,7 +171,7 @@ export function ProfileCard({ data, onEdit, onChangePassword }: ProfileCardProps
                 <div className="text-xs text-muted-foreground">Phòng ban</div>
                 <div className="flex items-center gap-2 min-w-0">
                   <Building2 className="h-4 w-4 shrink-0" />
-                  <span className="truncate">{data.departmentId ?? "Chưa có phòng ban"}</span>
+                  <span className="truncate">{data.departmentName ?? "Chưa có phòng ban"}</span>
                 </div>
               </div>
 

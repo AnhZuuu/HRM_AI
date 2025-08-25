@@ -17,16 +17,20 @@ import {
 } from "@/components/ui/dropdown-menu"
 import {
   Home, Users, Mail, Megaphone, Building2Icon, CalendarRange, Shapes,
-  Settings, Bell, Search, Menu, X, User, LogOut, Plus
+  Settings, Bell, Search, Menu, X, User, LogOut, Plus,
+  BookUser,
+  ReceiptText
 } from "lucide-react"
+import "react-toastify/dist/ReactToastify.css"
+import { ToastContainer, toast } from "react-toastify"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 
 // ---------------- Added breadcrumb helper ----------------
 const LABELS: Record<string, string> = {
   dashboard: "Dashboard",
   candidates: "Ứng viên",
-  campaigns: "Dự án",
+  campaigns: "Đợt tuyển dụng",
   mail: "Mail",
   schedules: "Lịch phỏng vấn",
   department: "Phòng ban",
@@ -34,6 +38,8 @@ const LABELS: Record<string, string> = {
   interviewTypes: "Loại phỏng vấn",
   interviewProcess: "Quy trình phỏng vấn",
   interviewStage: "Vòng phỏng vấn",
+  onboards: "on-board",
+  campaignPosition: "Vị trí ứng tuyển",
 }
 
 function isLikelyId(seg: string) {
@@ -93,13 +99,19 @@ const inter = Inter({ subsets: ["latin"] })
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: Home },
+  { name: "Tài khoản", href: "/dashboard/accounts", icon: BookUser  },
   { name: "Ứng viên", href: "/dashboard/candidates", icon: Users },
   { name: "Mail", href: "/dashboard/mail", icon: Mail },
   { name: "Campaign", href: "/dashboard/campaigns", icon: Megaphone },
+  { name: "Campaign Position", href: "/dashboard/campaignPosition", icon: Megaphone },
   { name: "Department", href: "/dashboard/departments", icon: Building2Icon },
   { name: "Schedule", href: "/dashboard/schedules", icon: CalendarRange },
   { name: "Interview Type", href: "/dashboard/interviewTypes", icon: Shapes },
+  { name: "Onboard", href: "/dashboard/onboards", icon: ReceiptText },
 ]
+
+
+
 
 export default function ClientLayout({
   children,
@@ -109,6 +121,22 @@ export default function ClientLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [name, setName] = useState<string>("");
   const [email, setEmail] = useState<string>("");
+  const router = useRouter();
+  const handleLogout = () => {
+
+    try {
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("user");
+      // Nếu muốn kỹ hơn thì localStorage.clear() nhưng thường không cần nếu bạn còn lưu state khác
+      toast.success("Đăng xuất thành công!");
+    } catch {
+      toast.error("Không thể đăng xuất. Vui lòng thử lại.");
+    } finally {
+      // Cho toast hiện 1 chút rồi chuyển trang
+      setTimeout(() => router.push("/"), 500);
+    }
+  };
   useEffect(() => {
     try {
       setName(localStorage.getItem("name") ?? "");
@@ -215,10 +243,12 @@ export default function ClientLayout({
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem>
-                          <LogOut className="mr-2 h-4 w-4" />
-                          <Link href="/" >
+                          <button
+                            onClick={handleLogout}
+                            className="inline bg-transparent p-0 m-0 border-0 cursor-pointer focus:outline-none">
+                            <LogOut className="inline mr-2 h-4 w-4" />
                             <span>Đăng xuất</span>
-                          </Link>
+                          </button>
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -235,8 +265,22 @@ export default function ClientLayout({
             <main className="flex-1">{children}</main>
           </div>
         </div>
+        <ToastContainer
+          position="top-right"
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          style={{ zIndex: 9999 }}
+        />
       </body>
+
     </html>
+
   )
 }
 
@@ -262,16 +306,14 @@ function SidebarContent() {
                   <li key={item.name}>
                     <Link
                       href={item.href}
-                      className={`group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold transition-colors ${
-                        isActive
-                          ? "bg-blue-50 text-blue-600"
-                          : "text-gray-700 hover:text-blue-600 hover:bg-gray-50"
-                      }`}
+                      className={`group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold transition-colors ${isActive
+                        ? "bg-blue-50 text-blue-600"
+                        : "text-gray-700 hover:text-blue-600 hover:bg-gray-50"
+                        }`}
                     >
                       <item.icon
-                        className={`h-6 w-6 shrink-0 ${
-                          isActive ? "text-blue-600" : "text-gray-400 group-hover:text-blue-600"
-                        }`}
+                        className={`h-6 w-6 shrink-0 ${isActive ? "text-blue-600" : "text-gray-400 group-hover:text-blue-600"
+                          }`}
                       />
                       {item.name}
                     </Link>

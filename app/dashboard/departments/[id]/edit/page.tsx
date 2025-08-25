@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import DepartmentForm, { DepartmentFormValues } from "@/components/department/departmentForm";
 import API from "@/api/api";
 import { authFetch } from "@/app/utils/authFetch";
+import { toast } from "react-toastify";
 
 type DeptApi = {
   id: string;
@@ -59,7 +60,7 @@ export default function EditDepartmentPage() {
     // match API contract exactly
     const payload = {
       departmentName: values.departmentName.trim(),
-      code: values.code.trim(),
+      // code: values.code.trim(),
       description: values.description?.trim() ?? "",
     };
 
@@ -70,6 +71,7 @@ export default function EditDepartmentPage() {
     });
 
     const txt = await res.text();
+    console.log(txt);
     const json = txt ? JSON.parse(txt) : null;
     if (!res.ok) {
       throw new Error(json?.message || "Cập nhật thất bại.");
@@ -86,16 +88,17 @@ export default function EditDepartmentPage() {
         title="Cập nhật phòng ban"
         initial={{
           departmentName: dept.departmentName,
-          code: dept.code,
+          // code: dept.code,
           description: dept.description ?? "",
         }}
         onSubmit={async (vals) => {
           try {
             await handleUpdate(vals);
-            alert("Chỉnh sửa thành công!");
-            router.push("/dashboard/departments");
+            toast.success("Chỉnh sửa thành công!");
+            // router.push("/dashboard/departments");
+            setTimeout(() => router.push("/dashboard/departments"), 500);
           } catch (e: any) {
-            alert(e?.message || "Cập nhật thất bại.");
+            toast.error(e?.message || "Cập nhật thất bại.");
           }
         }}
         submitText="Lưu thay đổi"

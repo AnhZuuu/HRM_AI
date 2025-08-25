@@ -10,6 +10,7 @@ import { FormState, PendingOne } from "./sampleData/mockData";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import ScheduleDialog from "./ui/scheduleDialog";
 import ApplicantsTable from "./ui/applicantTable";
+import { toast } from "react-toastify";
 
 const STORAGE_KEY = "mock_interview_schedules_v1";
 
@@ -82,9 +83,9 @@ export default function HandleCreateInterviewSchedule() {
 
   async function confirmAllSchedules() {
     const items = Object.values(pending);
-    if (!items.length) { alert("Chưa có lịch nào được chọn."); return; }
+    if (!items.length) { toast.warning("Chưa có lịch nào được chọn."); return; }
     if (!form.campaignId || !form.campaignPositionId || !form.departmentId) {
-      alert("Vui lòng chọn Đợt tuyển dụng, Vị trí, Phòng ban trước."); return;
+      toast.warning("Vui lòng chọn Đợt tuyển dụng, Vị trí, Phòng ban trước."); return;
     }
 
     const toNames = (ids: string[]) =>
@@ -130,7 +131,7 @@ export default function HandleCreateInterviewSchedule() {
       if (anyFailed) mockSaveSchedules(items, toNames);
     }
 
-    alert("Đã tạo lịch phỏng vấn.");
+    toast.success("Đã tạo lịch phỏng vấn.");
     setPending({});
   }
 
