@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { generateTimeSlots } from "@/app/utils/time";
 import { Account, InterviewType } from "../sampleData/mockData";
 import { displayName } from "@/app/utils/name";
+import { toast } from "react-toastify";
 
 
 const timeSlots = generateTimeSlots();
@@ -38,7 +39,7 @@ export default function ScheduleDialog({
 
   function confirm() {
     if (!dlgDate || !dlgTime || dlgDuration === "" || dlgSelected.size === 0 || !interviewTypeId) {
-      alert("Chọn loại PV, ngày/giờ/thời lượng và ít nhất 1 người phỏng vấn.");
+      toast.warning("Chọn loại Phỏng Vấn, ngày/giờ/thời lượng và ít nhất 1 người phỏng vấn.");
       return;
     }
     onConfirm({

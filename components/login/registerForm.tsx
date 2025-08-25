@@ -1,5 +1,6 @@
 import API from "@/api/api";
 import React from "react";
+import { toast } from "react-toastify";
 
 interface RegisterFormProps {
   onClose: () => void;
@@ -25,9 +26,11 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onClose, onChange, formData
 
     // Validations
     if (formData.password.length < 8 || formData.password.length > 28) {
+      // return toast.warning("Password must be 8–28 characters");
       return alert("Password must be 8–28 characters");
     }
     if (formData.password !== formData.confirmPassword) {
+      // return toast.warning("Passwords do not match");
       return alert("Passwords do not match");
     }
     if (!/^\d{10}$/.test(formData.phoneNumber)) {
@@ -54,9 +57,11 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onClose, onChange, formData
         throw new Error(result.message || "Registration failed");
       }
 
+      // toast.success("Registration successful!");
       alert("Registration successful!");
       onClose();
     } catch (error: any) {
+      // toast.error("Registration error: " + error.message);
       alert("Registration error: " + error.message);
       console.error("Sign-up error:", error);
     }
