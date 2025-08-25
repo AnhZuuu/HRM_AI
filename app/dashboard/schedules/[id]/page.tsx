@@ -1,7 +1,7 @@
 "use client";
 
-import InterviewScheduleDetailView from "@/components/interviewSchedule/ui/detailInterviewCard";
-import { useInterviewScheduleDetail } from "@/components/interviewSchedule/useInterviewScheduleDetail";
+import { useInterviewScheduleDetail } from "@/components/interviewSchedule/hooks/useInterviewScheduleDetail";
+import InterviewScheduleDetailView from "@/components/interviewSchedule/interviewScheduleDetail/detailInterviewCard";
 import { useParams } from "next/navigation";
 
 export default function Page() {
