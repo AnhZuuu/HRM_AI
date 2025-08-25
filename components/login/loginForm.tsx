@@ -89,6 +89,7 @@ const LoginPage = () => {
       localStorage.setItem("refreshTokenExpires", data.refreshTokenExpires);
       localStorage.setItem("email", data.data.email);
       localStorage.setItem("name", data.data.name);
+      localStorage.setItem("roles", JSON.stringify(data.data.roles));
 
       console.log("Saved test token:", localStorage.getItem("accessToken"));
 
@@ -96,9 +97,10 @@ const LoginPage = () => {
       window.location.href = "/dashboard";
     } catch (error: any) {
 
-      setError(error?.message ?? "Không thể đăng nhập lúc này");
+      // toast.error("Login failed: " + error.message);
+      alert("Đăng nhập thất bại: " + error.message);
+      console.error("Đăng nhập thất bại:", error);
 
-      console.error("Login error:", error);
     }
   };
 

@@ -71,6 +71,7 @@ export default function EditDepartmentPage() {
     });
 
     const txt = await res.text();
+    console.log(txt);
     const json = txt ? JSON.parse(txt) : null;
     if (!res.ok) {
       throw new Error(json?.message || "Cập nhật thất bại.");
@@ -94,7 +95,8 @@ export default function EditDepartmentPage() {
           try {
             await handleUpdate(vals);
             toast.success("Chỉnh sửa thành công!");
-            router.push("/dashboard/departments");
+            // router.push("/dashboard/departments");
+            setTimeout(() => router.push("/dashboard/departments"), 500);
           } catch (e: any) {
             toast.error(e?.message || "Cập nhật thất bại.");
           }

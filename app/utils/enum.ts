@@ -17,3 +17,15 @@ export const statusColor: Record<number, string> = {
   3: "bg-slate-200 text-slate-700 border-slate-300",
   4: "bg-indigo-100 text-indigo-800 border-indigo-200",
 };
+
+export const OUTCOME_STATUS: Record<number, { label: string; className: string }> = {
+  0: { label: "Pending", className: "bg-slate-100 text-slate-700" },
+  1: { label: "Pass",    className: "bg-emerald-100 text-emerald-700" },
+  2: { label: "Fail",    className: "bg-rose-100 text-rose-700" },
+};
+
+export const INTERVIEW_STATUS_MAP: Record<number, { label: string; className: string }> = {
+  0: { label: "Scheduled", className: "bg-blue-100 text-blue-700" },
+  1: { label: "Completed", className: "bg-emerald-100 text-emerald-700" },
+  2: { label: "Canceled", className: "bg-rose-100 text-rose-700" },
+};

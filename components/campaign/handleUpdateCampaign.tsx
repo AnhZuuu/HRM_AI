@@ -10,9 +10,9 @@ type Props = {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   campaign: Campaign | null;
-  onSave: (updated: Campaign) => void; 
+  onSave: (updated: Campaign) => void;
 };
-
+const today = new Date().toISOString().split("T")[0];
 export default function UpdateCampaignDialog({ open, onOpenChange, campaign, onSave }: Props) {
   const [form, setForm] = useState<Campaign | null>(null);
   const [errors, setErrors] = useState<{ name?: string; startTime?: string; endTime?: string }>({});
@@ -104,6 +104,7 @@ export default function UpdateCampaignDialog({ open, onOpenChange, campaign, onS
                 id="start"
                 type="date"
                 value={form?.startTime ?? ""}
+                min={today}
                 max={form?.endTime || undefined}
                 onChange={(e) => setForm((s) => (s ? { ...s, startTime: e.target.value } : s))}
               />

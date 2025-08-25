@@ -24,8 +24,6 @@ export default function InterviewProcessDetailPage() {
 
         // If your API expects /:id
         const url = `${API.INTERVIEW.PROCESS}/${id}`
-        // If your API expects ?id=... instead, use:
-        // const url = `${API.INTERVIEW.PROCESS}?id=${encodeURIComponent(id)}`
 
         const res = await authFetch(url)
         if (!res.ok) throw new Error(`HTTP error: ${res.status}`)
