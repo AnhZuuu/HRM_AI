@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { authFetch } from "@/app/utils/authFetch";
 import API from "@/api/api";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "react-toastify";
 
 type CvApplicantDraft = {
     fileUrl: string;
@@ -102,7 +103,7 @@ export default function CvApplicantDialog({
             onOpenChange(false);
         } catch (err: any) {
             console.error("Save CV applicant error:", err);
-            alert(err?.message || String(err));
+            toast.error(err?.message || String(err));
         } finally {
             setSaving(false);
         }
