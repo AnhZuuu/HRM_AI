@@ -45,8 +45,8 @@ async function fetchInterviewers(): Promise<Interviewer[]> {
 
 // Predefined static stage options (since API not ready)
 const STATIC_STAGES = [
-  { id: "c4f10b3b-aba8-4bf1-1066-08dde1803f00", name: "Vòng 1" },
-  { id: "c1f41fca-48a9-48ea-1067-08dde1803f00", name: "Vòng 2" },
+  { id: "6152ae79-d863-45b7-2576-08dde3e4c6fb", name: "Vòng 1" },
+  { id: "d8b67e40-dfcb-4272-89e3-08dde40294ce", name: "Vòng 2" },
   { id: "21099b0d-e3b7-4354-fff1-08dde0e5412d", name: "Vòng 3" },
   { id: "7227e337-ffce-42f0-fff0-08dde0e5412d", name: "Vòng 4" },
 ];
