@@ -7,6 +7,8 @@ export enum Role {
   Admin = 4,
 }
 
+type StoredRole = { name: string; role: number };
+
 function safeGet(key: string): string | null {
   if (typeof window === "undefined") return null;
   try {
@@ -16,33 +18,26 @@ function safeGet(key: string): string | null {
   }
 }
 
-/**
- * Reads numeric role IDs from localStorage.
- * Falls back to parsing "roles" array if "roleIds" is missing.
- */
+function parseJSON<T>(raw: string | null, fallback: T): T {
+  if (!raw) return fallback;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+/** Preferred: use numeric "roleIds"; fallback: map from "roles" array */
 export function getRoleIds(): number[] {
-  // Preferred: precomputed numeric IDs
-  const rawIds = safeGet("roleIds");
-  if (rawIds) {
-    try {
-      return JSON.parse(rawIds) as number[];
-    } catch {
-      // ignore and try fallback
-    }
-  }
+  const ids = parseJSON<number[]>(safeGet("roleIds"), []);
+  if (ids.length) return ids;
 
-  // Fallback: map from full roles array
-  const rawRoles = safeGet("roles");
-  if (rawRoles) {
-    try {
-      const roles = JSON.parse(rawRoles) as Array<{ name: string; role: number }>;
-      return roles.map(r => r.role);
-    } catch {
-      // ignore
-    }
-  }
+  const roles = parseJSON<StoredRole[]>(safeGet("roles"), []);
+  return roles.map((r) => r.role);
+}
 
-  return [];
+export function getRoles(): StoredRole[] {
+  return parseJSON<StoredRole[]>(safeGet("roles"), []);
 }
 
 export function hasRoleId(roleId: Role): boolean {
@@ -51,7 +46,7 @@ export function hasRoleId(roleId: Role): boolean {
 
 export function hasAnyRole(roleIds: Role[]): boolean {
   const owned = new Set(getRoleIds());
-  return roleIds.some(r => owned.has(r));
+  return roleIds.some((r) => owned.has(r));
 }
 
 // Single-role checks
@@ -63,3 +58,19 @@ export const isAdmin = () => hasRoleId(Role.Admin);
 export const isHRorDM = () => hasAnyRole([Role.HR, Role.DeparmentManager]);
 export const isHRorDMorAdmin = () =>
   hasAnyRole([Role.HR, Role.DeparmentManager, Role.Admin]);
+
+const roleLabel: Record<number, string> = {
+  [Role.HR]: "HR",
+  [Role.DeparmentManager]: "Department Manager",
+  [Role.Employee]: "Employee",
+  [Role.Admin]: "Admin",
+};
+
+export function getRoleLabels(): string[] {
+  return getRoleIds().map((id) => roleLabel[id] ?? `Role ${id}`);
+}
+
+export function getPrimaryRoleLabel(): string | null {
+  const labels = getRoleLabels();
+  return labels[0] ?? null;
+}

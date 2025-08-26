@@ -19,12 +19,14 @@ import {
   Home, Users, Mail, Megaphone, Building2Icon, CalendarRange, Shapes,
   Settings, Bell, Search, Menu, X, User, LogOut, Plus,
   BookUser,
-  ReceiptText
+  ReceiptText,
+  BriefcaseBusiness
 } from "lucide-react"
 import "react-toastify/dist/ReactToastify.css"
 import { ToastContainer, toast } from "react-toastify"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
+import { getRoleLabels, hasAnyRole, Role } from "@/lib/auth"
 
 // ---------------- Added breadcrumb helper ----------------
 const LABELS: Record<string, string> = {
@@ -97,18 +99,39 @@ function Breadcrumbs() {
 
 const inter = Inter({ subsets: ["latin"] })
 
-const navigation = [
-  { name: "Dashboard", href: "/dashboard", icon: Home },
-  { name: "Tài khoản", href: "/dashboard/accounts", icon: BookUser },
-  { name: "Ứng viên", href: "/dashboard/candidates", icon: Users },
-  { name: "Mail", href: "/dashboard/mail", icon: Mail },
-  { name: "Campaign", href: "/dashboard/campaigns", icon: Megaphone },
-  { name: "Campaign Position", href: "/dashboard/campaignPosition", icon: Megaphone },
-  { name: "Department", href: "/dashboard/departments", icon: Building2Icon },
-  { name: "Schedule", href: "/dashboard/schedules", icon: CalendarRange },
-  { name: "Interview Type", href: "/dashboard/interviewTypes", icon: Shapes },
-  { name: "Onboard", href: "/dashboard/onboards", icon: ReceiptText },
-]
+type NavItem = {
+  name: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  allow?: Role[]; // if omitted => visible to all roles
+};
+
+const NAVIGATION: NavItem[] = [
+  { name: "Thống kê", href: "/dashboard", icon: Home },
+
+  { name: "Tài khoản", href: "/dashboard/accounts", icon: BookUser, allow: [Role.HR, Role.Admin] },
+
+  { name: "Ứng viên", href: "/dashboard/candidates", icon: Users, allow: [Role.HR, Role.DeparmentManager, Role.Admin] },
+  { name: "Mail", href: "/dashboard/mail", icon: Mail, allow: [ Role.Admin] },
+  { name: "Đợt tuyển dụng", href: "/dashboard/campaigns", icon: Megaphone, allow: [Role.HR, Role.DeparmentManager] },
+  { name: "Vị trí ứng tuyển", href: "/dashboard/campaignPosition", icon: BriefcaseBusiness, allow: [Role.HR, Role.DeparmentManager] },
+  { name: "Phòng ban", href: "/dashboard/departments", icon: Building2Icon, allow: [Role.HR, Role.DeparmentManager, Role.Admin] },
+  { name: "Lịch", href: "/dashboard/schedules", icon: CalendarRange },
+  { name: "Loại phỏng vấn", href: "/dashboard/interviewTypes", icon: Shapes, allow: [Role.HR, Role.Admin] },
+  { name: "Onboard", href: "/dashboard/onboards", icon: ReceiptText, allow: [Role.HR, Role.DeparmentManager] },
+];
+// const navigation = [
+//   { name: "Dashboard", href: "/dashboard", icon: Home },
+//   { name: "Tài khoản", href: "/dashboard/accounts", icon: BookUser },
+//   { name: "Ứng viên", href: "/dashboard/candidates", icon: Users },
+//   { name: "Mail", href: "/dashboard/mail", icon: Mail },
+//   { name: "Campaign", href: "/dashboard/campaigns", icon: Megaphone },
+//   { name: "Campaign Position", href: "/dashboard/campaignPosition", icon: Megaphone },
+//   { name: "Department", href: "/dashboard/departments", icon: Building2Icon },
+//   { name: "Schedule", href: "/dashboard/schedules", icon: CalendarRange },
+//   { name: "Interview Type", href: "/dashboard/interviewTypes", icon: Shapes },
+//   { name: "Onboard", href: "/dashboard/onboards", icon: ReceiptText },
+// ]
 
 
 
@@ -121,6 +144,7 @@ export default function ClientLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [name, setName] = useState<string>("");
   const [email, setEmail] = useState<string>("");
+  const [role, setRole] = useState<string>("");
   const router = useRouter();
   const handleLogout = () => {
 
@@ -128,6 +152,7 @@ export default function ClientLayout({
       localStorage.removeItem("accessToken");
       localStorage.removeItem("refreshToken");
       localStorage.removeItem("user");
+      localStorage.clear();
       // Nếu muốn kỹ hơn thì localStorage.clear() nhưng thường không cần nếu bạn còn lưu state khác
       toast.success("Đăng xuất thành công!");
     } catch {
@@ -141,6 +166,7 @@ export default function ClientLayout({
     try {
       setName(localStorage.getItem("name") ?? "");
       setEmail(localStorage.getItem("email") ?? "");
+       setRole(getRoleLabels().join(" / "));
     } catch {
       // ignore if blocked
     }
@@ -228,6 +254,7 @@ export default function ClientLayout({
                           <div className="flex flex-col space-y-1">
                             <p className="text-sm font-medium leading-none">{name || "—"}</p>
                             <p className="text-xs leading-none text-muted-foreground">{email || "—"}</p>
+                             <p className="text-xs leading-none text-muted-foreground">{role || "—"}</p>
                           </div>
                         </DropdownMenuLabel>
                         <DropdownMenuSeparator />
@@ -286,7 +313,13 @@ export default function ClientLayout({
 
 function SidebarContent() {
   const pathname = usePathname()
-  return (
+   const [items, setItems] = useState<NavItem[]>([]);
+   useEffect(() => {
+    const filtered = NAVIGATION.filter(it => !it.allow || hasAnyRole(it.allow));
+    setItems(filtered);
+  }, []);
+
+    return (
     <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white px-6 pb-4 shadow-lg">
       <div className="flex h-16 shrink-0 items-center">
         <div className="flex items-center">
@@ -300,25 +333,27 @@ function SidebarContent() {
         <ul role="list" className="flex flex-1 flex-col gap-y-7">
           <li>
             <ul role="list" className="-mx-2 space-y-1">
-              {navigation.map((item) => {
-                const isActive = pathname.startsWith(item.href)
+              {items.map((item) => {
+                const isActive = pathname.startsWith(item.href);
                 return (
                   <li key={item.name}>
                     <Link
                       href={item.href}
-                      className={`group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold transition-colors ${isActive
-                        ? "bg-blue-50 text-blue-600"
-                        : "text-gray-700 hover:text-blue-600 hover:bg-gray-50"
-                        }`}
+                      className={`group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold transition-colors ${
+                        isActive
+                          ? "bg-blue-50 text-blue-600"
+                          : "text-gray-700 hover:text-blue-600 hover:bg-gray-50"
+                      }`}
                     >
                       <item.icon
-                        className={`h-6 w-6 shrink-0 ${isActive ? "text-blue-600" : "text-gray-400 group-hover:text-blue-600"
-                          }`}
+                        className={`h-6 w-6 shrink-0 ${
+                          isActive ? "text-blue-600" : "text-gray-400 group-hover:text-blue-600"
+                        }`}
                       />
                       {item.name}
                     </Link>
                   </li>
-                )
+                );
               })}
             </ul>
           </li>
@@ -326,5 +361,6 @@ function SidebarContent() {
         </ul>
       </nav>
     </div>
-  )
+  );
 }
+
