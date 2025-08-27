@@ -36,6 +36,21 @@ export const formatDMYHM = (s?: string | null): string => {
   return `${dd}-${mm}-${yyyy} ${hh}:${mi}`;
 };
 
+export const formatISODate = (iso?: string) => {
+  if (!iso) return "—";
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "—";
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    // return `${yyyy}-${mm}-${dd}`;
+    return `${dd}/${mm}/${yyyy}`;
+  } catch {
+    return "—";
+  }
+};
+
 export const toMidnight = (d: string | Date) => {
     const date = typeof d === "string" ? new Date(d) : d;
     return new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -54,7 +69,19 @@ export const formatDate = (dateStr?: string) => {
   }).format(d);
 }
 
+export const nowVietnamLocal = () => {
+  const now = new Date();
+  // Lấy giờ hiện tại của máy tính, rồi ép sang VN timezone
+  const vnDate = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" }));
 
+  const year = vnDate.getFullYear();
+  const month = String(vnDate.getMonth() + 1).padStart(2, "0");
+  const day = String(vnDate.getDate()).padStart(2, "0");
+  const hours = String(vnDate.getHours()).padStart(2, "0");
+  const minutes = String(vnDate.getMinutes()).padStart(2, "0");
+
+  return `${year}-${month}-${day}T${hours}:${minutes}`; // yyyy-MM-ddTHH:mm
+}
 
 export const  formatDOB = (dateStr?: string) => {
   if (!dateStr) return "—";
@@ -85,5 +112,21 @@ export const  initials = (first?: string, last?: string) => {
 export const toDateInput = (iso?: string | null) => {
   if (!iso) return "";
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10); // yyyy-mm-dd
+  return Number.isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10); 
 };
+
+export const fmtVnd = (n?: number | null) => {
+  if (n == null) return "—";
+  try {
+    return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(n);
+  } catch {
+    return `${n} VND`;
+  }
+}
+
+export const fmtDate = (s?: string | null) => {
+  if (!s) return "—";
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return s;
+  return d.toLocaleDateString("vi-VN", { year: "numeric", month: "2-digit", day: "2-digit" });
+}

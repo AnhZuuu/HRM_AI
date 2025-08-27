@@ -2,28 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { z } from "zod";
-import { useForm } from "react-hook-form";
+import { useForm, UseFormReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
 import { useToast } from "@/components/ui/use-toast";
-import { Separator } from "@/components/ui/separator";
 import { toDateInput } from "@/app/utils/helper";
 import {
   AlertCircle,
@@ -37,6 +19,7 @@ import { authFetch } from "@/app/utils/authFetch";
 import API from "@/api/api";
 import { useDecodedToken } from "@/components/auth/useDecodedToken";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { EditProfileFormCard } from "@/components/profile/editProfileFormCard";
 
 const profileSchema = z.object({
   firstName: z.string().trim().min(1, "Tên là bắt buộc").max(100),
@@ -103,7 +86,6 @@ export default function EditProfilePage() {
     mode: "onTouched",
   });
 
-  // normalize payload for backend
   function toPayload(values: z.infer<typeof profileSchema>) {
     return {
       firstName: values.firstName.trim(),
@@ -118,15 +100,14 @@ export default function EditProfilePage() {
   }
 
   useEffect(() => {
-    if (!accountId) return; // wait until token is decoded
-
+    if (!accountId) return; 
     const ctrl = new AbortController();
     (async () => {
       try {
         setLoading(true);
         setLoadError(null);
 
-        const res = await authFetch(`${API.ACCOUNT.PROFILE}/${accountId}`, {
+        const res = await authFetch(`${API.ACCOUNT.BASE}/${accountId}`, {
           method: "GET",
           signal: ctrl.signal,
         });
@@ -169,7 +150,7 @@ export default function EditProfilePage() {
     setSaveError(null);
     setSaveSuccess(null);
     try {
-      const res = await authFetch(`${API.ACCOUNT.PROFILE}/${accountId}`, {
+      const res = await authFetch(`${API.ACCOUNT.BASE}/${accountId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(toPayload(values)),
@@ -222,7 +203,6 @@ export default function EditProfilePage() {
     }
   }
 
-  // Loading / error UI for initial fetch
   if (loading) {
     return (
       <div className="flex items-center justify-center p-12">
@@ -252,17 +232,7 @@ export default function EditProfilePage() {
   }
 
   return (
-    <div className="flex">
-      <div className="p-6 gap-3">
-        <Button
-          variant="outline"
-          onClick={() => router.back()}
-          className="gap-2"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Quay lại
-        </Button>
-      </div>
+    <div className="flex">      
       <div className="mx-auto max-w-3xl p-4 md:p-8 space-y-6">
         <div>
           <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">
@@ -292,172 +262,18 @@ export default function EditProfilePage() {
             </Alert>
           </div>
         )}
-
-        <Card className="overflow-hidden">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Thông tin cơ bản</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit(onSubmit)}
-                className="space-y-6"
-              >
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="firstName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Tên</FormLabel>
-                        <FormControl>
-                          <Input placeholder="John" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="lastName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Họ</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Doe" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="username"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Tên người dùng</FormLabel>
-                        <FormControl>
-                          <Input placeholder="JohnDoe" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="email"
-                            placeholder="johndoe@gmail.com"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="phoneNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Số điện thoại</FormLabel>
-                        <FormControl>
-                          <Input placeholder="0987654321" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="gender"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Giới tính</FormLabel>
-                        <Select
-                          onValueChange={(v) => field.onChange(Number(v))}
-                          value={String(field.value)}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="0">Nữ</SelectItem>
-                            <SelectItem value="1">Nam</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="dateOfBirth"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Ngày sinh</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="departmentId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Phòng ban</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Chọn phòng ban"
-                            {...field}
-                            value={field.value ?? ""}
-                            onChange={(e) => field.onChange(e.target.value)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <Separator />
-
-                <div className="flex items-center justify-end gap-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => form.reset()}
-                  >
-                    Hủy
-                  </Button>
-                  <Button type="submit" disabled={submitting}>
-                    {submitting ? "Đang lưu..." : "Lưu thay đổi"}
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
+         <EditProfileFormCard
+          form={form as any as UseFormReturn<Account>}
+          submitting={submitting}
+          onSubmit={onSubmit as (v: Account) => Promise<void>}
+          onCancel={() => form.reset()}
+        />
+      </div>
+      <div className="p-6 gap-3">
+        <Button variant="outline" onClick={() => router.back()}>
+          <ArrowLeft className="h-4 w-4" />
+          Quay lại
+        </Button>
       </div>
     </div>
   );
