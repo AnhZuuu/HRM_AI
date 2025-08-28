@@ -1,280 +1,152 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { z } from "zod";
-import { useForm, UseFormReturn } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import * as React from "react";
+import { useParams, useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
-import { toDateInput } from "@/app/utils/helper";
-import {
-  AlertCircle,
-  ArrowLeft,
-  CheckCircle2,
-  Loader2,
-  RotateCcw,
-} from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
+import { toast as rtToast, toast } from "react-toastify";
+
+
 import { authFetch } from "@/app/utils/authFetch";
 import API from "@/api/api";
+import { ROLE_OPTIONS, RoleOption } from "@/app/utils/enum";
+import { ProfileForm, ProfileFormValues } from "@/components/profile/editProfileFormCard";
 import { useDecodedToken } from "@/components/auth/useDecodedToken";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { EditProfileFormCard } from "@/components/profile/editProfileFormCard";
 
-const profileSchema = z.object({
-  firstName: z.string().trim().min(1, "Tên là bắt buộc").max(100),
-  lastName: z.string().trim().min(1, "Họ là bắt buộc").max(100),
-  username: z
-    .string()
-    .trim()
-    .min(3, "Tên người dùng phải có ít nhất 3 ký tự")
-    .max(32)
-    .regex(
-      /^[a-zA-Z0-9_\.]+$/,
-      "Chỉ được phép sử dụng chữ cái, số, dấu gạch dưới và dấu chấm"
-    ),
-  email: z.string().email(),
-  phoneNumber: z
-    .string()
-    .trim()
-    .optional()
-    .refine((v) => !v || (v.length >= 9 && v.length <= 20), {
-      message: "Số điện thoại không hợp lệ",
-    }),
-  gender: z.number().int().min(0).max(2),
-  dateOfBirth: z
-    .string()
-    .optional()
-    .refine((v) => !v || !Number.isNaN(Date.parse(v)), {
-      message: "Ngày không hợp lệ",
-    }),
-  departmentId: z.string().nullable().optional(),
-});
+type Account = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  username: string;
+  email: string;
+  gender: number;
+  dateOfBirth?: string;
+  phoneNumber?: string;
+  departmentId?: string;
+  accountRoles?: { role?: number; roleName?: string }[];
+};
 
-type ApiResponse<T> = {
+type AccountDetailApiResponse = {
   code: number;
   status: boolean;
-  message?: string;
-  data: T;
+  message: string;
+  data: Account;
 };
-export default function EditProfilePage() {
-  const router = useRouter();
-  const { toast } = useToast();
-  const { claims, expired } = useDecodedToken(); // read id from JWT
+
+const roleNameToValue = new Map<string, number>(
+  (ROLE_OPTIONS as RoleOption[]).map((r) => [r.label.toLowerCase(), r.value])
+);
+
+export default function EditAccountPage() {
+  const { claims, expired } = useDecodedToken(); 
   console.log(claims);
   console.log("EXPIREEEEEEEEEEEEd:" + expired);
   const accountId = claims?.accountId ?? null;
+  const router = useRouter();
 
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [saving, setSaving] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [account, setAccount] = React.useState<Account | null>(null);
 
-  const form = useForm<z.infer<typeof profileSchema>>({
-    resolver: zodResolver(profileSchema),
-    defaultValues: {
-      firstName: "",
-      lastName: "",
-      username: "",
-      email: "",
-      phoneNumber: "",
-      dateOfBirth: "",
-      departmentId: "",
-      gender: 0,
-    },
-    mode: "onTouched",
-  });
-
-  function toPayload(values: z.infer<typeof profileSchema>) {
-    return {
-      firstName: values.firstName.trim(),
-      lastName: values.lastName.trim(),
-      username: values.username.trim(),
-      email: values.email.trim(),
-      phoneNumber: values.phoneNumber?.trim() || null,
-      gender: Number(values.gender),
-      dateOfBirth: values.dateOfBirth || null,
-      departmentId: values.departmentId || null,
-    };
-  }
-
-  useEffect(() => {
-    if (!accountId) return; 
-    const ctrl = new AbortController();
+  React.useEffect(() => {
     (async () => {
       try {
         setLoading(true);
-        setLoadError(null);
-
-        const res = await authFetch(`${API.ACCOUNT.BASE}/${accountId}`, {
-          method: "GET",
-          signal: ctrl.signal,
-        });
-
-        if (!res.ok) {
-          let msg = `Không thể tải hồ sơ (HTTP ${res.status}).`;
-          try {
-            const problem = await res.json();
-            msg = problem?.message ?? problem?.detail ?? msg;
-          } catch {}
-          throw new Error(msg);
-        }
-
-        const json = (await res.json()) as ApiResponse<Account> | Account;
-        const acc: Account = (json as any).data ?? json;
-
-        form.reset({
-          firstName: acc.firstName?.trim() ?? "",
-          lastName: acc.lastName?.trim() ?? "",
-          username: acc.username?.trim() ?? "",
-          email: acc.email?.trim() ?? "",
-          phoneNumber: acc.phoneNumber ?? "",
-          dateOfBirth: toDateInput(acc.dateOfBirth),
-          departmentId: acc.departmentId ?? "",
-          gender: Number(acc.gender ?? 0),
-        });
+        const res = await authFetch(`${API.ACCOUNT.BASE}/${accountId}`);
+        if (!res.ok) throw new Error(`Failed (${res.status})`);
+        const json: AccountDetailApiResponse = await res.json();
+        setAccount(json.data);
       } catch (e: any) {
-        if (ctrl.signal.aborted) return;
-        setLoadError(e?.message ?? "Không thể tải dữ liệu hồ sơ.");
+        setError(e?.message ?? "Unknown error");
       } finally {
         setLoading(false);
       }
     })();
+  }, [accountId]);
 
-    return () => ctrl.abort();
-  }, [accountId, form, router, toast]);
+  if (loading) return <div className="p-6">Đang tải…</div>;
+  if (error) return <div className="p-6 text-red-600">Lỗi: {error}</div>;
+  if (!account) return <div className="p-6">Không tìm thấy tài khoản</div>;
 
-  async function onSubmit(values: z.infer<typeof profileSchema>) {
-    setSubmitting(true);
-    setSaveError(null);
-    setSaveSuccess(null);
+  const primary = account.accountRoles?.[0];
+  let roleValue: number | undefined;
+  if (typeof primary?.role === "number") {
+    roleValue = ROLE_OPTIONS.find((r) => r.value === primary.role!)?.value;
+  }
+  if (roleValue === undefined && primary?.roleName) {
+    roleValue = roleNameToValue.get(primary.roleName.toLowerCase());
+  }
+
+  const defaults: ProfileFormValues = {
+    firstName: account.firstName ?? "",
+    lastName: account.lastName ?? "",
+    username: account.username ?? "",
+    email: account.email ?? "",
+    phoneNumber: account.phoneNumber ?? "",
+    gender: typeof account.gender === "number" ? account.gender : 0,
+    dateOfBirth: account.dateOfBirth ?? "",
+    departmentId: account.departmentId ?? "",
+    role: roleValue,
+  };
+
+  async function handleSubmit(values: ProfileFormValues) {
     try {
+      setSaving(true);
+
+      const payload: any = {
+        firstName: values.firstName,
+        lastName: values.lastName,
+        username: values.username,
+        gender: values.gender,
+        dateOfBirth: values.dateOfBirth || null,
+        phoneNumber: values.phoneNumber || null,
+        roles: values.role ? [values.role] : [],
+      };
+      if (values.departmentId) payload.departmentId = values.departmentId;
+
       const res = await authFetch(`${API.ACCOUNT.BASE}/${accountId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(toPayload(values)),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
-        let msg = `Cập nhật thất bại (HTTP ${res.status}).`;
-        try {
-          const problem = await res.json();
-          msg = problem?.message ?? problem?.detail ?? msg;
-        } catch {}
-        throw new Error(msg);
+        const text = await res.text().catch(() => "");
+        throw new Error(text || `Cập nhật thất bại (${res.status})`);
       }
 
-      let updated: Account | null = null;
-
-      const text = await res.text();
-      if (text) {
-        const json = JSON.parse(text);
-        const candidate = json?.data ?? json;
-        if (
-          candidate &&
-          typeof candidate === "object" &&
-          "firstName" in candidate
-        ) {
-          updated = candidate as Account;
-        }
-      }
-
-      if (updated) {
-        form.reset({
-          firstName: updated.firstName?.trim() ?? "",
-          lastName: updated.lastName?.trim() ?? "",
-          username: updated.username?.trim() ?? "",
-          email: updated.email?.trim() ?? "",
-          phoneNumber: updated.phoneNumber ?? "",
-          dateOfBirth: toDateInput(updated.dateOfBirth),
-          departmentId: updated.departmentId ?? "",
-          gender: Number(updated.gender ?? 0),
-        });
-      } else {
-        form.reset(values);
-      }
-      setSaveSuccess("Những thay đổi của bạn đã được lưu.");
+      toast.success("Đã lưu thay đổi");
+      router.push(`/profile`);
     } catch (e: any) {
-      const msg = e?.message ?? "Vui lòng thử lại.";
-      setSaveError(msg);
+      toast.error("Không thể cập nhật");
     } finally {
-      setSubmitting(false);
+      setSaving(false);
     }
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center p-12">
-        <Loader2 className="h-6 w-6 animate-spin" />
-        <span className="ml-3 text-sm text-muted-foreground">
-          Đang tải hồ sơ…
-        </span>
-      </div>
-    );
-  }
-  if (loadError) {
-    return (
-      <div className="max-w-xl mx-auto p-4">
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Lỗi tải hồ sơ</AlertTitle>
-          <AlertDescription className="mt-1">{loadError}</AlertDescription>
-        </Alert>
-        <div className="mt-4 flex justify-end">
-          <Button variant="outline" onClick={() => router.refresh()}>
-            <RotateCcw className="h-4 w-4 mr-2" />
-            Thử lại
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex">      
-      <div className="mx-auto max-w-3xl p-4 md:p-8 space-y-6">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">
-            Chỉnh sửa thông tin cá nhân
-          </h1>
-          <p className="text-muted-foreground">
-            Chỉnh sửa thông tin cá nhân cơ bản của tài khoản và thông tin liên
-            hệ.
-          </p>
-        </div>
-        {saveSuccess && (
-          <div className="max-w-3xl">
-            <Alert className="border-emerald-600/30 bg-green-500">
-              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-              <AlertTitle>Đã lưu thay đổi</AlertTitle>
-              <AlertDescription>{saveSuccess}</AlertDescription>
-            </Alert>
-          </div>
-        )}
-
-        {saveError && (
-          <div className="max-w-3xl">
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Cập nhật không thành công</AlertTitle>
-              <AlertDescription>{saveError}</AlertDescription>
-            </Alert>
-          </div>
-        )}
-         <EditProfileFormCard
-          form={form as any as UseFormReturn<Account>}
-          submitting={submitting}
-          onSubmit={onSubmit as (v: Account) => Promise<void>}
-          onCancel={() => form.reset()}
-        />
-      </div>
-      <div className="p-6 gap-3">
+    <div className="overflow-hidden mx-auto max-w-3xl p-4 md:p-8 space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">Chỉnh sửa thông tin cá nhân</h1>
         <Button variant="outline" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft className="h-4 w-4 mr-2" />
           Quay lại
         </Button>
       </div>
+
+      <ProfileForm
+        defaultValues={defaults}
+        onSubmit={handleSubmit}
+        submitting={saving}
+        showReset
+        submitLabel="Lưu thay đổi"
+        showDepartment={false}
+        showRole={false}
+        disableEmail={true}
+      />
     </div>
   );
 }
