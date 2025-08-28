@@ -19,3 +19,6 @@ export function fmtRange(start?: string | null, end?: string | null, locale = "v
   const t2 = e ? e.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" }) : null;
   return t2 ? `${d} ${t1}–${t2}` : `${d} ${t1}`;
 }
+
+
+export const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" });
