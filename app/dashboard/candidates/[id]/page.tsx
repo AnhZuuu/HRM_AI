@@ -12,6 +12,8 @@ import { Mail, Phone, MapPin, ExternalLink, FileText, ArrowLeft, CheckCircle2, X
 import { authFetch } from "@/app/utils/authFetch";
 import API from "@/api/api";
 import { formatISODate } from "@/app/utils/helper";
+import HandleUpdateCandidate from "@/components/candidates/handleUpdateCandidate";
+import HandleUpdateStatusCandidate from "@/components/candidates/HandleUpdateStatusCandidate";
 
 
 
@@ -36,7 +38,7 @@ type CvApplicant = {
   fullName: string;
   email: string;
   point: string; // "36/100"
-  status: 0 | 1 | 2 | 3; // 0 Pending, 1 Reviewed, 2 Rejected, 3 Accepted
+  status: 0 | 1 | 2 | 3 | 4; // 0 Pending, 1 Rejected, 2 Accepted, 3 Failed, 4 Onboarded
   campaignPositionId?: string | null;
   campaignPositionDescription?: string | null;
   fileUrl?: string | null;
@@ -48,21 +50,24 @@ type CvApplicant = {
 // ---------- Helpers ----------
 const STATUS_LABEL: Record<CvApplicant["status"], string> = {
   0: "Pending",
-  1: "Reviewed",
-  2: "Rejected",
-  3: "Accepted",
+  1: "Rejected",
+  2: "Accepted",
+  3: "Failed",
+  4: "Onboarded"
 };
 
 const statusBadgeClass = (s: CvApplicant["status"]) => {
   switch (s) {
-    case 3:
-      return "bg-green-100 text-green-800";
-    case 1:
-      return "bg-purple-100 text-purple-800";
-    case 0:
+    case 4:
       return "bg-blue-100 text-blue-800";
     case 2:
+      return "bg-green-100 text-green-800";
+    case 1:
       return "bg-red-100 text-red-800";
+    case 0:
+      return "bg-yellow-100 text-blue-800";
+    case 3:
+      return "bg-red-300 text-red-800";
     default:
       return "bg-gray-100 text-gray-800";
   }
@@ -120,6 +125,21 @@ export default function CvApplicantDetailPage() {
   const [item, setItem] = useState<CvApplicant | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const [openUpdate, setOpenUpdate] = useState(false);
+  const [openUpdateStatus, setOpenUpdateStatus] = useState(false);
+
+  function handleUpdatedCandidate(updated: any) {
+    // Merge returned fields back into the displayed item (no full refetch needed)
+    setItem((prev) => (prev ? { ...prev, ...updated } : prev));
+  }
+  function handleStatusUpdated(updated: { status: 0 | 1 | 2 | 3 | 4 }) {
+    setItem((prev) => (prev ? { ...prev, status: updated.status } : prev));
+    toast({
+      title: "Cập nhật trạng thái thành công",
+      description: `Trạng thái mới: ${STATUS_LABEL[updated.status]}`,
+    });
+  }
+
 
   useEffect(() => {
     let cancelled = false;
@@ -154,14 +174,14 @@ export default function CvApplicantDetailPage() {
 
   const sections = useMemo(() => groupDetails(item?.cvApplicantDetailModels), [item?.cvApplicantDetailModels]);
   const skills = useMemo(() => splitSkillValues(sections.skill), [sections.skill]);
-  
+
 
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center gap-3">
         <Button variant="outline" onClick={() => router.back()} className="gap-2">
-            <ArrowLeft className="h-4 w-4" />
-            Quay lại
+          <ArrowLeft className="h-4 w-4" />
+          Quay lại
         </Button>
         <h1 className="text-2xl font-semibold">Chi tiết ứng viên</h1>
       </div>
@@ -189,7 +209,16 @@ export default function CvApplicantDetailPage() {
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="text-xl font-bold">{item.fullName || "—"}</h2>
-                      <Badge className={statusBadgeClass(item.status)}>{STATUS_LABEL[item.status]}</Badge>
+                      <button
+                        type="button"
+                        onClick={() => setOpenUpdateStatus(true)}
+                        className="focus:outline-none"
+                        title="Cập nhật trạng thái"
+                      >
+                        <Badge className={`${statusBadgeClass(item.status)} cursor-pointer select-none`}>
+                          {STATUS_LABEL[item.status]}
+                        </Badge>
+                      </button>
                     </div>
                     <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-gray-600">
                       <span className="inline-flex items-center gap-1">
@@ -219,6 +248,9 @@ export default function CvApplicantDetailPage() {
                       </a>
                     </Button>
                   )}
+                  <Button className="gap-2" onClick={() => setOpenUpdate(true)}>
+                    Cập nhật
+                  </Button>
                   <Button variant="outline" className="gap-2" onClick={() => navigator.clipboard.writeText(item.id)}>
                     Copy ID
                   </Button>
@@ -403,6 +435,30 @@ export default function CvApplicantDetailPage() {
               </Card>
             </div>
           </div>
+          <HandleUpdateCandidate
+            open={openUpdate}
+            onOpenChange={setOpenUpdate}
+            candidateId={params.id}
+            initial={{
+              fileUrl: item.fileUrl ?? "",
+              fileAlt: item.fileAlt ?? "",
+              fullName: item.fullName ?? "",
+              email: item.email ?? "",
+              point: item.point ?? "",
+              // Convert your current status mapping to the update mapping if needed.
+              // If your backend already uses the new mapping (0 Pending, 1 Rejected, 2 Accepted, 3 Failed, 4 Onboarded),
+              // just pass item.status directly (cast).
+              status: (item.status as 0 | 1 | 2 | 3 | 4) ?? 0,
+            }}
+            onSuccess={handleUpdatedCandidate}
+          />
+          <HandleUpdateStatusCandidate
+            open={openUpdateStatus}
+            onOpenChange={setOpenUpdateStatus}
+            candidateId={params.id}
+            initialStatus={item.status}
+            onSuccess={handleStatusUpdated}
+          />
         </>
       )}
     </div>

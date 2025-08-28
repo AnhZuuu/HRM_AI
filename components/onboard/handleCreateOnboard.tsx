@@ -9,7 +9,7 @@ import CreateOnboardForm, {
   SalaryTypeUI,
 } from "@/components/onboard/createOnboardDialog";
 import API from "@/api/api";
-import { useToast } from "@/hooks/use-toast";
+import { toast, ToastContainer } from "react-toastify";
 
 // map UI → number for API
 const SALARY_TYPE_MAP: Record<SalaryTypeUI, number> = { Net: 0, Gross: 1 };
@@ -17,7 +17,6 @@ const SALARY_TYPE_MAP: Record<SalaryTypeUI, number> = { Net: 0, Gross: 1 };
 export default function OnboardCreateClientPage() {
   const sp = useSearchParams();
   const router = useRouter();
-  const { toast } = useToast();
 
   const presetOutcomeId = sp.get("outcomeId") ?? "";
   const presetApplicantId = sp.get("applicantId") ?? "";
@@ -74,16 +73,17 @@ export default function OnboardCreateClientPage() {
         throw new Error(msg);
       }
 
-      toast({ title: "Success", description: "Tạo onboard thành công!" });
+      toast.success("Tạo onboard thành công!");
       router.push("/dashboard/onboards");
     } catch (e: any) {
-      toast({ title: "Create onboard failed", description: e?.message ?? "", variant: "destructive" });
+      toast.error(e?.message ?? "Create onboard failed");
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
+    <>
     <CreateOnboardForm
       defaultValues={defaultValues}
       applicantOptions={applicantOptions}
@@ -92,5 +92,8 @@ export default function OnboardCreateClientPage() {
       submitting={submitting}
       onSubmit={handleSubmit}
     />
+    
+ <ToastContainer position="top-right" autoClose={3000} />
+    </>
   );
 }

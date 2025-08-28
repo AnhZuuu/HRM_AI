@@ -1,6 +1,7 @@
 import type React from "react"
 import "./globals.css"
 import { Inter } from "next/font/google"
+import { ToastProvider } from "@/components/toast/toast-provider"
 const inter = Inter({ subsets: ["latin"] })
 export const metadata = {
   title: "HRM AI",
@@ -19,11 +20,10 @@ export default function RootLayout({
         {/* <Header/> */}
         {children}
         {/* <Footer/> */}
+        <ToastProvider />  
       </body>
     </html>
   )
 }
 
 
-import './globals.css'
-import ClientLayout from "./clientLayout"

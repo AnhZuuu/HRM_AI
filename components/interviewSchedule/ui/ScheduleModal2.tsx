@@ -15,6 +15,7 @@ import { Users, ChevronsUpDown, Loader2 } from "lucide-react";
 import { authFetch } from "@/app/utils/authFetch";
 import API from "@/api/api";
 import { nowVietnamLocal } from "@/app/utils/helper";
+import { toast, ToastContainer } from "react-toastify";
 
 export type Candidate = {
   id: string;
@@ -44,8 +45,8 @@ async function fetchInterviewers(): Promise<Interviewer[]> {
 
 // Predefined static stage options (since API not ready)
 const STATIC_STAGES = [
-  { id: "0ba20051-35f5-4f29-ffee-08dde0e5412d", name: "Vòng 1" },
-  { id: "bc5cce45-1334-4aa6-ffef-08dde0e5412d", name: "Vòng 2" },
+  { id: "6152ae79-d863-45b7-2576-08dde3e4c6fb", name: "Vòng 1" },
+  { id: "d8b67e40-dfcb-4272-89e3-08dde40294ce", name: "Vòng 2" },
   { id: "21099b0d-e3b7-4354-fff1-08dde0e5412d", name: "Vòng 3" },
   { id: "7227e337-ffce-42f0-fff0-08dde0e5412d", name: "Vòng 4" },
 ];
@@ -91,24 +92,37 @@ export default function ScheduleModal2({ open, onOpenChange, candidate }: { open
 
   async function handleSave() {
     if (!candidate) return;
-    if (!interviewStageId || !start || !end) return alert("Vui lòng chọn vòng và thời gian.");
-    if (new Date(start) >= new Date(end)) return alert("Thời gian kết thúc phải sau thời gian bắt đầu.");
-    await postInterviewScheduleV2({
-      cvApplicantId: candidate.cvApplicantId,
-      startTime: new Date(start).toISOString(),
-      endTime: new Date(end).toISOString(),
-      interviewStageId,
-      notes: notes?.trim() || undefined,
-      interviewerIds: selectedInterviewers,
-    });
-    onOpenChange(false);
+    if (!interviewStageId || !start || !end) {
+      toast.error("Vui lòng chọn vòng và thời gian."); // error toast instead of alert
+      return;
+    }
+    if (new Date(start) >= new Date(end)) {
+      toast.error("Thời gian kết thúc phải sau thời gian bắt đầu.");
+      return;
+    }
+
+    try {
+      await postInterviewScheduleV2({
+        cvApplicantId: candidate.cvApplicantId,
+        startTime: new Date(start).toISOString(),
+        endTime: new Date(end).toISOString(),
+        interviewStageId,
+        notes: notes?.trim() || undefined,
+        interviewerIds: selectedInterviewers,
+      });
+
+      toast.success("Đã lưu lịch phỏng vấn thành công!"); // ✅ success popup
+      onOpenChange(false);
+    } catch (err: any) {
+      toast.error(err?.message || "Không thể lưu lịch phỏng vấn."); // ❌ error popup
+    }
   }
 
-  return (
+  return (<>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>Lên lịch phỏng vấn (v2)</DialogTitle>
+          <DialogTitle>Lên lịch phỏng vấn</DialogTitle>
           <DialogDescription>
             {candidate ? (
               <>Ứng viên: <span className="font-medium">{candidate.fullName || "(Không tên)"}</span>{candidate.campaignPositionDescription && <> · Vị trí: <span className="font-medium">{candidate.campaignPositionDescription}</span></>}</>
@@ -153,6 +167,9 @@ export default function ScheduleModal2({ open, onOpenChange, candidate }: { open
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <ToastContainer position="top-right" autoClose={3000} />
+  </>
   );
 }
 
@@ -167,7 +184,7 @@ function InterviewerMultiSelect({ options, value, onChange, disabled }: { option
       <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
         <Separator />
         <ScrollArea className="h-56">
-          <div className="p-1">{options.map((o) => { const checked = value.includes(o.id); return (<button key={o.id} type="button" disabled={disabled} className={cn("flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-left text-sm hover:bg-muted/70", disabled && "opacity-60")} onClick={() => toggle(o.id)}><div className="min-w-0"><div className="truncate font-medium">{o.fullName}</div>{o.title && <div className="truncate text-xs text-muted-foreground">{o.title}</div>}</div><Checkbox checked={checked} aria-label={`select ${o.fullName}`} /></button> ); })}</div>
+          <div className="p-1">{options.map((o) => { const checked = value.includes(o.id); return (<button key={o.id} type="button" disabled={disabled} className={cn("flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-left text-sm hover:bg-muted/70", disabled && "opacity-60")} onClick={() => toggle(o.id)}><div className="min-w-0"><div className="truncate font-medium">{o.fullName}</div>{o.title && <div className="truncate text-xs text-muted-foreground">{o.title}</div>}</div><Checkbox checked={checked} aria-label={`select ${o.fullName}`} /></button>); })}</div>
         </ScrollArea>
       </PopoverContent>
     </Popover>

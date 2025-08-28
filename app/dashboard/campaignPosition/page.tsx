@@ -33,7 +33,7 @@ type CampaignPosition = {
   description: string | null; // tên hiển thị
   totalSlot: number;
   campaignId: string;
-  // campaignName?: string; // TODO: add when API provides
+  campaignName?: string; // TODO: add when API provides
   departmentId: string;
   departmentName?: string; // TODO: add when API provides
   cvApplicantModels: CvApplicantModel[];
@@ -234,11 +234,11 @@ export default function CampaignPositionPage() {
 
                       <TableCell>
                         {pos.campaignId}
-                        {/* {pos.campaignName ? ` - ${pos.campaignName}` : null} */}
+                        {pos.campaignName ? ` - ${pos.campaignName}` : null}
                       </TableCell>
 
                       <TableCell>
-                        {pos.departmentId}
+                        {/* {pos.departmentId} */}
                         {pos.departmentName ? ` - ${pos.departmentName}` : null}
                       </TableCell>
 

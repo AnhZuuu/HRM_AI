@@ -14,6 +14,9 @@ import { Plus } from "lucide-react"
 import API from "@/api/api"
 import { authFetch } from "@/app/utils/authFetch"
 import { useToast } from "@/hooks/use-toast"
+// import { GUID } from "../interviewSchedule/hooks/useInterviewScheduleDetail"
+
+type GUID = string
 
 // ---------- UI callback shape (parent table) ----------
 export type CreatedStageOut = {
@@ -160,7 +163,7 @@ export function CreateInterviewStageModal({
     // init first row with first free order
     const firstAvailable = ORDER_OPTIONS.find((o) => !takenOrders.includes(Number(o))) ?? "1"
     setRows([{
-      id: crypto.randomUUID(),
+      id: crypto.randomUUID() as GUID,
       order: firstAvailable,
       name: "",
       interviewTypeId: "", // default after types load

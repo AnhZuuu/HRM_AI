@@ -68,7 +68,7 @@ export default function DepartmentDetailClient({ dept }: { dept: DepartmentDetai
         </TabsContent>
 
         <TabsContent value="interview-process" className="mt-4">
-          <InterviewProcessTable items={processes} />
+          <InterviewProcessTable items={processes} departmentId={dept.id} />
         </TabsContent>
       </Tabs>
     </div>
