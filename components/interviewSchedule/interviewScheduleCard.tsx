@@ -261,7 +261,7 @@ export default function InterviewSchedulesTable({
           <div className="flex items-center gap-2">
             <CalendarDays className="w-5 h-5 text-gray-700" />
             <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
-            <Badge variant="secondary">{filtered.length} lịch phỏng vấn</Badge>
+            <Badge variant="secondary">{filtered.length} lịch phỏng vấn hôm nay</Badge>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
