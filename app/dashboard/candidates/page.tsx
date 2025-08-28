@@ -71,15 +71,15 @@ const STATUS_LABEL: Record<CvApplicant["status"], string> = {
 const statusBadgeClass = (s: CvApplicant["status"]) => {
   switch (s) {
     case 4:
-      return "bg-amber-100 text-amber-800";
+      return "bg-blue-100 text-blue-800";
     case 2:
       return "bg-green-100 text-green-800";
-    case 0:
-      return "bg-blue-100 text-blue-800";
     case 1:
       return "bg-red-100 text-red-800";
+    case 0:
+      return "bg-yellow-100 text-blue-800";
     case 3:
-      return "bg-gray-200 text-gray-800";
+      return "bg-red-300 text-red-800";
     default:
       return "bg-gray-100 text-gray-800";
   }

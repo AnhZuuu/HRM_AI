@@ -21,7 +21,6 @@ export default function DeleteCampaignDialog({ open, onOpenChange, campaign, onC
   setLoading(true);
   try {
     await onConfirm(campaign.id);
-
     toast.success("Xóa chiến dịch thành công!"); // <-- success popup
     onOpenChange(false);
   } catch (err: any) {

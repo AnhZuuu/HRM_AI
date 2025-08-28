@@ -1,6 +1,6 @@
 import API from "@/api/api";
 import React from "react";
-import { toast } from "react-toastify";
+import { toast, ToastContainer } from "react-toastify";
 
 interface RegisterFormProps {
   onClose: () => void;
@@ -57,11 +57,11 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onClose, onChange, formData
         throw new Error(result.message || "Registration failed");
       }
 
-      // toast.success("Registration successful!");
+      toast.success("Registration successful!");
       alert("Registration successful!");
       onClose();
     } catch (error: any) {
-      // toast.error("Registration error: " + error.message);
+      toast.error("Registration error: " + error.message);
       alert("Registration error: " + error.message);
       console.error("Sign-up error:", error);
     }
@@ -93,6 +93,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onClose, onChange, formData
           <button type="submit" className="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700">Đăng Ký</button>
         </form>
       </div>
+      <ToastContainer position="top-right" autoClose={3000} />
     </div>
   );
 };

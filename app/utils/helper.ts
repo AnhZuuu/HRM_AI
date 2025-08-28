@@ -4,11 +4,6 @@
  * Convert "YYYY-MM-DD" from <input type="date"> to ISO string "YYYY-MM-DDT00:00:00.000Z".
  * If already in ISO format, returns it unchanged.
  */
-export const toIsoFromDateInput = (d?: string | null): string | null => {
-  if (!d) return null;
-  if (/\dT\d/.test(d)) return d; // already ISO-like
-  return new Date(`${d}T00:00:00`).toISOString();
-};
 
 /**
  * Parse a variety of date strings safely into a Date object.
@@ -50,6 +45,20 @@ export const formatISODate = (iso?: string) => {
     return "—";
   }
 };
+
+export const toIsoFromDateInput = (dateStr: string | null) => {
+  if (!dateStr) return null;
+  // "2025-08-28" -> new Date(2025, 7, 28) (local time, no timezone shift)
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const local = new Date(y, m - 1, d); 
+  return local.toISOString(); // "2025-08-27T17:00:00.000Z" if you log in VN, but still correct date part
+}
+export const toLocalDateIso = (dateStr: string | null) => {
+  if (!dateStr) return null;
+  return `${dateStr}T00:00:00+07:00`; // force Vietnam midnight
+}
+
+
 
 export const toMidnight = (d: string | Date) => {
     const date = typeof d === "string" ? new Date(d) : d;

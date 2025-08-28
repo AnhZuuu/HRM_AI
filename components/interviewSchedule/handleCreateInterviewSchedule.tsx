@@ -74,14 +74,29 @@ function getDetailValue(details: any[] | undefined, type: string, key: string): 
   return (found?.value as string) ?? null;
 }
 
-function normalizeCandidates(json: any): Candidate[] {
-  const arr = Array.isArray(json?.data?.data) ? json.data.data : [];
+function normalizeCandidates(payload: any): Candidate[] {
+  const arr =
+    (Array.isArray(payload?.data) && payload.data) ||
+    (Array.isArray(payload?.data?.data) && payload.data.data) ||
+    (Array.isArray(payload) && payload) ||
+    [];
+
+  
+  // console.log("[normalizeCandidates] input keys:", Object.keys(payload || {}));
+  // console.log("[normalizeCandidates] isArray(data):", Array.isArray(payload?.data));
+  // console.log("[normalizeCandidates] isArray(data.data):", Array.isArray(payload?.data?.data));
+  // console.log("[normalizeCandidates] final length:", arr.length);
+
   return arr.map((it: any) => {
     const details = it?.cvApplicantDetailModels as any[] | undefined;
     const fallbackFullName = getDetailValue(details, "personal_info", "full_name");
     const fallbackPosition = getDetailValue(details, "personal_info", "position");
-    const id = String(it?.id ?? "");
-    const statusVal = Number.isInteger(it?.status) ? Number(it.status) : null;
+
+    const rawStatus = it?.status;
+    const statusVal =
+      Number.isInteger(rawStatus) && rawStatus >= 0 && rawStatus <= 4 ? (rawStatus as 0 | 1 | 2 | 3 | 4) : null;
+
+    const id = String(it?.id ?? it?.cvApplicantId ?? "");
 
     return {
       id,
@@ -92,14 +107,7 @@ function normalizeCandidates(json: any): Candidate[] {
       campaignPositionDescription: it?.campaignPositionDescription ?? fallbackPosition ?? null,
       currentInterviewStageName: it?.currentInterviewStageName ?? null,
       fileUrl: it?.fileUrl ?? null,
-      status:
-        statusVal === 0 ||
-        statusVal === 1 ||
-        statusVal === 2 ||
-        statusVal === 3 ||
-        statusVal === 4
-          ? (statusVal as 0 | 1 | 2 | 3 | 4)
-          : null,
+      status: statusVal,
     };
   });
 }
@@ -107,8 +115,29 @@ function normalizeCandidates(json: any): Candidate[] {
 async function fetchCandidates(): Promise<Candidate[]> {
   const res = await authFetch(API.CV.APPLICANT, { method: "GET" });
   if (!res.ok) throw new Error(`Failed to load candidates: ${res.status}`);
+
+  // Important: don't string-concat an object (it prints [object Object]).
   const json = await res.json();
-  return normalizeCandidates(json);
+  console.log("[fetchCandidates] raw response:", json);
+  console.log(
+    "[fetchCandidates] shapes =>",
+    "Array.isArray(json.data):", Array.isArray(json?.data),
+    "| Array.isArray(json.data?.data):", Array.isArray(json?.data?.data)
+  );
+
+  const normalized = normalizeCandidates(json);
+  console.log("[fetchCandidates] normalized length:", normalized.length);
+  console.table(
+    normalized.map(x => ({
+      id: x.id,
+      name: x.fullName,
+      email: x.email,
+      point: x.point,
+      stage: x.currentInterviewStageName,
+      status: x.status,
+    }))
+  );
+  return normalized;
 }
 
 /* Debounce without external deps */

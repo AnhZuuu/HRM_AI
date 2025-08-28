@@ -152,10 +152,10 @@ export default function CampaignPage() {
 
   
 
-  const getCampaignStatus = (start: string, end: string, today = new Date()) => {
+  const getCampaignStatus = (start: string | null, end: string | null, today = new Date()) => {
     const dToday = toMidnight(today);
-    const dStart = toMidnight(start);
-    const dEnd = toMidnight(end);
+    const dStart = toMidnight(start || new Date());
+    const dEnd = toMidnight(end || new Date());
 
     if (dToday < dStart) return "sắp bắt đầu";
     if (dToday > dEnd) return "kết thúc";
@@ -189,10 +189,10 @@ export default function CampaignPage() {
     return () => clearTimeout(t1);
   }, []);
 
-  const getCampaignPhase = (start: string, end: string, today = new Date()) => {
+  const getCampaignPhase = (start: string | null, end: string | null, today = new Date()) => {
     const dToday = toMidnight(today);
-    const dStart = toMidnight(start);
-    const dEnd = toMidnight(end);
+    const dStart = toMidnight(start || new Date());
+    const dEnd = toMidnight(end || new Date());
     if (dToday < dStart) return "sap_bat_dau";
     if (dToday > dEnd) return "ket_thuc";
     return "dang_dien_ra";
@@ -200,7 +200,7 @@ export default function CampaignPage() {
 
   const filteredCampaigns = campaigns.filter((campaign) => {
     const matchesSearch = campaign.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const phase = getCampaignPhase(campaign.startTime, campaign.endTime, today);
+    const phase = getCampaignPhase(campaign.startTime ?? null, campaign.endTime ?? null, today);
     const matchesStatus = statusFilter === "all" || phase === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -326,7 +326,7 @@ export default function CampaignPage() {
                     <TableCell className="font-medium">{campaign.name}</TableCell>
                     <TableCell>
                       {(() => {
-                        const status = getCampaignStatus(campaign.startTime, campaign.endTime, today);
+                        const status = getCampaignStatus(campaign.startTime ?? null, campaign.endTime ?? null, today);
                         return <Badge className={getStatusColor(status)}>{status}</Badge>;
                       })()}
                     </TableCell>
