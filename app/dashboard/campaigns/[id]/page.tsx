@@ -200,8 +200,9 @@ export default async function CampaignDetailPage({
   const status = getCampaignStatus(campaign.startTime, campaign.endTime);
   const { className, message } = getStatusTone(status);
   const showAddPosition =
-    message === "Đợt tuyển dụng chưa bắt đầu" ||
-    message === "Đang diễn ra";
+  message === "Kết thúc";
+    // message === "Đợt tuyển dụng chưa bắt đầu" ||
+    // message === "Đang diễn ra";
 
 
   return (
@@ -224,7 +225,7 @@ export default async function CampaignDetailPage({
             {status} – {message}
           </div>
 
-          {showAddPosition && (
+          {!showAddPosition && (
             <AddPositionDialog campaignId={campaign.id} />
           )}
         </div>

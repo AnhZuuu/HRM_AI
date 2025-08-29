@@ -103,7 +103,7 @@ const LoginPage = () => {
     } catch (error: any) {
 
       toast.error("Đăng nhập thất bại: " + error.message);
-      alert("Đăng nhập thất bại: " + error.message);
+      // alert("Đăng nhập thất bại: " + error.message);
       console.error("Đăng nhập thất bại:", error);
 
     }

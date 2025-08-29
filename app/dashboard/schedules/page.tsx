@@ -153,7 +153,7 @@ export default function InterviewSchedulesPage() {
     (async () => {
       setListLoading(true);
       try {
-        const url = `${API.INTERVIEW.SCHEDULE}?pageNumber=${page}&pageSize=${pageSize}`;
+        const url = `${API.INTERVIEW.SCHEDULE}`;
         const res = await authFetch(url, { method: "GET", signal: controller.signal });
         if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
 

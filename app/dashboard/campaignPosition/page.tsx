@@ -63,7 +63,7 @@ export default function CampaignPositionPage() {
     description: raw.description ?? null,
     totalSlot: Number(raw.totalSlot ?? 0),
     campaignId: raw.campaignId,
-    // campaignName: raw.campaignName ?? undefined, // not available yet
+    campaignName: raw.campaignName ?? undefined, // not available yet
     departmentId: raw.departmentId,
     departmentName: raw.departmentName ?? undefined, // not available yet
     cvApplicantModels: Array.isArray(raw.cvApplicantModels) ? raw.cvApplicantModels : [],
@@ -211,7 +211,7 @@ export default function CampaignPositionPage() {
                   <TableHead>Số thứ tự</TableHead>
                   <TableHead>Tên</TableHead>
                   <TableHead>Số lượng</TableHead>
-                  <TableHead>Đợt</TableHead>
+                  <TableHead>Đợt tuyển dụng</TableHead>
                   <TableHead>Phòng ban</TableHead>
                   <TableHead>Đã ứng tuyển</TableHead>
                   <TableHead className="text-right">Thao tác</TableHead>
@@ -233,13 +233,13 @@ export default function CampaignPositionPage() {
                       <TableCell>{pos.totalSlot}</TableCell>
 
                       <TableCell>
-                        {pos.campaignId}
-                        {pos.campaignName ? ` - ${pos.campaignName}` : null}
+                        {/* {pos.campaignId} */}
+                        {pos.campaignName ? ` ${pos.campaignName}` : null}
                       </TableCell>
 
                       <TableCell>
                         {/* {pos.departmentId} */}
-                        {pos.departmentName ? ` - ${pos.departmentName}` : null}
+                        {pos.departmentName ? ` ${pos.departmentName}` : null}
                       </TableCell>
 
                       <TableCell>{appliedCount}</TableCell>
