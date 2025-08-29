@@ -1,7 +1,10 @@
 
 
-const API_BASE_URL = "http://localhost:7064/api/v1";
+//const API_BASE_URL = "http://localhost:7064/api/v1";
+//old
 // const API_BASE_URL = "https://hrm-ai-dwf8gxeqfvfgdvdy.malaysiawest-01.azurewebsites.net/api/v1";
+//new
+const API_BASE_URL = "https://hrm-ai-sep490-escte3g9f3dnfvgh.malaysiawest-01.azurewebsites.net/api/v1";
 
 export const API = {
   BASE_URL: API_BASE_URL,
@@ -12,6 +15,8 @@ export const API = {
     VERIFY_EMAIL: `${API_BASE_URL}/authentication/email/verify`,
     RESET_VERIFICATION: `${API_BASE_URL}/authentication/email/resend-verification`,   
     CHANGE_PASSWORD: `${API_BASE_URL}/authentication/password/change`,
+    FORGOT_PASSWORD: `${API_BASE_URL}/authentication/password/forgot`,
+    RESET_PASSWORD: `${API_BASE_URL}/authentication/password/reset`
   },
   ACCOUNT: {
     BASE: `${API_BASE_URL}/accounts`,
@@ -38,6 +43,9 @@ export const API = {
   },
   MAIL : {
     BASE: `${API_BASE_URL}/emails`,
+  },
+  ONBOARD : {
+    BASE: `${API_BASE_URL}/request-onboards`
   }
 };
 

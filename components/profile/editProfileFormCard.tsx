@@ -1,19 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { UseFormReturn } from "react-hook-form";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -21,301 +15,206 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import API from "@/api/api";
-import { authFetch } from "@/app/utils/authFetch";
+import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import { RoleOption } from "@/app/utils/enum";
 
-type DepartmentOption = {
-  id: string;
-  departmentName: string;
-};
-const NONE_DEPT = "__none__";
+export type DepartmentOption = { id: string; name: string };
 
-type EditProfileFormCardProps = {
-  form: UseFormReturn<Account>;
+export const genderOptions = [
+  { value: 0, label: "Nữ" },
+  { value: 1, label: "Nam" },
+] as const;
+
+const BaseSchema = z.object({
+  firstName: z.string().trim().min(1, "Vui lòng nhập tên"),
+  lastName: z.string().trim().min(1, "Vui lòng nhập họ"),
+  username: z.string().trim().min(3, "Tên người dùng tối thiểu 3 ký tự"),
+  email: z.string().email().optional(), 
+  phoneNumber: z
+    .string()
+    .trim()
+    .optional()
+    .refine((v) => !v || /^[0-9+()\-\s]{8,20}$/.test(v), "Số điện thoại không hợp lệ"),
+  gender: z.number().int(),
+  dateOfBirth: z.string().optional(), 
+  departmentId: z.string().optional(),
+  role: z.number().int().optional(),
+});
+
+export type ProfileFormValues = z.infer<typeof BaseSchema>;
+
+export type ProfileFormProps = {
+  defaultValues: ProfileFormValues;
+  onSubmit: (values: ProfileFormValues) => Promise<void> | void;
+
   submitting?: boolean;
-  onSubmit: (values: Account) => Promise<void> | void;
-  onCancel?: () => void;
+  showReset?: boolean;
+  submitLabel?: string;
+
+  showDepartment?: boolean;
+  showRole?: boolean;
+
   departments?: DepartmentOption[];
-  loadDepartments?: boolean;
-  departmentApi?: string;
+  roles?: RoleOption[];
+
+  departmentsLoading?: boolean;
+  disableEmail?: boolean;
+  className?: string;
 };
 
-export function EditProfileFormCard({
-  form,
-  submitting = false,
+export function ProfileForm({
+  defaultValues,
   onSubmit,
-  onCancel,
-  departments,
-  loadDepartments = true,
-  departmentApi = API.DEPARTMENT.BASE,
-}: EditProfileFormCardProps) {
-  const [internalDeps, setInternalDeps] = React.useState<DepartmentOption[]>(
-    []
-  );
-  const [depLoading, setDepLoading] = React.useState(false);
-  const [depError, setDepError] = React.useState<string | null>(null);
+  submitting,
+  showReset = true,
+  submitLabel = "Lưu thay đổi",
+  showDepartment = true,
+  showRole = true,
+  departments = [],
+  roles = [],
+  departmentsLoading = false,
+  disableEmail = true,
+  className,
+}: ProfileFormProps) {
+  const form = useForm<ProfileFormValues>({
+    resolver: zodResolver(BaseSchema),
+    defaultValues,
+  });
 
-  const shouldFetch =
-    loadDepartments && (!departments || departments.length === 0);
-
-  React.useEffect(() => {
-    if (!shouldFetch) return;
-    const ctrl = new AbortController();
-
-    (async () => {
-      try {
-        setDepLoading(true);
-        setDepError(null);
-
-        const res = await authFetch(departmentApi, { signal: ctrl.signal });
-        if (!res.ok) {
-          let msg = `Không thể tải danh sách phòng ban (HTTP ${res.status}).`;
-          try {
-            const p = await res.json();
-            msg = p?.message ?? p?.detail ?? msg;
-          } catch {}
-          throw new Error(msg);
-        }
-
-        const payload = await res.json();
-        const arr: any[] = Array.isArray(payload?.data?.data)
-          ? payload.data.data
-          : Array.isArray(payload?.data)
-          ? payload.data
-          : Array.isArray(payload)
-          ? payload
-          : [];
-
-        setInternalDeps(
-          arr.map((d: any) => ({
-            id: d.id,
-            departmentName: d.departmentName,
-          }))
-        );
-      } catch (e: any) {
-        if (ctrl.signal.aborted) return;
-        setDepError(e?.message ?? "Không thể tải phòng ban.");
-        setInternalDeps([]);
-      } finally {
-        setDepLoading(false);
-      }
-    })();
-
-    return () => ctrl.abort();
-  }, [shouldFetch, departmentApi]);
-
-  const depsToUse: DepartmentOption[] =
-    departments && departments.length > 0 ? departments : internalDeps;
   return (
-    <Card className="overflow-hidden">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base">Thông tin cơ bản</CardTitle>
+    <Card className={className ?? "mx-auto max-w-4xl rounded-2xl"}>
+      <CardHeader>
+        <CardTitle className="text-base font-semibold">Thông tin cơ bản</CardTitle>
+        <p className="text-muted-foreground">
+          Chỉnh sửa thông tin cá nhân cơ bản của tài khoản và thông tin liên hệ.
+        </p>
       </CardHeader>
 
       <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="firstName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tên</FormLabel>
-                    <FormControl>
-                      <Input placeholder="John" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+        <form className="grid gap-5 md:grid-cols-2" onSubmit={form.handleSubmit(onSubmit)}>
+          <div className="space-y-1">
+            <Label htmlFor="firstName">Tên</Label>
+            <Input id="firstName" {...form.register("firstName")} placeholder="Nhập tên" />
+            <FormError msg={form.formState.errors.firstName?.message} />
+          </div>
 
-              <FormField
-                control={form.control}
-                name="lastName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Họ</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Doe" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+          <div className="space-y-1">
+            <Label htmlFor="lastName">Họ</Label>
+            <Input id="lastName" {...form.register("lastName")} placeholder="Nhập họ" />
+            <FormError msg={form.formState.errors.lastName?.message} />
+          </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="username"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tên người dùng</FormLabel>
-                    <FormControl>
-                      <Input placeholder="JohnDoe" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          <div className="space-y-1">
+            <Label htmlFor="username">Tên người dùng</Label>
+            <Input id="username" {...form.register("username")} placeholder="ví dụ: tienle" />
+            <FormError msg={form.formState.errors.username?.message} />
+          </div>
 
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="email"
-                        placeholder="johndoe@gmail.com"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+          <div className="space-y-1">
+            <Label htmlFor="email">Email</Label>
+            <Input id="email" {...form.register("email")} disabled={disableEmail} />
+            <FormError msg={form.formState.errors.email?.message} />
+          </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="phoneNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Số điện thoại</FormLabel>
-                    <FormControl>
-                      <Input placeholder="0987654321" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          <div className="space-y-1">
+            <Label htmlFor="phoneNumber">Số điện thoại</Label>
+            <Input id="phoneNumber" {...form.register("phoneNumber")} placeholder="0987..." />
+            <FormError msg={form.formState.errors.phoneNumber?.message} />
+          </div>
 
-              <FormField
-                control={form.control}
-                name="gender"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Giới tính</FormLabel>
-                    <Select
-                      onValueChange={(v) => field.onChange(Number(v))}
-                      value={String(field.value)}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Chọn" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="0">Nữ</SelectItem>
-                        <SelectItem value="1">Nam</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+          <div className="space-y-1">
+            <Label>Giới tính</Label>
+            <Select
+              value={String(form.watch("gender"))}
+              onValueChange={(v) => form.setValue("gender", Number(v), { shouldDirty: true })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Chọn giới tính" />
+              </SelectTrigger>
+              <SelectContent>
+                {genderOptions.map((g) => (
+                  <SelectItem key={g.value} value={String(g.value)}>
+                    {g.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FormError msg={form.formState.errors.gender?.message as any} />
+          </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="dateOfBirth"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Ngày sinh</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          <div className="space-y-1">
+            <Label htmlFor="dateOfBirth">Ngày sinh</Label>
+            <Input id="dateOfBirth" type="date" {...form.register("dateOfBirth")} />
+            <FormError msg={form.formState.errors.dateOfBirth?.message} />
+          </div>
 
-              <FormField
-                control={form.control}
-                name="departmentId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Phòng ban</FormLabel>
-
-                    {depsToUse.length > 0 ? (
-                      <Select
-                        disabled={depLoading || submitting}
-                        // Nếu departmentId null/undefined -> chọn sentinel
-                        value={field.value ?? NONE_DEPT}
-                        onValueChange={(v) =>
-                          field.onChange(v === NONE_DEPT ? null : v)
-                        }
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue
-                              placeholder={
-                                depLoading ? "Đang tải..." : "Chọn phòng ban"
-                              }
-                            />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {/* KHÔNG dùng value="" nữa */}
-                          <SelectItem value={NONE_DEPT}>
-                            — Không thuộc phòng ban —
-                          </SelectItem>
-                          {depsToUse.map((d) => (
-                            <SelectItem key={d.id} value={d.id}>
-                              {d.departmentName}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <FormControl>
-                        <Input
-                          placeholder={
-                            depLoading
-                              ? "Đang tải..."
-                              : "Nhập ID phòng ban (tạm thời)"
-                          }
-                          disabled={depLoading || submitting}
-                          value={field.value ?? ""}
-                          onChange={(e) =>
-                            field.onChange(e.target.value || null)
-                          }
-                        />
-                      </FormControl>
-                    )}
-
-                    {depError ? (
-                      <p className="mt-1 text-xs text-red-600">{depError}</p>
-                    ) : null}
-
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <Separator />
-
-            <div className="flex items-center justify-end gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => (onCancel ? onCancel() : form.reset())}
+          {showDepartment && (
+            <div className="space-y-1">
+              <Label>Phòng ban</Label>
+              <Select
+                value={form.watch("departmentId") || ""}
+                onValueChange={(v) => form.setValue("departmentId", v, { shouldDirty: true })}
+                disabled={departmentsLoading || departments.length === 0}
               >
+                <SelectTrigger>
+                  <SelectValue
+                    placeholder={departmentsLoading ? "Đang tải phòng ban..." : "Chọn phòng ban"}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {departments.map((d) => (
+                    <SelectItem key={d.id} value={d.id}>
+                      {d.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormError msg={form.formState.errors.departmentId?.message} />
+            </div>
+          )}
+
+          {showRole && (
+            <div className="space-y-1 md:col-span-2">
+              <Label>Vai trò</Label>
+              <Select
+                value={form.watch("role") ? String(form.watch("role")) : ""}
+                onValueChange={(v) => form.setValue("role", Number(v), { shouldDirty: true })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn 1 vai trò" />
+                </SelectTrigger>
+                <SelectContent>
+                  {roles.map((r) => (
+                    <SelectItem key={r.value} value={String(r.value)}>
+                      {r.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormError msg={form.formState.errors.role?.message as any} />
+            </div>
+          )}
+
+          <Separator className="md:col-span-2" />
+
+          <div className="flex gap-3 md:col-span-2 items-center justify-end">
+            {showReset && (
+              <Button type="button" variant="outline" onClick={() => form.reset(defaultValues)}>
                 Xóa các thay đổi
               </Button>
-              <Button type="submit" disabled={submitting}>
-                {submitting ? "Đang lưu..." : "Lưu thay đổi"}
-              </Button>
-            </div>
-          </form>
-        </Form>
+            )}
+            <Button type="submit" disabled={submitting}>
+              {submitting ? "Đang lưu..." : submitLabel}
+            </Button>
+          </div>
+        </form>
       </CardContent>
     </Card>
   );
+}
+
+function FormError({ msg }: { msg?: string }) {
+  if (!msg) return null;
+  return <p className="text-xs text-red-600 mt-1">{msg}</p>;
 }

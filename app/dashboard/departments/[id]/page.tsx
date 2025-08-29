@@ -4,15 +4,11 @@ import DepartmentDetailClient from "@/components/department/detailDepartmentPage
 import { notFound } from "next/navigation";
 
 // ===== Types aligned with your API response =====
-export type Employee = {
-  id: string;
-  firstName: string | null;
-  lastName: string | null;
-  email: string | null;
-  phoneNumber: string | null;
+export type accountRoles = {
   status: number | null;
-  creationDate?: string | null;
-};
+  role: number | null;
+}
+export type Employee = Account;
 
 export type CampaignPositionDetailModel = {
   id: string;
@@ -106,6 +102,7 @@ export default async function DepartmentDetailPage({
   if (!res.ok) return notFound();
 
   const data = await unwrap<DepartmentDetail | ApiEnvelope<DepartmentDetail>>(res);
+  console.log("Fetched department data:", data);
 
   const entity: DepartmentDetail =
     (data as any)?.departmentName

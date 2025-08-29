@@ -21,7 +21,7 @@ interface Account {
 
   departmentId?: string;           
   departmentName?: string;
-  accountRoles : AccountRole[] | null;
+  accountRoles? : AccountRole[];
   isDeleted : boolean;
   creationDate : string;
   modificationDate : string;
