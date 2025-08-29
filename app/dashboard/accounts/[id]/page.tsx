@@ -54,6 +54,7 @@ export default function AccountDetailPage() {
       <ProfileCard
         data={account!}
         onEdit={() => router.push(`/dashboard/accounts/${account.id}/edit`)}
+        showEdit={false}
         showChangePassword={false}
       />
     </div>
