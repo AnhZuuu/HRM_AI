@@ -27,6 +27,7 @@ import { authFetch } from "@/app/utils/authFetch";
 import API from "@/api/api";
 import { ScheduleModal } from "./ui/ScheduleModal";
 import ScheduleModal2 from "./ui/ScheduleModal2";
+import HandleUpdateStatusCandidate from "../candidates/HandleUpdateStatusCandidate";
 
 /* ============= Types ============= */
 export type Candidate = {
@@ -74,14 +75,29 @@ function getDetailValue(details: any[] | undefined, type: string, key: string): 
   return (found?.value as string) ?? null;
 }
 
-function normalizeCandidates(json: any): Candidate[] {
-  const arr = Array.isArray(json?.data?.data) ? json.data.data : [];
+function normalizeCandidates(payload: any): Candidate[] {
+  const arr =
+    (Array.isArray(payload?.data) && payload.data) ||
+    (Array.isArray(payload?.data?.data) && payload.data.data) ||
+    (Array.isArray(payload) && payload) ||
+    [];
+
+
+  // console.log("[normalizeCandidates] input keys:", Object.keys(payload || {}));
+  // console.log("[normalizeCandidates] isArray(data):", Array.isArray(payload?.data));
+  // console.log("[normalizeCandidates] isArray(data.data):", Array.isArray(payload?.data?.data));
+  // console.log("[normalizeCandidates] final length:", arr.length);
+
   return arr.map((it: any) => {
     const details = it?.cvApplicantDetailModels as any[] | undefined;
     const fallbackFullName = getDetailValue(details, "personal_info", "full_name");
     const fallbackPosition = getDetailValue(details, "personal_info", "position");
-    const id = String(it?.id ?? "");
-    const statusVal = Number.isInteger(it?.status) ? Number(it.status) : null;
+
+    const rawStatus = it?.status;
+    const statusVal =
+      Number.isInteger(rawStatus) && rawStatus >= 0 && rawStatus <= 4 ? (rawStatus as 0 | 1 | 2 | 3 | 4) : null;
+
+    const id = String(it?.id ?? it?.cvApplicantId ?? "");
 
     return {
       id,
@@ -92,14 +108,7 @@ function normalizeCandidates(json: any): Candidate[] {
       campaignPositionDescription: it?.campaignPositionDescription ?? fallbackPosition ?? null,
       currentInterviewStageName: it?.currentInterviewStageName ?? null,
       fileUrl: it?.fileUrl ?? null,
-      status:
-        statusVal === 0 ||
-        statusVal === 1 ||
-        statusVal === 2 ||
-        statusVal === 3 ||
-        statusVal === 4
-          ? (statusVal as 0 | 1 | 2 | 3 | 4)
-          : null,
+      status: statusVal,
     };
   });
 }
@@ -107,8 +116,29 @@ function normalizeCandidates(json: any): Candidate[] {
 async function fetchCandidates(): Promise<Candidate[]> {
   const res = await authFetch(API.CV.APPLICANT, { method: "GET" });
   if (!res.ok) throw new Error(`Failed to load candidates: ${res.status}`);
+
+  // Important: don't string-concat an object (it prints [object Object]).
   const json = await res.json();
-  return normalizeCandidates(json);
+  console.log("[fetchCandidates] raw response:", json);
+  console.log(
+    "[fetchCandidates] shapes =>",
+    "Array.isArray(json.data):", Array.isArray(json?.data),
+    "| Array.isArray(json.data?.data):", Array.isArray(json?.data?.data)
+  );
+
+  const normalized = normalizeCandidates(json);
+  console.log("[fetchCandidates] normalized length:", normalized.length);
+  console.table(
+    normalized.map(x => ({
+      id: x.id,
+      name: x.fullName,
+      email: x.email,
+      point: x.point,
+      stage: x.currentInterviewStageName,
+      status: x.status,
+    }))
+  );
+  return normalized;
 }
 
 /* Debounce without external deps */
@@ -150,8 +180,18 @@ export default function CandidatesPage() {
   const [activeCandidate, setActiveCandidate] = useState<Candidate | null>(null);
 
   //Modals 2
-  const [openV2, setOpenV2] = useState(false);
+  // const [openV2, setOpenV2] = useState(false);
   const [activeCandidateV2, setActiveCandidateV2] = useState<Candidate | null>(null);
+
+  // Update candidate status modal
+  const [openUpdateStatus, setOpenUpdateStatus] = useState(false);
+  const [activeStatusCandidate, setActiveStatusCandidate] = useState<Candidate | null>(null);
+
+  function openUpdateStatusModal(c: Candidate) {
+    setActiveStatusCandidate(c);
+    setOpenUpdateStatus(true);
+  }
+
 
   // Fetch once
   useEffect(() => {
@@ -217,10 +257,10 @@ export default function CandidatesPage() {
     setOpen(true);
   }
   //Modal 2
-  function openScheduleV2(candidate: Candidate) {
-    setActiveCandidateV2(candidate);
-    setOpenV2(true);
-  }
+  // function openScheduleV2(candidate: Candidate) {
+  //   setActiveCandidateV2(candidate);
+  //   setOpenV2(true);
+  // }
 
   function clearFilters() {
     setQuery("");
@@ -331,13 +371,21 @@ export default function CandidatesPage() {
                       </td>
                       <td className="px-4 py-3">
                         {a.status !== null && a.status !== undefined ? (
-                          <Badge className={statusBadgeClass(a.status)}>
-                            {STATUS_LABEL[a.status as 0 | 1 | 2 | 3 | 4]}
-                          </Badge>
+                          <button
+                            type="button"
+                            onClick={() => openUpdateStatusModal(a)}
+                            className="focus:outline-none"
+                            title="Cập nhật trạng thái"
+                          >
+                            <Badge className={statusBadgeClass(a.status)}>
+                              {STATUS_LABEL[a.status as 0 | 1 | 2 | 3 | 4]}
+                            </Badge>
+                          </button>
                         ) : (
                           <span className="text-muted-foreground">—</span>
                         )}
                       </td>
+
                       <td className="px-4 py-3">
                         {a.fileUrl ? (
                           <Link
@@ -363,7 +411,7 @@ export default function CandidatesPage() {
                               <Eye className="mr-2 h-4 w-4" /> Chi tiết
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => openScheduleV2(a)}>
+                            <DropdownMenuItem onClick={() => openSchedule(a)}>
                               <CalendarPlus className="mr-2 h-4 w-4" /> Lên lịch phỏng vấn
                             </DropdownMenuItem>
                           </DropdownMenuContent>
@@ -407,7 +455,27 @@ export default function CandidatesPage() {
       <ScheduleModal open={open} onOpenChange={setOpen} candidate={activeCandidate} />
 
       {/* Modal V2 (payload: interviewStageId) */}
-      <ScheduleModal2 open={openV2} onOpenChange={setOpenV2} candidate={activeCandidateV2} />
+      {/* <ScheduleModal2 open={openV2} onOpenChange={setOpenV2} candidate={activeCandidateV2} /> */}
+
+      <HandleUpdateStatusCandidate
+        open={openUpdateStatus}
+        onOpenChange={setOpenUpdateStatus}
+        candidateId={activeStatusCandidate?.id ?? ""}
+        initialStatus={
+          (activeStatusCandidate?.status as 0 | 1 | 2 | 3 | 4 | undefined) ?? 0
+        }
+        onSuccess={(updated) => {
+          // update list without refetch
+          setCandidates(prev =>
+            prev.map(c =>
+              c.id === (activeStatusCandidate?.id ?? updated.id ?? "")
+                ? { ...c, status: updated.status as Candidate["status"] }
+                : c
+            )
+          );
+        }}
+      />
+
     </div>
   );
 }
