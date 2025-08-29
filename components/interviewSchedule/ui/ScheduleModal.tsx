@@ -9,7 +9,7 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle
+  DialogTitle,
 } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -19,9 +19,20 @@ import { Users, ChevronsUpDown, Loader2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { authFetch } from "@/app/utils/authFetch";
 import API from "@/api/api";
-import { today } from "@/app/utils/time";
+import { today, todayStartVNForDatetimeLocal } from "@/app/utils/time";
+import { toast } from "react-toastify";
 
 /* ================= Types ================= */
+export interface Department {
+  id: string;
+  departmentName: string;
+  code: string;
+  description: string | null;
+  campaignPositions?: any[] | null; // keep as any[] to avoid cross-file imports
+  employees: any[] | null;
+  campaignPositionModels: any[] | null;
+}
+
 export type Candidate = {
   id: string;
   cvApplicantId: string;
@@ -29,8 +40,13 @@ export type Candidate = {
   email: string | null;
   point: string | null;
   campaignPositionDescription: string | null;
-  // add departmentId if available in your data flow
+  currentInterviewStageName: string | null;
+  fileUrl: string | null;
+  status: 0 | 1 | 2 | 3 | 4 | null; // 0 Pending, 1 Rejected, 2 Accepted, 3 Failed, 4 Onboarded
+
+  // ensure these get populated in normalizeCandidates()
   departmentId?: string | null;
+  department: Department[] | null;
 };
 
 type NextStageResponse = {
@@ -41,18 +57,25 @@ type NextStageResponse = {
 
 type Interviewer = { id: string; fullName: string; title?: string };
 
-type DepartmentEmployeesResponse = {
-  employees?: Array<{
-    id: string;
-    firstName?: string | null;
-    lastName?: string | null;
-    username?: string | null;
-    email?: string | null;
-    phoneNumber?: string | null;
-    accountRoles?: Array<{ roleName?: string | null }>;
-  }>;
+/* Payload actually returned by your /accounts?departmentId=... endpoint */
+type AccountDTO = {
+  id: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  username?: string | null;
+  email?: string | null;
+  phoneNumber?: string | null;
+  accountRoles?: Array<{ roleName?: string | null }>;
 };
 
+/* ============= Helpers ============= */
+function getCandidateDepartmentId(candidate: Candidate | null): string | null {
+  if (!candidate) return null;
+  if (candidate.departmentId) return candidate.departmentId || null;
+
+  const first = Array.isArray(candidate.department) ? candidate.department[0] : null;
+  return first?.id ?? null;
+}
 
 /* ============= Fetchers adapted to your API ============= */
 
@@ -70,21 +93,16 @@ async function fetchNextStage(cvApplicantId: string): Promise<NextStageResponse 
   };
 }
 
-
-
-async function fetchDepartmentInterviewers(
-  departmentId?: string | null
-): Promise<Interviewer[]> {
+async function fetchDepartmentInterviewers(departmentId?: string | null): Promise<Interviewer[]> {
   if (!departmentId) return []; // no department → no interviewers
-  const url = `${API.DEPARTMENT.BASE}/${departmentId}`;
+  const url = `${API.ACCOUNT.BASE}?departmentId=${departmentId}`;
   const res = await authFetch(url, { method: "GET" });
   if (!res.ok) throw new Error(`Failed to load interviewers: ${res.status}`);
 
   const json = await res.json();
-  const data: DepartmentEmployeesResponse | undefined = json?.data;
-  const emps = Array.isArray(data?.employees) ? data!.employees! : [];
+  const accounts: AccountDTO[] = Array.isArray(json?.data) ? json.data : [];
 
-  return emps.map((e) => {
+  return accounts.map((e) => {
     const displayName =
       e.username ||
       [e.firstName, e.lastName].filter(Boolean).join(" ").trim() ||
@@ -101,10 +119,9 @@ async function fetchDepartmentInterviewers(
   });
 }
 
-
 async function postInterviewSchedule(payload: {
   cvApplicantId: string;
-  stageId: string;
+  interviewStageId: string;
   startTime: string;
   endTime: string;
   interviewerIds: string[];
@@ -126,15 +143,17 @@ export function ScheduleModal({
   open,
   onOpenChange,
   candidate,
+   onScheduled,   
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   candidate: Candidate | null;
+   onScheduled?: () => void;
 }) {
   const [loading, setLoading] = useState(false);
 
   // stage (single)
-  const [stageId, setStageId] = useState<string>("");
+  const [interviewStageId, setinterviewStageId] = useState<string>("");
   const [stageName, setStageName] = useState<string>("");
 
   // interviewers
@@ -147,14 +166,16 @@ export function ScheduleModal({
   const [notes, setNotes] = useState<string>("");
 
   // UI errors (simple inline hints)
-  const [errors, setErrors] = useState<{ stageId?: string; start?: string; end?: string; interviewerIds?: string }>(
-    {}
-  );
+  const [errors, setErrors] = useState<{ interviewStageId?: string; start?: string; end?: string; interviewerIds?: string }>({});
+
+  // Resolve departmentId for UI checks too
+  const deptId = useMemo(() => getCandidateDepartmentId(candidate), [candidate]);
 
   // Reset and fetch when opened
   useEffect(() => {
     if (!open || !candidate) return;
-    setStageId("");
+
+    setinterviewStageId("");
     setStageName("");
     setInterviewers([]);
     setSelectedInterviewers([]);
@@ -170,12 +191,12 @@ export function ScheduleModal({
         // 1) next stage (single object)
         const next = await fetchNextStage(candidate.cvApplicantId);
         if (next?.id) {
-          setStageId(next.id);
+          setinterviewStageId(next.id);
           setStageName(next.stageName || "Unnamed stage");
         }
 
-        // 2) interviewers by department
-        const people = await fetchDepartmentInterviewers(candidate.departmentId);
+        // 2) interviewers by department (using computed deptId)
+        const people = await fetchDepartmentInterviewers(getCandidateDepartmentId(candidate));
         setInterviewers(people);
       } catch (e) {
         console.error(e);
@@ -187,7 +208,7 @@ export function ScheduleModal({
 
   function validate(): boolean {
     const e: typeof errors = {};
-    if (!stageId) e.stageId = "Vui lòng chọn vòng phỏng vấn.";
+    if (!interviewStageId) e.interviewStageId = "Vui lòng chọn vòng phỏng vấn.";
     if (!start) e.start = "Vui lòng chọn thời gian bắt đầu.";
     if (!end) e.end = "Vui lòng chọn thời gian kết thúc.";
     if (start && end && new Date(end) <= new Date(start)) {
@@ -198,29 +219,43 @@ export function ScheduleModal({
     return Object.keys(e).length === 0;
   }
 
-  async function handleSave() {
-    if (!candidate) return;
-    if (!validate()) return;
+ async function handleSave() {
+  if (!candidate) return;
+  if (!validate()) return;
 
-    setLoading(true);
-    try {
-      // NOTE: datetime-local returns a local time string.
-      // toISOString() converts to UTC; ensure your backend expects UTC.
-      await postInterviewSchedule({
-        cvApplicantId: candidate.cvApplicantId,
-        stageId,
-        startTime: new Date(start).toISOString(),
-        endTime: new Date(end).toISOString(),
-        interviewerIds: selectedInterviewers,
-        notes: notes?.trim() || undefined,
-      });
-      onOpenChange(false);
-    } catch (e: any) {
-      alert(e?.message || "Schedule failed");
-    } finally {
-      setLoading(false);
-    }
+  setLoading(true);
+  try {
+    const payload = {
+      cvApplicantId: candidate.cvApplicantId,
+      interviewStageId,
+      startTime: new Date(start).toISOString(),
+      endTime: new Date(end).toISOString(),
+      interviewerIds: selectedInterviewers,
+      notes: notes?.trim() || undefined,
+    };
+
+    // 👇 See exactly what you're about to POST
+    console.log("[ScheduleModal] POST /interview/schedule payload:", payload, {
+      startLocal: start,
+      endLocal: end,
+    });
+
+    const result = await postInterviewSchedule(payload);
+     onScheduled?.();
+
+
+    // 👇 See parsed response (if any)
+    console.log("[ScheduleModal] POST result:", result);
+
+    onOpenChange(false);
+  } catch (e: any) {
+    console.error("[ScheduleModal] POST error:", e);
+    toast.error("Tạo lịch thất bại");
+  } finally {
+    setLoading(false);
   }
+}
+
 
   return (
     <Dialog open={open} onOpenChange={(v) => !loading && onOpenChange(v)}>
@@ -253,23 +288,16 @@ export function ScheduleModal({
             </label>
             <div className="col-span-3">
               <select
-                className={cn(
-                  "block w-full rounded-md border bg-background px-3 py-2 text-sm",
-                  !stageId && "opacity-50"
-                )}
-                disabled={!stageId || loading}
-                value={stageId}
-                onChange={(e) => setStageId(e.target.value)}
+                className={cn("block w-full rounded-md border bg-background px-3 py-2 text-sm", !interviewStageId && "opacity-50")}
+                disabled={!interviewStageId || loading}
+                value={interviewStageId}
+                onChange={(e) => setinterviewStageId(e.target.value)}
               >
-                {stageId ? (
-                  <option value={stageId}>{stageName || "Không có tên"}</option>
-                ) : (
-                  <option>Không có vòng tiếp theo</option>
-                )}
+                {interviewStageId ? <option value={interviewStageId}>{stageName || "Không có tên"}</option> : <option>Không có vòng tiếp theo</option>}
               </select>
-              {errors.stageId && (
+              {errors.interviewStageId && (
                 <p className="mt-1 flex items-center gap-1 text-xs text-red-600">
-                  <AlertCircle className="h-3 w-3" /> {errors.stageId}
+                  <AlertCircle className="h-3 w-3" /> {errors.interviewStageId}
                 </p>
               )}
             </div>
@@ -281,13 +309,11 @@ export function ScheduleModal({
               Bắt đầu <span className="text-red-500">*</span>
             </label>
             <div className="col-span-3 space-y-1">
-              <Input
-                type="datetime-local"
-                min={today}
-                value={start}
-                onChange={(e) => setStart(e.target.value)}
-                disabled={loading}
-              />
+              <Input type="datetime-local" 
+              min={todayStartVNForDatetimeLocal()} 
+              value={start} 
+              onChange={(e) => setStart(e.target.value)} 
+              disabled={loading} />
               {errors.start && (
                 <p className="flex items-center gap-1 text-xs text-red-600">
                   <AlertCircle className="h-3 w-3" /> {errors.start}
@@ -305,7 +331,7 @@ export function ScheduleModal({
                 type="datetime-local"
                 value={end}
                 onChange={(e) => setEnd(e.target.value)}
-                min={start || today}
+                min={start || todayStartVNForDatetimeLocal()}
                 disabled={loading}
               />
               {errors.end && (
@@ -313,9 +339,7 @@ export function ScheduleModal({
                   <AlertCircle className="h-3 w-3" /> {errors.end}
                 </p>
               )}
-              <p className="text-xs text-muted-foreground">
-                Lưu ý: thời gian được lưu dưới dạng UTC (chuyển đổi tự động từ giờ địa phương).
-              </p>
+              <p className="text-xs text-muted-foreground">Lưu ý: thời gian được lưu dưới dạng UTC (chuyển đổi tự động từ giờ địa phương).</p>
             </div>
           </div>
 
@@ -329,12 +353,12 @@ export function ScheduleModal({
                 options={interviewers}
                 value={selectedInterviewers}
                 onChange={setSelectedInterviewers}
-                disabled={loading || !candidate?.departmentId || interviewers.length === 0}
+                disabled={loading || !deptId || interviewers.length === 0}
               />
-              {!candidate?.departmentId && (
+              {!deptId && (
                 <p className="mt-1 text-xs text-red-600">Ứng viên chưa có phòng ban — không thể lấy danh sách người phỏng vấn.</p>
               )}
-              {candidate?.departmentId && interviewers.length === 0 && (
+              {deptId && interviewers.length === 0 && (
                 <p className="mt-1 text-xs text-muted-foreground">Phòng ban không có nhân viên phù hợp.</p>
               )}
               {errors.interviewerIds && (
@@ -342,9 +366,7 @@ export function ScheduleModal({
                   <AlertCircle className="h-3 w-3" /> {errors.interviewerIds}
                 </p>
               )}
-              <p className="mt-1 text-xs text-muted-foreground">
-                Danh sách lấy theo phòng ban của ứng viên. Bạn có thể chọn nhiều người.
-              </p>
+              <p className="mt-1 text-xs text-muted-foreground">Danh sách lấy theo phòng ban của ứng viên. Bạn có thể chọn nhiều người.</p>
             </div>
           </div>
 

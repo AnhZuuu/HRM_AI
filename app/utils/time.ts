@@ -22,3 +22,19 @@ export function fmtRange(start?: string | null, end?: string | null, locale = "v
 
 
 export const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" });
+// utils/time.ts (client-only or in a 'use client' module)
+export function todayStartVNForDatetimeLocal(): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+
+  const get = (t: string) => parts.find(p => p.type === t)?.value ?? "";
+  const y = get("year");
+  const m = get("month");
+  const d = get("day");
+  return `${y}-${m}-${d}T00:00`;
+}
+
