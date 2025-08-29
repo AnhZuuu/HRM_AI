@@ -14,6 +14,7 @@ import { Card, CardContent } from "../ui/card";
 import { Input } from "../ui/input";
 import { DeleteDepartmentDialog } from "./handleDeleteDepartment";
 import API from "@/api/api";
+import { authFetch } from "@/app/utils/authFetch";
 
 export interface Department {
   id: string;
@@ -54,11 +55,10 @@ export default function DepartmentPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [selectedDept, setSelectedDept] = useState<Department | null>(null);
 
-  // Fetch real data
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(`${API.DEPARTMENT.BASE}`, {
+        const res = await authFetch(`${API.DEPARTMENT.BASE}`, {
           method: "GET",
           headers: { "Content-Type": "application/json" },
           cache: "no-store",
@@ -92,7 +92,7 @@ export default function DepartmentPage() {
   const handleDeleteDepartment = async (id: string) => {
     try {
       // If your API uses soft delete or different route, adjust here
-      const res = await fetch(`${API.DEPARTMENT.BASE}/${id}`, {
+      const res = await authFetch(`${API.DEPARTMENT.BASE}/${id}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
       });
@@ -154,7 +154,7 @@ export default function DepartmentPage() {
               key={dept.id}
               className="bg-white rounded-lg overflow-hidden shadow-lg transform transition-transform duration-300 hover:scale-105 relative"
             >
-              <div className="absolute -top-[20px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[75px] border-r-[75px] border-b-[40px] border-l-transparent border-r-transparent border-b-blue-500 z-10"></div>
+              <div className="absolute  z-10"></div>
 
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
@@ -173,7 +173,7 @@ export default function DepartmentPage() {
                         <FaEdit className="text-lg" />
                       </button>
                     </Link>
-                    <Button
+                    {/* <Button
                       variant="destructive"
                       onClick={() => {
                         setSelectedDept(dept);
@@ -181,7 +181,7 @@ export default function DepartmentPage() {
                       }}
                     >
                       Xóa
-                    </Button>
+                    </Button> */}
                   </div>
                 </div>
 
@@ -212,7 +212,7 @@ export default function DepartmentPage() {
                 </div>
 
                 <Link href={`/dashboard/departments/${dept.id}`}>
-                  <button className="mt-6 w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-red-600 transition-colors duration-300">
+                  <button className="mt-6 w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-300">
                     Xem chi tiết
                   </button>
                 </Link>

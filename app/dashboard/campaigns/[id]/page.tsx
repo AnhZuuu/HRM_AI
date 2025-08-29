@@ -1,17 +1,13 @@
 import API from "@/api/api";
 import { authFetch } from "@/app/utils/authFetch";
-import { formatDMYHM } from "@/app/utils/helper";
+import { formatDMYHM, toMidnight } from "@/app/utils/helper";
 import AddPositionDialog from "@/components/campaignPosition/handleAddCampaignPosition";
 import CampaignPositions from "@/components/campaignPosition/positionCard";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { notFound } from "next/navigation";
 
-// Helpers kept same as your list page for consistent logic
-function toMidnight(d: string | Date) {
-  const date = typeof d === "string" ? new Date(d) : d;
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-}
+
 function getCampaignStatus(start: string, end: string, today = new Date()) {
   const dToday = toMidnight(today);
   const dStart = toMidnight(start);
@@ -50,28 +46,132 @@ type CampaignWithPositions = Campaign & {
     createdBy?: string | null;
     totalSlot?: number | null;
     description?: string | null;
+    cvApplicants?: CVApplicant[];
   }>;
 };
 
-// Map API -> UI
-const mapFromApi = (c: any): CampaignWithPositions => ({
-  id: c.id,
-  name: c.name,
-  startTime: c.startTime ?? c.starTime, 
-  endTime: c.endTime,
-  description: c.description,
-  createdBy: c.createdById ?? null,
-  campaignPosition: (c.campaignPositions ?? []).map((p: any) => ({
-    id: p.id,
-    departmentId: p.departmentId ?? null,
-    campaignId: p.campaignId ?? null,
-    campaign: p.campaign?.name ?? null,
-    department: p.department?.name ?? null,
-    createdBy: p.createdById ?? null,
-    totalSlot: p.totalSlot ?? null,
-    description: p.description ?? null,
-  })),
+
+// Add this near your mappers
+type ApiCvApplicantModel = {
+  id: string;
+  fileUrl: string;
+  fileAlt: string;
+  fullName: string | null;
+  email: string | null;
+  point?: string | null; // "22/100"
+  status?: number | string | null;
+  campaignPositionId?: string | null;
+};
+
+const leadingInt = (s?: string | null): number | null => {
+  if (!s) return null;
+  const m = /^(\d+)/.exec(s);
+  return m ? Number(m[1]) : null;
+};
+
+const mapCvApplicantModelToCvApplicant = (m: ApiCvApplicantModel): CVApplicant => ({
+  id: String(m.id ?? ""),
+  fileUrl: String(m.fileUrl ?? ""),
+  fileAlt: String(m.fileAlt ?? ""),
+  fullName: m.fullName ?? "",
+  email: m.email ?? null,
+  // point: leadingInt(m.point),      
+  point: typeof m.point === "string" ? m.point : null,
+  status: m.status == null ? null : String(m.status),
+  campaignPositionId: m.campaignPositionId ?? null,
+  campaignPosition: null,
+  cvApplicantDetails: [],
+  interviewSchedules: [],
 });
+
+// ---------- Strong mappers from API -> UI ----------
+type ApiCampaign = any; // if you have a DTO, use it instead of 'any'
+type ApiCampaignPosition = any;
+type ApiCampaignPositionDetail = any;
+
+const mapPositionDetail = (d: ApiCampaignPositionDetail): CampaignPositionDetail => ({
+  id: String(d?.id ?? ""),
+  campaignPositionId: String(d?.campaignPositionId ?? d?.campaign_position_id ?? ""),
+  campaignPosition: null, // avoid circular; fill only when you truly need it
+  type: String(d?.type ?? ""),
+  key: String(d?.key ?? ""),
+  value: String(d?.value ?? ""),
+  groupIndex: Number.isFinite(d?.groupIndex) ? Number(d.groupIndex) : 0,
+});
+
+
+//   id: String(p?.id ?? ""),
+//   departmentId: String(p?.departmentId ?? p?.department_id ?? ""),
+//   campaignId: String(p?.campaignId ?? p?.campaign_id ?? ""),
+//   campaign: p?.campaign?.name ?? (typeof p?.campaign === "string" ? p.campaign : null),
+//   department: p?.department?.name ?? (typeof p?.department === "string" ? p.department : null),
+//   createdBy: p?.createdBy ?? p?.createdById ?? null,
+//   totalSlot: Number.isFinite(p?.totalSlot) ? Number(p.totalSlot) : 0,
+//   description: typeof p?.description === "string" ? p.description : "",
+//   cvApplicants: Array.isArray(p?.cvApplicants) ? p.cvApplicants : undefined, // keep your existing CVApplicant[] type
+// });
+const mapPosition = (p: ApiCampaignPosition): CampaignPosition => ({
+  id: String(p?.id ?? ""),
+  departmentId: String(p?.departmentId ?? p?.department_id ?? ""),
+  campaignId: String(p?.campaignId ?? p?.campaign_id ?? ""),
+  campaign: p?.campaign?.name ?? (typeof p?.campaign === "string" ? p.campaign : null),
+
+  // ← important: prefer API's departmentName, then nested object, then your string
+  department:
+    (p as any).departmentName ??
+    p?.department?.name ??
+    (typeof p?.department === "string" ? p.department : null),
+
+  createdBy: p?.createdBy ?? p?.createdById ?? null,
+  totalSlot: Number.isFinite(p?.totalSlot) ? Number(p.totalSlot) : 0,
+  description: typeof p?.description === "string" ? p.description : "",
+
+  // ← important: project cvApplicantModels into your CVApplicant[]
+  cvApplicants: Array.isArray((p as any).cvApplicantModels)
+    ? ((p as any).cvApplicantModels as ApiCvApplicantModel[]).map(mapCvApplicantModelToCvApplicant)
+    : (Array.isArray(p?.cvApplicants) ? p.cvApplicants : []),
+});
+
+const mapPositionModel = (p: ApiCampaignPosition): CampaignPositionModel => ({
+  id: String(p?.id ?? ""),
+  departmentId: String(p?.departmentId ?? p?.department_id ?? ""),
+  campaignId: String(p?.campaignId ?? p?.campaign_id ?? ""),
+  departmentName:
+    p?.department?.name ??
+    p?.departmentName ??
+    (typeof p?.department === "string" ? p.department : ""),
+  totalSlot: Number.isFinite(p?.totalSlot) ? Number(p.totalSlot) : 0,
+  description: typeof p?.description === "string" ? p.description : null,
+  campaignPositionDetail: Array.isArray(p?.campaignPositionDetails)
+    ? (p.campaignPositionDetails as ApiCampaignPositionDetail[]).map(mapPositionDetail)
+    : null,
+});
+
+const mapFromApi = (c: ApiCampaign): CampaignWithPositions => {
+  const start = c?.startTime ?? c?.starTime; // tolerate backend typo
+  const end = c?.endTime;
+
+  if (!start || !end) throw new Error("Invalid campaign payload: missing start/end time");
+
+  const rawPositions: ApiCampaignPosition[] = Array.isArray(c?.campaignPositions)
+    ? c.campaignPositions
+    : [];
+
+  // If you want Campaign.campaignPosition to be CampaignPosition[] (not the *Model*),
+  // map with mapPosition. If you prefer the richer *Model*, swap to mapPositionModel below.
+  const positions: CampaignPosition[] = rawPositions.map(mapPosition);
+
+  return {
+    id: String(c?.id ?? ""),
+    name: String(c?.name ?? ""),
+    startTime: String(start),
+    endTime: String(end),
+    description: typeof c?.description === "string" ? c.description : "",
+    createdBy: c?.createdBy ?? c?.createdById ?? null,
+    createdByName: typeof c?.createdByName === "string" ? c.createdByName : null,
+    campaignPosition: positions,
+  };
+};
 
 export default async function CampaignDetailPage({
   params,
@@ -79,12 +179,14 @@ export default async function CampaignDetailPage({
   params: Promise<{ id: string }>;
   // params: { id: string };
 }) {
-  const { id } =  await params;
+  const { id } = await params;
   //await
 
   const res = await authFetch(`${API.CAMPAIGN.BASE}/${id}`, {
     cache: "no-store",
   });
+
+  console.log("Fetched campaign data detail:", res);
 
   if (res.status === 404) return notFound();
   if (!res.ok) return notFound();
@@ -98,8 +200,9 @@ export default async function CampaignDetailPage({
   const status = getCampaignStatus(campaign.startTime, campaign.endTime);
   const { className, message } = getStatusTone(status);
   const showAddPosition =
-    message === "Đợt tuyển dụng chưa bắt đầu" ||
-    message === "Đang diễn ra";
+  message === "Kết thúc";
+    // message === "Đợt tuyển dụng chưa bắt đầu" ||
+    // message === "Đang diễn ra";
 
 
   return (
@@ -122,7 +225,7 @@ export default async function CampaignDetailPage({
             {status} – {message}
           </div>
 
-          {showAddPosition && (
+          {!showAddPosition && (
             <AddPositionDialog campaignId={campaign.id} />
           )}
         </div>

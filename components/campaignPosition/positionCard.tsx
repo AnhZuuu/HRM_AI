@@ -13,168 +13,239 @@ import { Input } from "@/components/ui/input";
 import { authFetch } from "@/app/utils/authFetch";
 import API from "@/api/api";
 import LoadingDialog from "./loading";
-import ShowAllDialog from "./showAll";
+import ShowAllDialog, { LiveUploadItem } from "./showAll";
 import CvApplicantDialog from "./cvApplicant";
+import { toast, ToastContainer } from "react-toastify";
 
-type UploadResult = {
-  status: number;
-  ok: boolean;
-  message?: string | null;
-  data?: any;
-};
 type CvApplicantDraft = {
-  fileUrl: string;                 // from uploaded File (blob URL)
-  fileAlt: string;                 // file name
-  fullName: string | null;         // parsedData -> key: "full_name"
-  email: string | null;            // parsedData -> key: "email"
-  point: number | null;            // rating
-  campaignPositionId: string;      // activePos.id
-  cvApplicantDetailsAddModels: any[]; // full parsedData array
-   originalFile?: File;  
-};
+  fileUrl: string;
+  fileAlt: string;
+  fullName: string | null;
+  email: string | null;
+  point: number | null;
+  campaignPositionId: string;
+  cvApplicantDetailsAddModels: any[];
+  originalFile?: File;
 
+  // optional extras from backend
+  warning?: string | null;
+  evaluationComment?: string | null;
+};
 
 function getPositionStatus(campaignStatus: string, pos: CampaignPosition) {
   if (campaignStatus === "Kết thúc" || campaignStatus === "Kết thúc hôm nay") {
     return { label: "Đóng", tone: "bg-zinc-100 text-zinc-700" };
   }
   const applied = pos.cvApplicants?.length ?? 0;
-  if (applied >= pos.totalSlot) return { label: "Đóng", tone: "bg-red-100 text-red-700" };
+  // if (applied >= pos.totalSlot) return { label: "Đóng", tone: "bg-red-100 text-red-700" };
   return { label: "Mở", tone: "bg-emerald-100 text-emerald-700" };
 }
 
 export default function CampaignPositions(
   { positions, campaignStatus }: { positions: CampaignPosition[]; campaignStatus: string }
 ) {
+  // console.log("ALOOOOOOOOOOOOOO" + positions);
+  // console.log("MMMMMMMMMMMMMMMM" + campaignStatus);
+  // console.log("positions:", positions);
+
+  //this work
+  // if (Array.isArray(positions) && positions[0]) {
+  //   console.log("first position keys:", Object.keys(positions[0]));
+  //   console.log("first position:", JSON.stringify(positions[0], null, 2));
+  // }
+
+  // dialogs + selection
   const [uploadOpen, setUploadOpen] = React.useState(false);
   const [listOpen, setListOpen] = React.useState(false);
   const [activePos, setActivePos] = React.useState<CampaignPosition | null>(null);
   const [files, setFiles] = React.useState<FileList | null>(null);
 
-  const [loadingOpen, setLoadingOpen] = React.useState(false);
-  const [result, setResult] = React.useState<UploadResult | null>(null);
+  // live upload result dialog
   const [resultOpen, setResultOpen] = React.useState(false);
+  const [liveItems, setLiveItems] = React.useState<LiveUploadItem[]>([]);
 
+  // detail dialog
   const [cvOpen, setCvOpen] = React.useState(false);
   const [cvDraft, setCvDraft] = React.useState<CvApplicantDraft | null>(null);
-  const [selectedIdx, setSelectedIdx] = React.useState(0);
 
-  const appliedCount = (p: CampaignPosition) => p.cvApplicants?.length ?? 0;
+  // optional: keep but unused if you want to show a global spinner elsewhere
+  const [loadingOpen] = React.useState(false);
+
+  const appliedCount = (p: CampaignPosition) =>
+  (p.cvApplicantModels?.length ??
+    p.cvApplicants?.length ??
+    0);
 
   const openUpload = (p: CampaignPosition) => {
     console.log("Upload CV for position ID:", p.id);
     setActivePos(p);
     setUploadOpen(true);
   };
+
   const openList = (p: CampaignPosition) => {
     console.log("View applicants for position ID:", p.id);
     setActivePos(p);
     setListOpen(true);
   };
 
-
-  const handleUpload = async () => {
-    if (!activePos || !files?.length) return;
-
-    setLoadingOpen(true); // <-- show loading
-    try {
-      console.log("Uploading CV(s) for campaignPositionId:", activePos.id);
-
-      const tasks = Array.from(files).map(async (file) => {
-        const fd = new FormData();
-        fd.append("campaignPositionId", activePos.id); // keep old behavior
-        fd.append("CampaignPositionId", activePos.id); // keep old behavior
-        fd.append("file", file);
-
-        const url = `${API.CV.PARSE}?campaignPositionId=${encodeURIComponent(activePos.id)}`;
-
-        const res = await authFetch(url, { method: "POST", body: fd });
-
-        console.log("Upload response status:", res.status, res.ok);
-        const text = await res.text();
-
-        let data: any = null;
-        try { data = text ? JSON.parse(text) : null; } catch { /* ignore non-JSON */ }
-
-        if (!res.ok) {
-          console.error("Upload failed body:", text);
-          throw new Error(data?.message || text || `Upload failed: ${res.status}`);
-        }
-
-
-        const fileUrl = URL.createObjectURL(file);
-
-
-        console.log("Upload response JSON:", data);
-        return {
-          fileName: file.name,
-          fileUrl,             // you already add this
-          originalFile: file,
-          status: res.status,
-          ok: true,
-          message: data?.message ?? "OK",
-          data,
-        };
-      });
-
-      // Use allSettled so one failure doesn't cancel others
-      const settled = await Promise.allSettled(tasks);
-
-      const items = settled.map((r) =>
-        r.status === "fulfilled"
-          ? r.value
-          : { fileName: "(unknown)", status: 0, ok: false, message: String(r.reason), data: null }
-      );
-
-      const okCount = items.filter(i => i.ok).length;
-      const failCount = items.length - okCount;
-
-      if (failCount > 0) {
-        alert(`Một số tệp thất bại: ${failCount}/${items.length}.`);
-      }
-
-      // Summarize for result modal (ShowAllDialog)
-      setResult({
-        status: okCount === items.length ? 200 : 207, // summary
-        ok: okCount === items.length,
-        message: `Thành công ${okCount}/${items.length}, thất bại ${failCount}/${items.length}`,
-        data: { items },
-      });
-
-      console.log("All uploads done:", items);
-      setUploadOpen(false);
-      setFiles(null);
-      setResultOpen(true); // <-- open result modal
-    } catch (err) {
-      console.error("Upload error:", err);
-      alert(String((err as Error)?.message || err)); // <-- failure alert
-    } finally {
-      setLoadingOpen(false); // <-- hide loading
-    }
-  };
-
-
   const pickValue = (arr: any[], key: string) =>
     (arr?.find?.((x: any) => x?.key === key)?.value) ?? null;
 
+  // Build draft for CvApplicantDialog from one item payload
   const buildDraftFromItem = (item: any, campaignPositionId: string): CvApplicantDraft | null => {
-    const inner = item?.data?.data ?? {};
+    // support both shapes: item.data.data or item.data
+    const inner = item?.data?.data ?? item?.data ?? {};
     const parsed = Array.isArray(inner?.parsedData) ? inner.parsedData : [];
 
     return {
       fileUrl: item?.fileUrl ?? "",
       fileAlt: item?.fileName ?? "",
-      originalFile: item?.originalFile,  
+      originalFile: item?.originalFile,
       fullName: pickValue(parsed, "full_name"),
       email: pickValue(parsed, "email"),
       point: inner?.rating ?? null,
       campaignPositionId,
       cvApplicantDetailsAddModels: parsed,
+      warning: inner?.warning ?? null,
+      evaluationComment: inner?.evaluationComment ?? null,
     };
   };
 
+  // Upload one file and update its live item as it progresses
+  const uploadOne = async (file: File, index: number, campaignPositionId: string) => {
+    try {
+      // mark uploading
+      setLiveItems(prev => {
+        const next = [...prev];
+        next[index] = { ...next[index], status: "UPLOADING" };
+        return next;
+      });
 
+      const fd = new FormData();
+      fd.append("campaignPositionId", campaignPositionId);
+      fd.append("CampaignPositionId", campaignPositionId);
+      fd.append("file", file);
 
+      const url = `${API.CV.PARSE}?campaignPositionId=${encodeURIComponent(campaignPositionId)}`;
+      const res = await authFetch(url, { method: "POST", body: fd });
+
+      console.log("Upload response status:", res.status, res.ok);
+
+      const text = await res.text();
+      let data: any = null;
+      try { data = text ? JSON.parse(text) : null; } catch { /* ignore */ }
+
+      console.log("Upload response JSON:", data);
+
+      if (!res.ok) {
+        setLiveItems(prev => {
+          const next = [...prev];
+          next[index] = {
+            ...next[index],
+            status: "FAILED",
+            httpStatus: res.status,
+            ok: false,
+            message: data?.message || text || `Upload failed: ${res.status}`,
+          };
+          return next;
+        });
+        return;
+      }
+
+      // success
+      setLiveItems(prev => {
+        const next = [...prev];
+        next[index] = {
+          ...next[index],
+          status: "DONE",
+          httpStatus: res.status,
+          ok: true,
+          message: data?.message ?? "OK",
+          payload: data,
+        };
+        return next;
+      });
+    } catch (err: any) {
+      setLiveItems(prev => {
+        const next = [...prev];
+        next[index] = {
+          ...next[index],
+          status: "FAILED",
+          ok: false,
+          message: err?.message || String(err),
+        };
+        return next;
+      });
+    }
+  };
+
+  // Start live/async uploads for all selected files
+  const handleUpload = async () => {
+    if (!activePos || !files?.length) return;
+    try {
+      toast.success("Tải CV lên thành công!");
+      console.log("Uploading CV(s) for campaignPositionId:", activePos.id);
+      // seed live items & open the live dialog right away
+      const seeded: LiveUploadItem[] = Array.from(files).map((file) => ({
+        fileName: file.name,
+        fileUrl: URL.createObjectURL(file),
+        originalFile: file,
+        status: "UPLOADING",
+      }));
+      setLiveItems(seeded);
+      setResultOpen(true);
+      setUploadOpen(false);
+      setFiles(null);
+
+      // kick off each upload concurrently
+      seeded.forEach((it, idx) => {
+        uploadOne(it.originalFile, idx, activePos.id);
+      });
+    } catch {
+      toast.error("Không thể tải lên file.");
+    }
+
+  };
+
+  // “Chi tiết” handler from the live dialog
+  const handleDetails = (index: number) => {
+    const it = liveItems[index];
+    if (!it || it.status !== "DONE" || !it.ok || !activePos) return;
+
+    // wrap to match buildDraftFromItem’s expected shape
+    const wrapped = {
+      fileName: it.fileName,
+      fileUrl: it.fileUrl,
+      originalFile: it.originalFile,
+      status: it.httpStatus ?? 200,
+      ok: it.ok,
+      message: it.message,
+      data: it.payload, // server JSON
+    };
+
+    const draft = buildDraftFromItem(wrapped, activePos.id);
+    if (!draft) return;
+    setCvDraft(draft);
+    setCvOpen(true);
+  };
+  React.useEffect(() => {
+    if (liveItems.length === 0) return;
+    const allFinished = liveItems.every(i => i.status !== "UPLOADING");
+    if (!allFinished) return;
+
+    // Build a summary like your old `items` array
+    const items = liveItems.map(it => ({
+      fileName: it.fileName,
+      fileUrl: it.fileUrl,
+      originalFile: it.originalFile,
+      status: it.httpStatus ?? 0,
+      ok: !!it.ok,
+      message: it.message ?? null,
+      data: it.payload ?? null,
+    }));
+
+    console.log("All uploads done:", items); // <-- add
+  }, [liveItems]);
 
   return (
     <>
@@ -197,6 +268,7 @@ export default function CampaignPositions(
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Phòng ban</p>
                   <p className="text-base font-medium">{pos.department ?? "—"}</p>
+                  {/* <p className="text-base font-medium">{(pos as any).departmentName ?? "—"}</p> */}
                 </div>
 
                 <div className="grid grid-cols-3 gap-4">
@@ -249,11 +321,11 @@ export default function CampaignPositions(
                 id="cvFiles"
                 type="file"
                 multiple
-                accept=".pdf,.doc,.docx"
+                accept=".pdf,.png,.jpg,.jpeg"
                 onChange={(e) => setFiles(e.target.files)}
               />
               <p className="text-xs text-muted-foreground">
-                Hỗ trợ PDF/DOC/DOCX. Có thể chọn nhiều file.
+                Hỗ trợ PDF/PNG/JPG/JPEG. Có thể chọn nhiều file.
               </p>
             </div>
           </div>
@@ -266,24 +338,20 @@ export default function CampaignPositions(
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Optional global loading dialog (kept for compatibility) */}
       <LoadingDialog open={loadingOpen} />
 
+      {/* LIVE progress dialog with per-file “Chi tiết” */}
       <ShowAllDialog
         open={resultOpen}
         onOpenChange={setResultOpen}
-        result={result}
-        selectedIndex={selectedIdx}
-        onSelectIndex={setSelectedIdx}
-        onContinue={() => {
-          const item = result?.data?.items?.[selectedIdx];
-          if (!item || !activePos) return;
-          const draft = buildDraftFromItem(item, activePos.id);
-          if (!draft) return;
-          setCvDraft(draft);
-          setCvOpen(true);         // open next modal
-        }}
+        result={null}                 // using live mode
+        liveItems={liveItems}
+        onDetails={handleDetails}
       />
 
+      {/* Detail dialog to confirm & save applicant */}
       <CvApplicantDialog
         open={cvOpen}
         onOpenChange={setCvOpen}
@@ -305,8 +373,14 @@ export default function CampaignPositions(
               <ul className="space-y-2">
                 {activePos.cvApplicants.map((cv, i) => (
                   <li key={i} className="flex items-center justify-between rounded-md border p-2">
-                    <span>{cv.fullName}</span>
-                    {/* Example: place “Xem CV” / “Gỡ” buttons here later */}
+                    <a
+                      href={cv.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline cursor-pointer"
+                    >
+                      {cv.fullName}
+                    </a>
                   </li>
                 ))}
               </ul>
@@ -320,6 +394,8 @@ export default function CampaignPositions(
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ToastContainer position="top-right" autoClose={3000} />
     </>
   );
 }

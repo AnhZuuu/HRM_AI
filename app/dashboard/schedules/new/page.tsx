@@ -1,10 +1,10 @@
-"use client";
 import HandleCreateInterviewSchedule from "@/components/interviewSchedule/handleCreateInterviewSchedule";
-
-export default function NewInterviewPage() {
+import { Suspense } from "react";
+export const metadata = { title: "Tạo lịch phỏng vấn | HRM-AI" };
+export default function CreateInterviewPage() {
   return (
-    <div className="container mx-auto p-6 space-y-6">
-        <HandleCreateInterviewSchedule/>
-    </div>
+    <Suspense fallback={<div className="p-4 text-sm text-muted-foreground">Loading…</div>}>
+      <HandleCreateInterviewSchedule />;
+    </Suspense>
   );
 }

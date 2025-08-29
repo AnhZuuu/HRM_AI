@@ -26,7 +26,7 @@ export interface CVApplicant {
   campaignPositionId: string;
   campaignPosition: CampaignPosition | null;
   cvApplicantDetails: any[];
-  interviewSchedules: any[];
+  interviewSchedules: AnySchedule[];
 }
 
 export interface Account {
@@ -49,6 +49,39 @@ export interface CampaignPosition {
   cvApplicants?: CVApplicant[];
 }
 
+export type PendingOne = {
+  applicantId: string;
+  round: 1 | 2;
+  interviewerIds: string[];
+  startTime?: string;
+  endTime?: string;
+  notes?: string | null;
+};
+
+export type FormState = {
+  campaignId?: string;
+  campaignPositionId?: string;
+  departmentId?: string;
+  cvApplicantId?: string;
+  interviewers: Account[];
+  round?: number;
+  interviewTypeId?: string;
+  notes?: string;
+  startTime?: string;
+  endTime?: string;
+};
+
+export interface AnySchedule {
+  id?: string;
+  round?: number | null;
+  status?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
+  interviewers?:
+    | { firstName?: string; lastName?: string; username?: string }[]
+    | string;
+  notes?: string | null;
+}
 
 // Same STORAGE_KEY used in mockRepo.ts
 const STORAGE_KEY = "mock_interview_schedules_v1";
@@ -171,7 +204,7 @@ export const mockInterviewTypes: InterviewType[] = [
 export const mockInterviewSchedule: InterviewSchedule[] = [
   {
     id: "is-001",
-    cvApplicantId: "cv-01",
+    cvApplicantId: "app-001",
     cvApplicant: {
       id: "cv-01",
       fullName: "Nguyễn Văn A",
@@ -180,7 +213,7 @@ export const mockInterviewSchedule: InterviewSchedule[] = [
     startTime: "2025-05-11T07:30:00+07:00",
     endTime: "2025-05-11T08:00:00+07:00",
     createdBy: "admin-1",
-    status: "Scheduled",
+    status: "Pass",
     round: 2,
     interviewTypeId: "type-2",
     interviewType: "Test Quiz",
@@ -198,7 +231,43 @@ export const mockInterviewSchedule: InterviewSchedule[] = [
     startTime: "2025-05-12T09:00:00+07:00",
     endTime: "2025-05-12T10:00:00+07:00",
     createdBy: "admin-1",
-    status: "Completed",
+    status: "Fail",
+    round: 1,
+    interviewTypeId: "type-1",
+    interviewType: "HR Screening",
+    notes: null,
+    interviewers: "Lan N.",
+  },
+  {
+    id: "is-003",
+    cvApplicantId: "cv-03",
+    cvApplicant: {
+      id: "cv-01",
+      fullName: "Nguyễn Văn A",
+      email: "a@example.com"     
+    },
+    startTime: "2025-08-18T07:30:00+07:00",
+    endTime: "2025-08-18T08:00:00+07:00",
+    createdBy: "admin-1",
+    status: "Pending",
+    round: 2,
+    interviewTypeId: "type-2",
+    interviewType: "Test Quiz",
+    notes: "Presentation",
+    interviewers: "Mai L., Tùng P.",
+  },
+  {
+    id: "is-004",
+    cvApplicantId: "cv-04",
+    cvApplicant: {
+      id: "cv-02",
+      fullName: "Trần B",
+      email: "b@example.com"
+    },
+    startTime: "2025-08-15T09:00:00+07:00",
+    endTime: "2025-08-15T10:00:00+07:00",
+    createdBy: "admin-1",
+    status: "Canceled",
     round: 1,
     interviewTypeId: "type-1",
     interviewType: "HR Screening",

@@ -1,11 +1,12 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,346 +14,173 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, Filter, Plus, MoreHorizontal, Eye, Edit, Trash2, Mail, Phone } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
+} from "@/components/ui/dropdown-menu";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Search, Filter, MoreHorizontal, Mail, Phone, Eye } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { authFetch } from "@/app/utils/authFetch";
+import { formatISODate } from "@/app/utils/helper";
+import API from "@/api/api";
 
-// Mock candidates data
-const candidatesData = [
-  {
-    id: 1,
-    name: "Sarah Johnson",
-    email: "sarah.johnson@email.com",
-    phone: "+1 (555) 123-4567",
-    position: "Frontend Developer",
-    department: "Engineering",
-    status: "Interview",
-    experience: "3 years",
-    appliedDate: "2024-01-15",
-    source: "LinkedIn",
-    skills: ["React", "TypeScript", "CSS"],
-  },
-  {
-    id: 2,
-    name: "Michael Chen",
-    email: "michael.chen@email.com",
-    phone: "+1 (555) 234-5678",
-    position: "Product Manager",
-    department: "Product",
-    status: "Screening",
-    experience: "5 years",
-    appliedDate: "2024-01-14",
-    source: "Company Website",
-    skills: ["Product Strategy", "Analytics", "Agile"],
-  },
-  {
-    id: 3,
-    name: "Emily Davis",
-    email: "emily.davis@email.com",
-    phone: "+1 (555) 345-6789",
-    position: "UX Designer",
-    department: "Design",
-    status: "Hired",
-    experience: "4 years",
-    appliedDate: "2024-01-13",
-    source: "Referral",
-    skills: ["Figma", "User Research", "Prototyping"],
-  },
-  {
-    id: 4,
-    name: "James Wilson",
-    email: "james.wilson@email.com",
-    phone: "+1 (555) 456-7890",
-    position: "Sales Executive",
-    department: "Sales",
-    status: "Applied",
-    experience: "2 years",
-    appliedDate: "2024-01-12",
-    source: "Indeed",
-    skills: ["CRM", "Lead Generation", "Negotiation"],
-  },
-  {
-    id: 5,
-    name: "Lisa Anderson",
-    email: "lisa.anderson@email.com",
-    phone: "+1 (555) 567-8901",
-    position: "Marketing Specialist",
-    department: "Marketing",
-    status: "Interview",
-    experience: "3 years",
-    appliedDate: "2024-01-11",
-    source: "LinkedIn",
-    skills: ["Digital Marketing", "SEO", "Content Strategy"],
-  },
-  {
-    id: 6,
-    name: "David Rodriguez",
-    email: "david.rodriguez@email.com",
-    phone: "+1 (555) 678-9012",
-    position: "Backend Developer",
-    department: "Engineering",
-    status: "Screening",
-    experience: "6 years",
-    appliedDate: "2024-01-10",
-    source: "GitHub",
-    skills: ["Node.js", "Python", "AWS"],
-  },
-]
+/* ---------- Types ---------- */
+type ApiEnvelope<T> = {
+  code: number;
+  status: boolean;
+  message: string;
+  data: T;
+};
+
+type CvApplicantDetail = {
+  cvApplicantId: string;
+  type: string;
+  key: string;
+  value: string;
+  groupIndex: number;
+};
+
+type CvApplicant = {
+  id: string;
+  fullName: string | null;
+  email: string | null;
+  point: string | null; // e.g. "36/100"
+  // New status mapping:
+  // 0: Pending, 1: Rejected, 2: Accepted, 3: Failed, 4: Onboarded
+  status: 0 | 1 | 2 | 3 | 4;
+  campaignPositionId?: string | null;
+  campaignPositionDescription?: string | null;
+  fileUrl?: string | null;
+  fileAlt?: string | null;
+  cvApplicantDetailModels?: CvApplicantDetail[];
+  creationDate?: string | null;
+};
+
+type FlatList<T> = {
+  data: T[];
+  // server might add paging fields, but we ignore them now
+};
+
+/* ---------- Helpers ---------- */
+const STATUS_LABEL: Record<CvApplicant["status"], string> = {
+  0: "Pending",
+  1: "Rejected",
+  2: "Accepted",
+  3: "Failed",
+  4: "Onboarded",
+};
+
+const statusBadgeClass = (s: CvApplicant["status"]) => {
+  switch (s) {
+    case 4:
+      return "bg-blue-100 text-blue-800";
+    case 2:
+      return "bg-green-100 text-green-800";
+    case 1:
+      return "bg-red-100 text-red-800";
+    case 0:
+      return "bg-yellow-100 text-blue-800";
+    case 3:
+      return "bg-red-300 text-red-800";
+    default:
+      return "bg-gray-100 text-gray-800";
+  }
+};
 
 export default function CandidatesPage() {
-  const [candidates, setCandidates] = useState(candidatesData)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
-  const { toast } = useToast()
+  const router = useRouter();
+  const { toast } = useToast();
 
-  // Form state for new candidate
-  const [newCandidate, setNewCandidate] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    position: "",
-    department: "",
-    experience: "",
-    source: "",
-    skills: "",
-    notes: "",
-  })
+  // UI state
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "0" | "1" | "2" | "3" | "4">("all");
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Hired":
-        return "bg-green-100 text-green-800"
-      case "Interview":
-        return "bg-purple-100 text-purple-800"
-      case "Screening":
-        return "bg-yellow-100 text-yellow-800"
-      case "Applied":
-        return "bg-blue-100 text-blue-800"
-      case "Rejected":
-        return "bg-red-100 text-red-800"
-      default:
-        return "bg-gray-100 text-gray-800"
-    }
-  }
+  // Data state
+  const [items, setItems] = useState<CvApplicant[]>([]);
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(5);
 
-  const filteredCandidates = candidates.filter((candidate) => {
-    const matchesSearch =
-      candidate.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      candidate.position.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      candidate.email.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === "all" || candidate.status.toLowerCase() === statusFilter.toLowerCase()
-    return matchesSearch && matchesStatus
-  })
+  // Loading / error
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleAddCandidate = () => {
-    if (!newCandidate.name || !newCandidate.email || !newCandidate.position) {
-      toast({
-        title: "Error",
-        description: "Please fill in all required fields.",
-        variant: "destructive",
-      })
-      return
-    }
+  /* ---------- Fetch all (no server pagination) ---------- */
+  useEffect(() => {
+    let cancelled = false;
 
-    const candidate = {
-      id: candidates.length + 1,
-      ...newCandidate,
-      status: "Applied",
-      appliedDate: new Date().toISOString().split("T")[0],
-      skills: newCandidate.skills.split(",").map((skill) => skill.trim()),
-    }
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        // Removed ?page=&pageSize= — we pull everything and paginate client-side
+        const res = await authFetch(`${API.CV.APPLICANT}`, { method: "GET" });
+        const text = await res.text();
+        const json: ApiEnvelope<FlatList<CvApplicant> | any> = text ? JSON.parse(text) : ({} as any);
 
-    setCandidates([...candidates, candidate])
-    setNewCandidate({
-      name: "",
-      email: "",
-      phone: "",
-      position: "",
-      department: "",
-      experience: "",
-      source: "",
-      skills: "",
-      notes: "",
-    })
-    setIsAddDialogOpen(false)
+        if (!res.ok || !json?.status) {
+          throw new Error(json?.message || "Failed to load applicants");
+        }
 
-    toast({
-      title: "Success",
-      description: "Candidate added successfully!",
-    })
-  }
+        // The API you showed has data: { data: [...] }
+        // Normalize to items[]
+        const raw = json.data;
+        const array = Array.isArray(raw?.data) ? raw.data : Array.isArray(raw) ? raw : [];
 
-  const handleStatusChange = (candidateId: number, newStatus: string) => {
-    setCandidates(
-      candidates.map((candidate) => (candidate.id === candidateId ? { ...candidate, status: newStatus } : candidate)),
-    )
+        if (!cancelled) {
+          setItems(array as CvApplicant[]);
+        }
+      } catch (e: any) {
+        if (!cancelled) {
+          setError(e?.message || "Unexpected error");
+          toast({
+            title: "Failed to load candidates",
+            description: e?.message || "Please try again.",
+            variant: "destructive",
+          });
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
 
-    toast({
-      title: "Status Updated",
-      description: `Candidate status changed to ${newStatus}`,
-    })
-  }
+    return () => {
+      cancelled = true;
+    };
+  }, [toast]);
+
+  /* ---------- Client-side search + filter ---------- */
+  const filtered = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    return items.filter((c) => {
+      const matchesSearch =
+        !term ||
+        (c.fullName ?? "").toLowerCase().includes(term) ||
+        (c.email ?? "").toLowerCase().includes(term) ||
+        (c.point ?? "").toLowerCase().includes(term) ||
+        (c.campaignPositionDescription ?? "").toLowerCase().includes(term);
+
+      const matchesStatus = statusFilter === "all" || String(c.status) === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [items, searchTerm, statusFilter]);
+
+  /* ---------- Client-side pagination ---------- */
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const startIndex = (page - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paged = filtered.slice(startIndex, endIndex);
+
+  // Reset to page 1 if filters change and current page would be out of range
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, statusFilter]);
 
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Candidates</h1>
-          <p className="text-gray-600 mt-1">Manage your candidate pipeline</p>
+          <h1 className="text-3xl font-bold text-gray-900">Trang ứng viên</h1>
+          <p className="text-gray-600 mt-1">Quản lý ứng viên của bạn</p>
         </div>
-
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-blue-600 hover:bg-blue-700">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Candidate
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Add New Candidate</DialogTitle>
-              <DialogDescription>Enter the candidate's information below.</DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full Name *</Label>
-                  <Input
-                    id="name"
-                    value={newCandidate.name}
-                    onChange={(e) => setNewCandidate({ ...newCandidate, name: e.target.value })}
-                    placeholder="John Doe"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={newCandidate.email}
-                    onChange={(e) => setNewCandidate({ ...newCandidate, email: e.target.value })}
-                    placeholder="john@example.com"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input
-                    id="phone"
-                    value={newCandidate.phone}
-                    onChange={(e) => setNewCandidate({ ...newCandidate, phone: e.target.value })}
-                    placeholder="+1 (555) 123-4567"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="position">Position *</Label>
-                  <Input
-                    id="position"
-                    value={newCandidate.position}
-                    onChange={(e) => setNewCandidate({ ...newCandidate, position: e.target.value })}
-                    placeholder="Software Engineer"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="department">Department</Label>
-                  <Select
-                    value={newCandidate.department}
-                    onValueChange={(value) => setNewCandidate({ ...newCandidate, department: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select department" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Engineering">Engineering</SelectItem>
-                      <SelectItem value="Product">Product</SelectItem>
-                      <SelectItem value="Design">Design</SelectItem>
-                      <SelectItem value="Marketing">Marketing</SelectItem>
-                      <SelectItem value="Sales">Sales</SelectItem>
-                      <SelectItem value="HR">HR</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="experience">Experience</Label>
-                  <Input
-                    id="experience"
-                    value={newCandidate.experience}
-                    onChange={(e) => setNewCandidate({ ...newCandidate, experience: e.target.value })}
-                    placeholder="3 years"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="source">Source</Label>
-                <Select
-                  value={newCandidate.source}
-                  onValueChange={(value) => setNewCandidate({ ...newCandidate, source: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="How did they find us?" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="LinkedIn">LinkedIn</SelectItem>
-                    <SelectItem value="Indeed">Indeed</SelectItem>
-                    <SelectItem value="Company Website">Company Website</SelectItem>
-                    <SelectItem value="Referral">Referral</SelectItem>
-                    <SelectItem value="GitHub">GitHub</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="skills">Skills (comma-separated)</Label>
-                <Input
-                  id="skills"
-                  value={newCandidate.skills}
-                  onChange={(e) => setNewCandidate({ ...newCandidate, skills: e.target.value })}
-                  placeholder="React, TypeScript, Node.js"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea
-                  id="notes"
-                  value={newCandidate.notes}
-                  onChange={(e) => setNewCandidate({ ...newCandidate, notes: e.target.value })}
-                  placeholder="Additional notes about the candidate..."
-                  rows={3}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleAddCandidate} className="bg-blue-600 hover:bg-blue-700">
-                Add Candidate
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
 
       {/* Filters */}
@@ -361,9 +189,9 @@ export default function CandidatesPage() {
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
-                  placeholder="Search candidates..."
+                  placeholder="Search by name, email, point, or position…"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -371,18 +199,18 @@ export default function CandidatesPage() {
               </div>
             </div>
             <div className="flex gap-2">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[180px]">
+              <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
+                <SelectTrigger className="w-[220px]">
                   <Filter className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="applied">Applied</SelectItem>
-                  <SelectItem value="screening">Screening</SelectItem>
-                  <SelectItem value="interview">Interview</SelectItem>
-                  <SelectItem value="hired">Hired</SelectItem>
-                  <SelectItem value="rejected">Rejected</SelectItem>
+                  <SelectItem value="all">Tất cả trạng thái</SelectItem>
+                  <SelectItem value="0">Đang chờ</SelectItem>
+                  <SelectItem value="1">Đã từ chối</SelectItem>
+                  <SelectItem value="2">Đã chấp nhận</SelectItem>
+                  <SelectItem value="3">Thất bại</SelectItem>
+                  <SelectItem value="4">Onboard</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -393,95 +221,139 @@ export default function CandidatesPage() {
       {/* Candidates Table */}
       <Card>
         <CardHeader>
-          <CardTitle>All Candidates ({filteredCandidates.length})</CardTitle>
+          <CardTitle>
+            Tất cả ứng viên{" "}
+            {!loading && !error ? (
+              <span className="text-gray-500">
+               Đang hiển thị ({paged.length} trên {filtered.length})
+              </span>
+            ) : null}
+          </CardTitle>
         </CardHeader>
+
         <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Position</TableHead>
-                  <TableHead>Department</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Experience</TableHead>
-                  <TableHead>Applied Date</TableHead>
-                  <TableHead>Source</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredCandidates.map((candidate) => (
-                  <TableRow key={candidate.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{candidate.name}</div>
-                        <div className="text-sm text-gray-500 flex items-center gap-2">
+          {loading ? (
+            <div className="p-6 text-sm text-gray-500">Đang tải ứng viên…</div>
+          ) : error ? (
+            <div className="p-6 text-sm text-red-600">Lỗi: {error}</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Họ tên</TableHead>
+                    <TableHead>Email</TableHead>
+                    {/* Updated header to reflect the new status mapping */}
+                    <TableHead>Trạng thái</TableHead>
+                    <TableHead>Điểm</TableHead>
+                    <TableHead>Vị trí ứng tuyển</TableHead>
+                    <TableHead>Ngày nộp</TableHead>
+                    <TableHead className="text-right">Hành động</TableHead>
+                  </TableRow>
+                </TableHeader>
+
+                <TableBody>
+                  {paged.map((c) => (
+                    <TableRow key={c.id}>
+                      <TableCell className="font-medium">{c.fullName || "—"}</TableCell>
+
+                      <TableCell>
+                        <div className="text-sm text-gray-700 flex items-center gap-2">
                           <Mail className="h-3 w-3" />
-                          {candidate.email}
+                          {c.email || "—"}
                         </div>
-                        {candidate.phone && (
-                          <div className="text-sm text-gray-500 flex items-center gap-2">
-                            <Phone className="h-3 w-3" />
-                            {candidate.phone}
+                        {false && (
+                          <div className="text-xs text-gray-500 flex items-center gap-2">
+                            <Phone className="h-3 w-3" /> +84 …
                           </div>
                         )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-medium">{candidate.position}</TableCell>
-                    <TableCell>{candidate.department}</TableCell>
-                    <TableCell>
-                      <Badge className={getStatusColor(candidate.status)}>{candidate.status}</Badge>
-                    </TableCell>
-                    <TableCell>{candidate.experience}</TableCell>
-                    <TableCell>{candidate.appliedDate}</TableCell>
-                    <TableCell>{candidate.source}</TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem>
-                            <Eye className="mr-2 h-4 w-4" />
-                            View Details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuLabel>Change Status</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => handleStatusChange(candidate.id, "Screening")}>
-                            Move to Screening
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleStatusChange(candidate.id, "Interview")}>
-                            Schedule Interview
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleStatusChange(candidate.id, "Hired")}>
-                            Mark as Hired
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleStatusChange(candidate.id, "Rejected")}>
-                            Reject
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-red-600">
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                      </TableCell>
+
+                      <TableCell>
+                        <Badge className={statusBadgeClass(c.status)}>
+                          {STATUS_LABEL[c.status]}
+                        </Badge>
+                      </TableCell>
+
+                      <TableCell>{c.point || "—"}</TableCell>
+
+                      <TableCell>
+                        <span className="inline-flex items-center gap-2">
+                          <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-xs">
+                            {c.campaignPositionDescription || "—"}
+                          </span>
+                        </span>
+                      </TableCell>
+
+                      <TableCell>{formatISODate(c.creationDate || undefined)}</TableCell>
+
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Hành động</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => router.push(`/dashboard/candidates/${c.id}`)}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              Xem chi tiết
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() =>
+                                navigator.clipboard
+                                  .writeText(c.id)
+                                  .then(() => toast({ title: "Copied ID" }))
+                              }
+                            >
+                              Copy ID
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+
+                  {paged.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-sm text-gray-500 py-8">
+                        Không tìm thấy ứng viên nào.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+
+          {/* Client-side Pagination */}
+          {!loading && !error && totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4">
+              <div className="text-sm text-gray-500">
+                Page {page} of {totalPages}
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

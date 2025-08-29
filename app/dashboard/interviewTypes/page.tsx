@@ -5,57 +5,118 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Trash2, Edit3 } from "lucide-react";
-import {
-  listInterviewTypes, seedInterviewTypesIfEmpty,
-  deleteInterviewType, countSchedulesUsingTypeIdOrCode,
-  InterviewTypeRecord
-} from "@/components/interviewType/interviewTypeRepo";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-  AlertDialogTrigger
-} from "@/components/ui/alert-dialog";
+import { Search, Plus } from "lucide-react";
 
+// If you have these utilities in your project, keep them.
+// Falls back to window.fetch if authFetch isn't available.
+import { authFetch } from "@/app/utils/authFetch";
+import API from "@/api/api"; // should export API.API_BASE_URL or similar
+
+// ---------- Types ----------
+type ApiEnvelope<T> = {
+  code: number;
+  status: boolean;
+  message: string;
+  data: T;
+};
+
+type InterviewTypeDto = {
+  code: string;
+  name: string;
+  description: string | null;
+  id: string;
+  creationDate?: string;
+  createdById?: string | null;
+  modificationDate?: string | null;
+  modifiedById?: string | null;
+  deletionDate?: string | null;
+  deletedById?: string | null;
+  isDeleted?: boolean;
+};
+
+type Row = {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+};
+
+// ---------- Data loader ----------
+async function fetchInterviewTypes(): Promise<Row[]> {
+  const base =
+    // prefer API.API_BASE_URL if your API helper exports it; otherwise adjust to your constant
+    (API as any)?.BASE_URL ??
+    (API as any)?.API_BASE_URL ??
+    process.env.NEXT_PUBLIC_API_BASE_URL;
+
+  if (!base) {
+    throw new Error("API base URL is not configured.");
+  }
+
+  const url = `${base}/interview-types`;
+
+  // use authFetch if available to attach tokens, otherwise use fetch
+  const doFetch: typeof fetch =
+    typeof authFetch === "function" ? (authFetch as any) : fetch;
+
+  const res = await doFetch(url, { method: "GET", cache: "no-store" });
+  const text = await res.text();
+  const json: ApiEnvelope<InterviewTypeDto[]> = text ? JSON.parse(text) : ({} as any);
+
+  if (!res.ok || !json?.status) {
+    const msg = json?.message || `Failed to load interview types (${res.status})`;
+    throw new Error(msg);
+  }
+
+  const items = Array.isArray(json.data) ? json.data : [];
+  return items.map((x) => ({
+    id: x.id,
+    code: x.code,
+    name: x.name,
+    description: x.description ?? null,
+  }));
+}
+
+// ---------- Page ----------
 export default function InterviewTypesListPage() {
-  const [items, setItems] = useState<InterviewTypeRecord[]>([]);
+  const [items, setItems] = useState<Row[]>([]);
   const [q, setQ] = useState("");
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [inUseCount, setInUseCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
 
-  const reload = async () => setItems(await listInterviewTypes());
+  const reload = async () => {
+    try {
+      setErr(null);
+      setLoading(true);
+      const data = await fetchInterviewTypes();
+      setItems(data);
+    } catch (e: any) {
+      setErr(e?.message ?? "Unknown error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    (async () => {
-      await seedInterviewTypesIfEmpty();
-      await reload();
-    })();
+    reload();
   }, []);
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
     if (!s) return items;
-    return items.filter(x =>
-      x.id.toLowerCase().includes(s) ||
-      x.code.toLowerCase().includes(s) ||
-      x.name.toLowerCase().includes(s) ||
-      (x.description ?? "").toLowerCase().includes(s)
-    );
+    return items.filter((x) => {
+      const code = x.code?.toLowerCase() ?? "";
+      const name = x.name?.toLowerCase() ?? "";
+      const desc = x.description?.toLowerCase() ?? "";
+      const id = x.id?.toLowerCase() ?? "";
+      return (
+        id.includes(s) ||
+        code.includes(s) ||
+        name.includes(s) ||
+        desc.includes(s)
+      );
+    });
   }, [items, q]);
-
-  const askDelete = async (id: string) => {
-    setDeletingId(id);
-    setInUseCount(await countSchedulesUsingTypeIdOrCode(id));
-  };
-
-  const confirmDelete = async () => {
-    if (!deletingId || inUseCount > 0) return;
-    await deleteInterviewType(deletingId);
-    setDeletingId(null);
-    await reload();
-  };
-
-  const deleting = items.find(x => x.id === deletingId);
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -65,7 +126,10 @@ export default function InterviewTypesListPage() {
           <p className="text-gray-600 mt-1">Quản lý các loại phỏng vấn.</p>
         </div>
         <Button asChild className="bg-blue-600 hover:bg-blue-700">
-          <Link href="/dashboard/interviewTypes/new"><Plus className="h-4 w-4 mr-2" />Tạo loại mới</Link>
+          <Link href="/dashboard/interviewTypes/new">
+            <Plus className="h-4 w-4 mr-2" />
+            Tạo loại mới
+          </Link>
         </Button>
       </div>
 
@@ -80,7 +144,13 @@ export default function InterviewTypesListPage() {
               className="pl-9 h-10 rounded-full border-gray-200 focus-visible:ring-0 focus-visible:ring-offset-0 shadow-sm"
             />
             {!!q && (
-              <button onClick={() => setQ("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 px-2" aria-label="Clear">✕</button>
+              <button
+                onClick={() => setQ("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 px-2"
+                aria-label="Clear"
+              >
+                ✕
+              </button>
             )}
           </div>
         </CardContent>
@@ -88,62 +158,28 @@ export default function InterviewTypesListPage() {
 
       <Card>
         <CardContent className="pt-6">
-          {filtered.length === 0 ? (
+          {loading ? (
+            <p className="text-gray-500">Đang tải…</p>
+          ) : err ? (
+            <div className="text-red-600">Lỗi tải dữ liệu: {err}</div>
+          ) : filtered.length === 0 ? (
             <p className="text-gray-500">Chưa có loại phỏng vấn nào.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
                 <thead>
-                  <tr className="text-left text-gray-500">                    
+                  <tr className="text-left text-gray-500">
                     <th className="py-2 pr-4">Code</th>
                     <th className="py-2 pr-4">Tên</th>
-                    <th className="py-2 pr-4">Mô tả</th>                  
+                    <th className="py-2 pr-4">Mô tả</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map(row => (
-                    <tr key={row.id} className="border-top">                      
+                  {filtered.map((row) => (
+                    <tr key={row.id} className="border-top">
                       <td className="py-2 pr-4 font-mono">{row.code}</td>
                       <td className="py-2 pr-4">{row.name}</td>
                       <td className="py-2 pr-4">{row.description ?? "—"}</td>
-                      <td className="py-2 pr-4">
-                        <div className="flex gap-2">
-                          <Button variant="outline" asChild>
-                            <Link href={`/dashboard/interviewTypes/${row.id}/edit`}>
-                              <Edit3 className="h-4 w-4 mr-1" /> Chỉnh sửa
-                            </Link>
-                          </Button>
-
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                variant="outline"
-                                className="text-red-600 border-red-600 hover:bg-red-50"
-                                onClick={() => askDelete(row.id)}
-                              >
-                                <Trash2 className="h-4 w-4 mr-1" /> Xóa
-                              </Button>
-                            </AlertDialogTrigger>
-
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Xóa “{deleting?.name}”?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  {inUseCount > 0
-                                    ? `Không thể xóa. Loại này (code ${deleting?.code}) đang được sử dụng bởi ${inUseCount} lịch phỏng vấn.`
-                                    : "Hành động này không thể hoàn tác."}
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel onClick={() => setDeletingId(null)}>Hủy</AlertDialogCancel>
-                                <AlertDialogAction disabled={inUseCount > 0} onClick={confirmDelete}>
-                                  Xóa
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      </td>
                     </tr>
                   ))}
                 </tbody>

@@ -7,7 +7,7 @@ interface CVApplicant {
     point: string | null;
     status: string | null
     createdBy: string | null;
-    campaignPositionId: string;
+    campaignPositionId: string ;
     campaignPosition: CampaignPosition | null;
     cvApplicantDetails: CVApplicantDetail[];
     interviewSchedules: InterviewSchedule[];
