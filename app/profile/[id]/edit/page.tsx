@@ -5,8 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
-import { toast as rtToast, toast } from "react-toastify";
+import { toast } from "react-toastify";
 
 
 import { authFetch } from "@/app/utils/authFetch";
@@ -40,10 +39,7 @@ const roleNameToValue = new Map<string, number>(
 );
 
 export default function EditAccountPage() {
-  const { claims, expired } = useDecodedToken(); 
-  console.log(claims);
-  console.log("EXPIREEEEEEEEEEEEd:" + expired);
-  const accountId = claims?.accountId ?? null;
+  const params = useParams<{ id: string }>();
   const router = useRouter();
 
   const [loading, setLoading] = React.useState(true);
@@ -55,7 +51,7 @@ export default function EditAccountPage() {
     (async () => {
       try {
         setLoading(true);
-        const res = await authFetch(`${API.ACCOUNT.BASE}/${accountId}`);
+        const res = await authFetch(`${API.ACCOUNT.BASE}/${params.id}`);
         if (!res.ok) throw new Error(`Failed (${res.status})`);
         const json: AccountDetailApiResponse = await res.json();
         setAccount(json.data);
@@ -65,7 +61,7 @@ export default function EditAccountPage() {
         setLoading(false);
       }
     })();
-  }, [accountId]);
+  }, [params.id]);
 
   if (loading) return <div className="p-6">Đang tải…</div>;
   if (error) return <div className="p-6 text-red-600">Lỗi: {error}</div>;
@@ -107,7 +103,7 @@ export default function EditAccountPage() {
       };
       if (values.departmentId) payload.departmentId = values.departmentId;
 
-      const res = await authFetch(`${API.ACCOUNT.BASE}/${accountId}`, {
+      const res = await authFetch(`${API.ACCOUNT.BASE}/${params.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
