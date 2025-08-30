@@ -175,7 +175,7 @@ export function InterviewProcessDetail({ data }: { data: InterviewProcessData })
       </div> */}
 
       {/* Process Info (same layout as liked UI) */}
-      <Card className="bg-muted/50">
+      {/* <Card className="bg-muted/50">
         <CardHeader>
           <CardTitle className="text-lg">Thông Tin Quy Trình</CardTitle>
         </CardHeader>
@@ -197,7 +197,7 @@ export function InterviewProcessDetail({ data }: { data: InterviewProcessData })
             <p className="text-sm">{Number(data.countOfStage) || 0} vòng</p>
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
     </div>
   )
 }

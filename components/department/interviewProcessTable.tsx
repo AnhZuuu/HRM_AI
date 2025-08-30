@@ -5,21 +5,10 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-  Table,
-  TableCaption,
-  TableHeader,
-  TableRow,
-  TableHead,
-  TableBody,
-  TableCell,
+  Table, TableCaption, TableHeader, TableRow, TableHead, TableBody, TableCell,
 } from "@/components/ui/table";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
@@ -27,48 +16,41 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Plus, Eye, Edit, Trash2, MoreHorizontal } from "lucide-react";
 import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { CreateInterviewStageModal } from "./create-interview-stage-modal";
 import { toast } from "react-toastify";
 import { authFetch } from "@/app/utils/authFetch";
 import API from "@/api/api";
 
-/* =================== Backend Types (align to your API) =================== */
+/**
+ * BACKEND TYPES (from your API)
+ */
 export type BackendInterviewStage = {
-  id?: string | number;
+  id: string;
   name?: string | null;
   description?: string | null;
   order?: number | null;
   duration?: number | null; // minutes
-  type?: string | null; // e.g., "interview" | "technical" | ...
+  type?: string | null;     // e.g., "interview" | "technical" | ...
 };
 
 export type BackendInterviewProcess = {
-  id?: string | number; // some APIs omit id in list; treat as optional
-  departmentId: string;
+  id: string;
   processName: string;
   description: string | null;
-  countOfStage?: number;
-  interviewStageModels?: BackendInterviewStage[];
-  // ... other audit fields can exist
+  countOfStage: number;
+  interviewStageModels: BackendInterviewStage[];
+   departmentId?: string | null;
 };
 
-/* =================== UI-NORMALIZED TYPES =================== */
+/**
+ * UI-NORMALIZED TYPES (used by this table)
+ */
 type UiStage = {
   id: string;
   stageName: string;
@@ -80,84 +62,65 @@ type UiStage = {
 
 type UiProcess = {
   id: string;
-  departmentId: string;
   processName: string;
   description: string | null;
   stages: UiStage[];
+  departmentId?: string | null;
 };
 
 type CreatedStage = {
-  name: string;
-  description: string;
-  order: number;
-  duration: number;
-  typeId: string;
-  typeCode: string;
-  typeName: string;
-};
+  name: string
+  description: string
+  order: number
+  duration: number
+  typeId: string
+  typeCode: string
+  typeName: string
+}
 
-/* =================== Helpers =================== */
+
 const typeToName = (t?: string | null) => {
   switch (t) {
-    case "interview":
-      return "Trực tiếp";
-    case "technical":
-      return "Kỹ thuật";
-    case "hr":
-      return "HR";
-    case "presentation":
-      return "Thuyết trình";
-    case "test":
-      return "Bài kiểm tra";
-    case "group":
-      return "Nhóm";
-    default:
-      return t ?? null;
+    case "interview": return "Trực tiếp";
+    case "technical": return "Kỹ thuật";
+    case "hr": return "HR";
+    case "presentation": return "Thuyết trình";
+    case "test": return "Bài kiểm tra";
+    case "group": return "Nhóm";
+    default: return t ?? null;
   }
 };
 
-/** Normalize one backend process → UI process (with stable id fallback) */
-const normalizeProcess = (p: BackendInterviewProcess, idx: number): UiProcess => {
-  const fallbackId = `${p.departmentId}:${p.processName}:${idx}`;
-  const id = String(p.id ?? fallbackId);
-
-  const stagesSrc = Array.isArray(p.interviewStageModels) ? p.interviewStageModels : [];
-  const stages: UiStage[] = stagesSrc.map((s, si) => {
-    const stFallbackId = `${id}-st-${si}`;
-    return {
-      id: String(s.id ?? stFallbackId),
+/**
+ * Normalize one backend process → UI process
+ */
+const normalizeProcess = (p: BackendInterviewProcess): UiProcess => ({
+  id: p.id,
+  processName: p.processName,
+  description: p.description ?? null,
+  stages: Array.isArray(p.interviewStageModels)
+    ? p.interviewStageModels.map((s) => ({
+      id: s.id,
       stageName: s.name ?? "—",
       description: s.description ?? null,
       order: Number(s.order ?? 0),
       totalTime: Number(s.duration ?? 0),
       typeName: typeToName(s.type),
-    };
-  });
+    }))
+    : [],
+});
 
-  return {
-    id,
-    departmentId: p.departmentId,
-    processName: p.processName,
-    description: p.description ?? null,
-    stages,
-  };
-};
-
-/* =================== Component =================== */
 export default function InterviewProcessTable({
   items = [],
-  departmentId,
+  departmentId
 }: {
   items?: BackendInterviewProcess[];
-  departmentId: string;
+  departmentId : string
 }) {
   const router = useRouter();
 
   // Keep a local, editable copy (normalized for UI)
-  const normalized = useMemo(
-    () => (items ?? []).map((p, i) => normalizeProcess(p, i)),
-    [items]
-  );
+  const normalized = useMemo(() => (items ?? []).map(normalizeProcess), [items]);
   const [data, setData] = useState<UiProcess[]>(normalized);
   useEffect(() => setData(normalized), [normalized]);
 
@@ -168,12 +131,12 @@ export default function InterviewProcessTable({
   const [openAdd, setOpenAdd] = useState(false);
   const [newName, setNewName] = useState("");
   const [newDesc, setNewDesc] = useState("");
-  const [adding, setAdding] = useState(false);
 
   const [openEdit, setOpenEdit] = useState(false);
   const [editing, setEditing] = useState<UiProcess | null>(null);
   const [editName, setEditName] = useState("");
   const [editDesc, setEditDesc] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const [openDelete, setOpenDelete] = useState(false);
   const [deleting, setDeleting] = useState<UiProcess | null>(null);
@@ -182,27 +145,27 @@ export default function InterviewProcessTable({
   const [addStageOpen, setAddStageOpen] = useState(false);
   const [addStageFor, setAddStageFor] = useState<UiProcess | null>(null);
 
-  const handleStageCreated = (stage: CreatedStage) => {
-    console.log("[InterviewProcessTable] Stage created (client-only map):", stage);
-    const mapped: UiStage = {
-      id: `st-${Date.now()}`,
-      stageName: stage.name,
-      description: stage.description || null,
-      order: Number(stage.order ?? 0),
-      totalTime: Number(stage.duration ?? 0),
-      typeName: stage.typeName || stage.typeCode || null,
-    };
 
-    if (!addStageFor) return;
-    setData((prev) =>
-      prev.map((p) =>
-        p.id === addStageFor.id ? { ...p, stages: [...(p.stages ?? []), mapped] } : p
-      )
-    );
-    setAddStageOpen(false);
-    setAddStageFor(null);
-    toast.success("Đã thêm vòng phỏng vấn (local)");
-  };
+const handleStageCreated = (stage: CreatedStage) => {
+  const mapped: UiStage = {
+    id: `st-${Date.now()}`,
+    stageName: stage.name,
+    description: stage.description || null,
+    order: Number(stage.order ?? 0),
+    totalTime: Number(stage.duration ?? 0),
+    typeName: stage.typeName || stage.typeCode || null,
+  }
+
+  if (!addStageFor) return
+  setData((prev) =>
+    prev.map((p) =>
+      p.id === addStageFor.id ? { ...p, stages: [...(p.stages ?? []), mapped] } : p
+    )
+  )
+  setAddStageOpen(false)
+  setAddStageFor(null)
+}
+
 
   const openStages = (proc: UiProcess) => {
     setSelected(proc);
@@ -214,71 +177,18 @@ export default function InterviewProcessTable({
     setNewDesc("");
   };
 
-  /** CREATE PROCESS (POST with exact payload) */
-  const handleAddProcess = async () => {
-    try {
-      if (!newName.trim()) {
-        toast.warn("Vui lòng nhập tên quy trình");
-        return;
-      }
-      if (!departmentId) {
-        toast.error("Thiếu departmentId");
-        return;
-      }
-
-      setAdding(true);
-
-      const payload = {
-        departmentId, // exact field
-        processName: newName.trim(), // exact field
-        description: (newDesc ?? "").trim(), // backend expects string; empty allowed
-      };
-
-      console.log("[InterviewProcessTable] Creating process with payload:", payload);
-
-      // Adjust endpoint path if your API constants differ
-      const res = await authFetch(`${API.INTERVIEW.PROCESS}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const text = await res.text();
-      console.log("[InterviewProcessTable] Create response status/text:", res.status, text);
-      const json = text ? JSON.parse(text) : null;
-
-      if (!res.ok) {
-        const msg =
-          json?.message ||
-          json?.error ||
-          "Không thể tạo quy trình. Vui lòng thử lại.";
-        throw new Error(msg);
-      }
-
-      // Expect backend returns created process in json.data (or at root)
-      const created: BackendInterviewProcess = json?.data ?? json;
-      console.log("[InterviewProcessTable] Created process (raw):", created);
-
-      // Optimistic UI update so user sees it instantly
-      setData((prev) => {
-        const ui = normalizeProcess(created, prev.length); // stable fallback id
-        console.log("[InterviewProcessTable] Normalized created process:", ui);
-        return [ui, ...prev];
-      });
-
-      setOpenAdd(false);
-      resetAddForm();
-
-      toast.success(`Đã tạo quy trình`);
-      // toast.info("Đang tải lại dữ liệu từ máy chủ…");
-      router.refresh(); // re-fetch server components so table matches backend
-      console.log("[InterviewProcessTable] router.refresh() called");
-    } catch (err: any) {
-      console.error("[InterviewProcessTable] Create error:", err);
-      toast.error(`Thêm quy trình thất bại: ${err?.message || "Lỗi không xác định"}`);
-    } finally {
-      setAdding(false);
-    }
+  const handleAddProcess = () => {
+    if (!newName.trim()) return;
+    const id = `proc-${Date.now()}`;
+    const next: UiProcess = {
+      id,
+      processName: newName.trim(),
+      description: newDesc.trim() || null,
+      stages: [],
+    };
+    setData((prev) => [next, ...prev]);
+    setOpenAdd(false);
+    resetAddForm();
   };
 
   const openEditDialog = (proc: UiProcess) => {
@@ -288,28 +198,57 @@ export default function InterviewProcessTable({
     setOpenEdit(true);
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!editing) return;
     const id = editing.id;
-    console.log("[InterviewProcessTable] Saving edit for id:", id, {
-      newName: editName,
-      newDesc: editDesc,
-    });
-    // Client-side only edit (keep UI behavior)
-    setData((prev) =>
-      prev.map((p) =>
-        p.id === id
-          ? {
-              ...p,
-              processName: editName.trim() || p.processName,
-              description: editDesc.trim() || null,
-            }
-          : p
-      )
-    );
-    setOpenEdit(false);
-    setEditing(null);
-    toast.success("Đã cập nhật (local)");
+    const body = {
+      departmentId: departmentId, 
+      processName: editName.trim(),
+      description: (editDesc ?? "").trim() || null,
+    };
+
+    if (!body.processName) {
+      toast.error("Vui lòng nhập Tên quy trình.");
+      return;
+    }
+
+    setSavingEdit(true);
+    try {
+      const res = await authFetch(
+        `${API.INTERVIEW.PROCESS}/${id}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }
+      );
+
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json?.status === false) {
+        throw new Error(json?.message || "Cập nhật quy trình thất bại.");
+      }
+
+      // Update UI list
+      setData((prev) =>
+        prev.map((p) =>
+          p.id === id
+            ? {
+                ...p,
+                processName: body.processName,
+                description: body.description,
+              }
+            : p
+        )
+      );
+
+      toast.success("Đã cập nhật quy trình.");
+      setOpenEdit(false);
+      setEditing(null);
+    } catch (e: any) {
+      toast.error(e?.message || "Không thể cập nhật quy trình.");
+    } finally {
+      setSavingEdit(false);
+    }
   };
 
   const confirmDelete = (proc: UiProcess) => {
@@ -319,12 +258,9 @@ export default function InterviewProcessTable({
 
   const doDelete = () => {
     if (!deleting) return;
-    console.log("[InterviewProcessTable] Deleting (local) id:", deleting.id);
-    // Client-side only delete (keep UI behavior)
     setData((prev) => prev.filter((p) => p.id !== deleting.id));
     setOpenDelete(false);
     setDeleting(null);
-    toast.success("Đã xóa (local)");
   };
 
   return (
@@ -345,28 +281,22 @@ export default function InterviewProcessTable({
               <TableRow>
                 <TableHead className="w-[260px]">Quy trình</TableHead>
                 <TableHead>Mô tả</TableHead>
+                {/* <TableHead className="w-[420px]">Các vòng (nhấn để xem chi tiết)</TableHead> */}
                 <TableHead className="w-[80px] text-right">Thao tác</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {data.length === 0 ? (
                 <TableRow>
-                  <TableCell
-                    colSpan={4}
-                    className="text-center text-sm text-muted-foreground"
-                  >
+                  <TableCell colSpan={4} className="text-center text-sm text-muted-foreground">
                     Chưa có quy trình phỏng vấn.
                   </TableCell>
                 </TableRow>
               ) : (
-                data.map((proc, idx) => (
-                  <TableRow key={proc.id || `${proc.processName}-${idx}`}>
-                    <TableCell className="align-top font-medium">
-                      {proc.processName}
-                    </TableCell>
-                    <TableCell className="align-top">
-                      {proc.description ?? "—"}
-                    </TableCell>
+                data.map((proc) => (
+                  <TableRow key={proc.id}>
+                    <TableCell className="align-top font-medium">{proc.processName}</TableCell>
+                    <TableCell className="align-top">{proc.description ?? "—"}</TableCell>
 
                     <TableCell className="text-right align-top">
                       <DropdownMenu>
@@ -377,11 +307,7 @@ export default function InterviewProcessTable({
                         </DropdownMenuTrigger>
 
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() =>
-                              router.push(`/dashboard/interviewProcess/${proc.id}`)
-                            }
-                          >
+                          <DropdownMenuItem onClick={() => router.push(`/dashboard/interviewProcess/${proc.id}`)}>
                             <Eye className="mr-2 h-4 w-4" />
                             Chi tiết
                           </DropdownMenuItem>
@@ -403,10 +329,7 @@ export default function InterviewProcessTable({
 
                           <DropdownMenuSeparator />
 
-                          <DropdownMenuItem
-                            className="text-red-600"
-                            onClick={() => confirmDelete(proc)}
-                          >
+                          <DropdownMenuItem className="text-red-600" onClick={() => confirmDelete(proc)}>
                             <Trash2 className="mr-2 h-4 w-4" />
                             Xóa
                           </DropdownMenuItem>
@@ -455,15 +378,9 @@ export default function InterviewProcessTable({
                       <TableRow key={st.id}>
                         <TableCell className="align-top">{st.order}</TableCell>
                         <TableCell className="align-top">{st.stageName}</TableCell>
-                        <TableCell className="align-top">
-                          {st.totalTime} phút
-                        </TableCell>
-                        <TableCell className="align-top">
-                          {st.typeName ?? "—"}
-                        </TableCell>
-                        <TableCell className="align-top">
-                          {st.description ?? "—"}
-                        </TableCell>
+                        <TableCell className="align-top">{st.totalTime} phút</TableCell>
+                        <TableCell className="align-top">{st.typeName ?? "—"}</TableCell>
+                        <TableCell className="align-top">{st.description ?? "—"}</TableCell>
                       </TableRow>
                     ))}
                 </TableBody>
@@ -480,12 +397,7 @@ export default function InterviewProcessTable({
       </Dialog>
 
       {/* Add process */}
-      <Dialog
-        open={openAdd}
-        onOpenChange={(v) => {
-          if (!adding) setOpenAdd(v);
-        }}
-      >
+      <Dialog open={openAdd} onOpenChange={setOpenAdd}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Thêm quy trình phỏng vấn</DialogTitle>
@@ -500,7 +412,6 @@ export default function InterviewProcessTable({
                 placeholder="VD: Quy trình tuyển dụng Backend"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
-                disabled={adding}
               />
             </div>
 
@@ -511,28 +422,15 @@ export default function InterviewProcessTable({
                 placeholder="Ghi chú thêm về quy trình…"
                 value={newDesc}
                 onChange={(e) => setNewDesc(e.target.value)}
-                disabled={adding}
               />
             </div>
           </div>
 
           <DialogFooter className="mt-4">
-            <Button
-              variant="secondary"
-              onClick={() => {
-                if (!adding) {
-                  setOpenAdd(false);
-                  setNewName("");
-                  setNewDesc("");
-                }
-              }}
-              disabled={adding}
-            >
+            <Button variant="secondary" onClick={() => { setOpenAdd(false); setNewName(""); setNewDesc(""); }}>
               Hủy
             </Button>
-            <Button onClick={handleAddProcess} disabled={adding}>
-              {adding ? "Đang lưu..." : "Lưu"}
-            </Button>
+            <Button onClick={handleAddProcess}>Lưu</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -545,7 +443,7 @@ export default function InterviewProcessTable({
             <DialogDescription>Chỉnh sửa tên và mô tả quy trình.</DialogDescription>
           </DialogHeader>
 
-        <div className="space-y-3">
+          <div className="space-y-3">
             <div className="space-y-1">
               <Label htmlFor="editProcessName">Tên quy trình *</Label>
               <Input
@@ -566,9 +464,7 @@ export default function InterviewProcessTable({
           </div>
 
           <DialogFooter className="mt-4">
-            <Button variant="secondary" onClick={() => setOpenEdit(false)}>
-              Hủy
-            </Button>
+            <Button variant="secondary" onClick={() => setOpenEdit(false)}>Hủy</Button>
             <Button onClick={handleSaveEdit}>Lưu</Button>
           </DialogFooter>
         </DialogContent>
@@ -580,30 +476,26 @@ export default function InterviewProcessTable({
           <AlertDialogHeader>
             <AlertDialogTitle>Xóa quy trình?</AlertDialogTitle>
             <AlertDialogDescription>
-              Hành động này không thể hoàn tác. Quy trình:{" "}
-              <b>{deleting?.processName}</b> sẽ bị xóa khỏi danh sách hiện tại.
+              Hành động này không thể hoàn tác. Quy trình: <b>{deleting?.processName}</b> sẽ bị xóa khỏi danh sách hiện tại.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Hủy</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700"
-              onClick={doDelete}
-            >
+            <AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={doDelete}>
               Xóa
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Add Stage */}
+      {/* Add Stage (mapped to our UI shape on create) */}
       <CreateInterviewStageModal
         interviewProcessId={addStageFor?.id || ""}
         processName={addStageFor?.processName || ""}
         open={addStageOpen}
         onOpenChange={(v) => {
-          setAddStageOpen(v);
-          if (!v) setAddStageFor(null);
+          setAddStageOpen(v)
+          if (!v) setAddStageFor(null)
         }}
         hideTrigger
         takenOrders={(addStageFor?.stages ?? [])
@@ -612,6 +504,7 @@ export default function InterviewProcessTable({
         existingStagesCount={addStageFor?.stages.length ?? 0}
         onStageCreated={handleStageCreated}
       />
+
     </>
   );
 }
