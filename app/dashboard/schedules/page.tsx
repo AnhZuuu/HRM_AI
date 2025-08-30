@@ -78,7 +78,13 @@ const statusToString = (n: number | null | undefined): string | null => {
 const mapItem = (x: ApiItem): RowType => ({
   id: x.id,
   cvApplicantId: x.cvApplicantId,
-  cvApplicant: null as UICVApplicant | null,
+  cvApplicantModel: (x as any).cvApplicantModel
+    ? {
+        id: (x as any).cvApplicantModel.id,
+        fullName: (x as any).cvApplicantModel.fullName ?? "",
+        email: (x as any).cvApplicantModel.email ?? null,
+      }
+    : null,
   startTime: x.startTime,
   endTime: x.endTime ?? null,
   createdBy: x.createdById ?? null,
@@ -90,6 +96,14 @@ const mapItem = (x: ApiItem): RowType => ({
   notes: x.notes ?? null,
   departmentId: null,
   interviewers: [],
+  campaignPositionModel: (x as any).campaignPositionModel
+    ? {
+        id: (x as any).campaignPositionModel.id,
+        departmentId: (x as any).campaignPositionModel.departmentId,
+        departmentName: (x as any).campaignPositionModel.departmentName ?? null,
+      }
+    : null,
+
 });
 
 export default function InterviewSchedulesPage() {

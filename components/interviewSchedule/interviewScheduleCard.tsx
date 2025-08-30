@@ -27,16 +27,13 @@ import { Input } from "@/components/ui/input";
 export type CampaignPosition = {
   id: string;
   departmentId?: string;
-  campaignId?: string;
-  campaign?: string | null;
-  department?: string | null;
+  departmentName?: string | null;
 };
 
 export type CVApplicant = {
   id: string;
   fullName: string;
   email: string | null;
-  campaignPosition?: CampaignPosition | null;
 };
 
 export type Interviewer = {
@@ -50,7 +47,7 @@ export type Interviewer = {
 export type InterviewSchedule = {
   id: string;
   cvApplicantId: string;
-  cvApplicant: CVApplicant | null;
+  cvApplicantModel: CVApplicant | null;
   startTime: string;            // ISO
   endTime: string | null;       // ISO | null
   createdBy: string | null;
@@ -62,6 +59,7 @@ export type InterviewSchedule = {
   notes: string | null;
   departmentId?: string | null;
   interviewers?: Interviewer[] | string;
+  campaignPositionModel? : CampaignPosition | null;
 };
 
 // ---------- Helpers ----------
@@ -210,7 +208,7 @@ export default function InterviewSchedulesTable({
   const filtered = useMemo(() => {
     const byText = (it: InterviewSchedule) => {
       if (!q) return true;
-      const name = it.cvApplicant?.fullName?.toLowerCase() ?? "";
+      const name = it.cvApplicantModel?.fullName?.toLowerCase() ?? "";
       const t = (it.interviewType ?? it.interviewTypeName ?? "").toLowerCase();
       const st = it.status?.toLowerCase() ?? "";
       return (
@@ -364,7 +362,7 @@ export default function InterviewSchedulesTable({
               {filtered.map((it) => {
                 const dur = durationMin(it.startTime, it.endTime);
                 const dept =
-                  it.cvApplicant?.campaignPosition?.department ?? "—";
+                  it.campaignPositionModel?.departmentName ?? "—";
                 const typeName =
                   it.interviewType ??
                   it.interviewTypeName ??
@@ -375,10 +373,10 @@ export default function InterviewSchedulesTable({
                   <TableRow key={it.id} className="align-top">
                     <TableCell>
                       <div className="font-medium">
-                        {it.cvApplicant?.fullName ?? "Unknown"}
+                        {it.cvApplicantModel?.fullName}
                       </div>
                       <div className="text-xs text-gray-600">
-                        {it.cvApplicant?.email ?? "—"}
+                        {it.cvApplicantModel?.email ?? "—"}
                       </div>
                     </TableCell>
 
