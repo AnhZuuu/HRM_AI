@@ -7,8 +7,7 @@ interface CampaignPosition {
     createdBy: string | null;
     totalSlot: number;
     description: string;
-    // embedding: number[];
-    // campaignPositionDetails: CampaignPositionDetail[];    
     cvApplicants?: CVApplicant[];
+    cvApplicantModels?: CVApplicantModel[]; 
 
 }
