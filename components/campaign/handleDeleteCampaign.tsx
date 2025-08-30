@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { AlertTriangle } from "lucide-react";
 import { DropdownMenuSeparator } from "../ui/dropdown-menu";
+import { toast, ToastContainer } from "react-toastify";
 
 type Props = {
   open: boolean;
@@ -16,17 +17,21 @@ export default function DeleteCampaignDialog({ open, onOpenChange, campaign, onC
   const [loading, setLoading] = useState(false);
 
   const handleConfirm = async () => {
-    if (!campaign) return;
-    setLoading(true);
-    try {
-      await onConfirm(campaign.id);
-      onOpenChange(false);
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (!campaign) return;
+  setLoading(true);
+  try {
+    await onConfirm(campaign.id);
+    toast.success("Xóa chiến dịch thành công!"); // <-- success popup
+    onOpenChange(false);
+  } catch (err: any) {
+    toast.error(err?.message || "Xác nhận thất bại."); // <-- error popup
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
@@ -50,5 +55,7 @@ export default function DeleteCampaignDialog({ open, onOpenChange, campaign, onC
         </DialogFooter>
       </DialogContent>
     </Dialog>
+     <ToastContainer position="top-right" autoClose={3000} />
+    </>
   );
 }

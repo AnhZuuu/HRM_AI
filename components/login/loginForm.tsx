@@ -3,7 +3,7 @@ import { FaEnvelope, FaLock } from "react-icons/fa";
 import VerificationForm from "./verificationForm";
 import API from "@/api/api";
 
-import { toast } from "react-toastify";
+import { toast, ToastContainer } from "react-toastify";
 
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
@@ -73,7 +73,7 @@ const LoginPage = () => {
         try {
           const prob = await response.json();
           message = prob?.message ?? prob?.detail ?? message;
-        } catch {}
+        } catch { }
         throw new Error(message);
       }
 
@@ -90,20 +90,27 @@ const LoginPage = () => {
       localStorage.setItem("email", data.data.email);
       localStorage.setItem("name", data.data.name);
 
-      console.log("Saved test token:", localStorage.getItem("accessToken"));
+      // Save full roles for reference
+      localStorage.setItem("roles", JSON.stringify(data.data.roles));
+      // Also save numeric role IDs for fast checks
+      const roleIds = data.data.roles.map((r: { role: number }) => r.role);
+      localStorage.setItem("roleIds", JSON.stringify(roleIds));
 
+      console.log("Saved test token:", localStorage.getItem("accessToken"));
+      toast.success("Đăng nhập thành công");
       // Navigate to dashboard
       window.location.href = "/dashboard";
     } catch (error: any) {
 
-      // toast.error("Login failed: " + error.message);
-      alert("Đăng nhập thất bại: " + error.message);
+      toast.error("Đăng nhập thất bại: " + error.message);
+      // alert("Đăng nhập thất bại: " + error.message);
       console.error("Đăng nhập thất bại:", error);
 
     }
   };
 
   return (
+    
     <div className="min-h-screen bg-gray-200 flex items-center justify-center p-4 relative">
       {showVerify && (
         <VerificationForm
@@ -206,6 +213,7 @@ const LoginPage = () => {
             khi đăng nhập lần đầu
           </div>
         </div>
+        <ToastContainer position="top-right" autoClose={3000} />
       </div>
 
       <style jsx>{`
@@ -224,6 +232,7 @@ const LoginPage = () => {
         }
       `}</style>
     </div>
+    
   );
 };
 

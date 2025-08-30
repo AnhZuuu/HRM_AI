@@ -35,6 +35,7 @@ import { Separator } from "../ui/separator";
 import { useEffect, useState } from "react";
 import ConfirmBlockDialog from "./handleBlockAccount";
 import API from "@/api/api";
+import { isAdmin } from "@/lib/auth";
 
 interface AccountTableProps {
   accounts: Account[];
@@ -145,36 +146,40 @@ export function AccountTable({ accounts }: AccountTableProps) {
                       <Eye className="mr-2 h-4 w-4" />
                       Chi tiết
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={() =>
-                        router.push(`/dashboard/accounts/${a.id}/edit`)
-                      }
-                    >
-                      <Edit className="mr-2 h-4 w-4" />
-                      Chỉnh sửa
-                    </DropdownMenuItem>
-                    <Separator/>
-                    <DropdownMenuItem
-                      onClick={() => openBlockDialog(a)}
-                      className={
-                        a.isDeleted
-                          ? "text-emerald-600 focus:text-emerald-700"
-                          : "text-red-600 focus:text-red-700"
-                      }
-                    >
-                      {a.isDeleted ? (
-                        <>
-                          <LockOpen className="mr-2 h-4 w-4" />
-                          <span>Mở khóa tài khoản</span>
-                        </>
-                      ) : (
-                        <>
-                          <Lock className="mr-2 h-4 w-4" />
-                          <span>Khóa tài khoản</span>
-                        </>
-                      )}
-                  </DropdownMenuItem>
+                    {isAdmin() && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() =>
+                            router.push(`/dashboard/accounts/${a.id}/edit`)
+                          }
+                        >
+                          <Edit className="mr-2 h-4 w-4" />
+                          Chỉnh sửa
+                        </DropdownMenuItem>
+                        <Separator/>
+                        <DropdownMenuItem
+                          onClick={() => openBlockDialog(a)}
+                          className={
+                            a.isDeleted
+                              ? "text-emerald-600 focus:text-emerald-700"
+                              : "text-red-600 focus:text-red-700"
+                          }
+                        >
+                          {a.isDeleted ? (
+                            <>
+                              <LockOpen className="mr-2 h-4 w-4" />
+                              <span>Mở khóa tài khoản</span>
+                            </>
+                          ) : (
+                            <>
+                              <Lock className="mr-2 h-4 w-4" />
+                              <span>Khóa tài khoản</span>
+                            </>
+                          )}
+                      </DropdownMenuItem>
+                    </>
+                  )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </TableCell>

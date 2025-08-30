@@ -16,7 +16,7 @@ export function FancyTextarea({
   onChange,
   maxLength = 800,
   placeholder = "Đánh giá ứng viên...",
-  suggestions = ["Đúng giờ", "Kỹ năng tốt", "Giao tiếp rõ ràng", "Cần đào sâu thêm", "Đề xuất pass vòng sau"],
+  suggestions = ["Đúng giờ", "Kỹ năng tốt", "Giao tiếp rõ ràng", "Cần đào sâu thêm"],
   minHeight = 120,
 }: FancyTextareaProps) {
   const ref = useRef<HTMLTextAreaElement>(null);
