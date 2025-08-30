@@ -273,9 +273,9 @@ export default function CvApplicantDialog({
                     <Button variant="outline" onClick={() => onOpenChange(false)}>
                         Đóng
                     </Button>
-                    <Button onClick={saveApplicant} disabled={saving}>
+                    {/* <Button onClick={saveApplicant} disabled={saving}>
                         {saving ? "Đang lưu..." : "Lưu"}
-                    </Button>
+                    </Button> */}
                 </DialogFooter>
             </DialogContent>
         </Dialog>

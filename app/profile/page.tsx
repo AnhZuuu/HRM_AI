@@ -51,7 +51,6 @@ export default function ProfilePage() {
             description: "Vui lòng đăng nhập lại.",
             variant: "destructive",
           });
-          // router.replace("/?reason=expired");
           return;
         }
 
@@ -87,7 +86,6 @@ export default function ProfilePage() {
         description: "Vui lòng đăng nhập lại.",
         variant: "destructive",
       });
-      // setTimeout(() => router.replace("/?reason=expired"), 50);
       return;
     }
     if (!endpoint) return; 
@@ -143,7 +141,7 @@ export default function ProfilePage() {
   return (
     <ProfileCard
       data={data!}
-      onEdit={() => router.push("/profile/edit")}
+      onEdit={() => router.push(`/profile/${accountId}/edit`)}
       onChangePassword={() => router.push("/profile/changePassword")}
     />
   );

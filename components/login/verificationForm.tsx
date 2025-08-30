@@ -65,10 +65,12 @@ const VerificationForm: React.FC<VerificationFormProps> = ({ onClose, onChange }
 
     if (!isEmailValid) {
       setMsg({ type: "error", text: "Email không hợp lệ. Vui lòng kiểm tra lại." });
+      toast.warning("Email không hợp lệ. Vui lòng kiểm tra lại.");
       return;
     }
     if (!formData.verificationCode) {
       setMsg({ type: "error", text: "Mã xác minh không hợp lệ. Vui lòng kiểm tra lại." });
+      toast.warning("Mã xác minh không hợp lệ. Vui lòng kiểm tra lại.");
       return;
     }
 
@@ -91,11 +93,12 @@ const VerificationForm: React.FC<VerificationFormProps> = ({ onClose, onChange }
 
 
       setMsg({ type: "success", text: "Xác minh thành công. Cảm ơn bạn!" });
+      toast.success("Xác minh thành công. Cảm ơn bạn!");
 
       setTimeout(() => onClose(), 1200);
     } catch (error: any) {
       setMsg({ type: "error", text: error?.message || "Xác minh thất bại. Vui lòng thử lại." });
-
+      toast.error("Xác minh thất bại. Vui lòng thử lại.");
       console.error("Verification failed:", error);
     } finally {
       setLoading(false);

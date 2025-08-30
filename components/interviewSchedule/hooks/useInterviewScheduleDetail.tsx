@@ -3,32 +3,33 @@
 import { useEffect, useMemo, useState } from "react";
 import API from "@/api/api";
 import { authFetch } from "@/app/utils/authFetch";
+import { toast } from "react-toastify";
 
 /* ===== Types ===== */
-export type UUID = string;
+export type GUID = string;
 
 export interface ApiInterviewOutcome {
-  interviewScheduleId: UUID;
+  interviewScheduleId: GUID;
   feedback: string | null;
-  id: UUID;
+  id: GUID;
   creationDate: string | null;
 }
 
 export interface ApiInterviewSchedule {
-  cvApplicantId: UUID;
+  cvApplicantId: GUID;
   startTime: string | null;
   endTime: string | null;
   status: number;
   notes: string | null;
 
-  interviewerModels: { id: UUID; name: string }[];
+  interviewerModels: { id: GUID; name: string }[];
 
-  departmentModel?: { id: UUID; departmentName: string } | null;
-  interviewStageModel?: { id: UUID; stageName: string | null; order: number | null } | null;
-  campaignPositionModel?: { id: UUID; description?: string | null } | null;
+  departmentModel?: { id: GUID; departmentName: string } | null;
+  interviewStageModel?: { id: GUID; stageName: string | null; order: number | null } | null;
+  campaignPositionModel?: { id: GUID; description?: string | null } | null;
 
   cvApplicantModel: {
-    id: UUID;
+    id: GUID;
     fullName: string;
     email?: string | null;
     fileUrl: string;
@@ -37,12 +38,12 @@ export interface ApiInterviewSchedule {
 
   outcomes: ApiInterviewOutcome[];
 
-  id: UUID;
+  id: GUID;
   creationDate: string | null;
 }
 
 export interface UiInterviewSchedule {
-  id: UUID;
+  id: GUID;
   stageOrder?: number | null;
   stageName?: string | null;
   startTime?: string | null;
@@ -52,15 +53,13 @@ export interface UiInterviewSchedule {
 }
 
 export interface UiInterviewOutcome {
-  id: UUID;
+  id: GUID; 
   feedback: string | null;
   createdAt: string | null;
+  interviewScheduleId?: string;
   interviewSchedule?: UiInterviewSchedule | null;
   interviewOutcomeStatus?: number | null;
 }
-
-/* ===== Utils (export để UI có thể dùng nếu muốn) ===== */
-
 
 export function fmt(iso?: string | null, withTime = true) {
   if (!iso) return "—";
@@ -154,7 +153,7 @@ export function useInterviewScheduleDetail(scheduleId: string) {
     const text = feedback.trim();
     if (!text) return;
 
-    const tempId = crypto.randomUUID() as UUID;
+    const tempId = crypto.randomUUID() as GUID;
     const uiSched = toUiSchedule(schedule);
     const optimistic: UiInterviewOutcome = {
       id: tempId,
@@ -201,6 +200,12 @@ export function useInterviewScheduleDetail(scheduleId: string) {
     }
   }
 
+  function patchOutcome(id: GUID, patch: Partial<UiInterviewOutcome>) {
+  setOutcomes(prev => prev.map(o => (o.id === id ? { ...o, ...patch } : o)));
+  setLastSubmitted(prev => (prev?.id === id ? { ...prev, ...patch } : prev));
+}
+
+
   return {
     // data
     schedule,
@@ -220,5 +225,7 @@ export function useInterviewScheduleDetail(scheduleId: string) {
     setFeedback,
     setComposerOpen,
     submitFeedback,
+    
+    patchOutcome,
   };
 }
