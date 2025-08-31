@@ -1,0 +1,14 @@
+interface InterviewSchedule {
+  id: string;
+  cvApplicantId: string;
+  cvApplicant: CVApplicant | null;
+  startTime: string;        
+  endTime: string | null;  
+  status?: string | number;
+  round: number | null;
+  interviewTypeId: string;
+  interviewTypeName?: string | null;
+  notes: string | null;
+  outcome?: InterviewOutcome[] | string;
+  interviewers : string;
+};

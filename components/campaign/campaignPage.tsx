@@ -1,199 +1,248 @@
-import { useEffect, useState } from "react";
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
+  DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+  Dialog, DialogContent, DialogDescription, DialogFooter,
+  DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Search,
-  Filter,
-  Plus,
-  MoreHorizontal,
-  Eye,
-  Edit,
-  Trash2,
-  Mail,
-  Phone,
-} from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Search, Filter, Plus, MoreHorizontal, Eye, Edit, Trash2, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import UpdateCampaignDialog from "./handleUpdateCampaign";
 import AddCampaignDialog from "./handleAddCampaign";
 import DeleteCampaignDialog from "./handleDeleteCampaign";
 
-// Mock candidates data
-const campaignsData = [
-  {
-    id: "1",
-    name: "đợt 1",
-    startTime: "2024-01-14",
-    endTime: "2024-02-14",
-    description: "abc",
-    createdBy: "123",
-  },
-  {
-    id: "2",
-    name: "đợt 2",
-    startTime: "2024-01-14",
-    endTime: "2024-02-14",
-    description: "abc",
-    createdBy: "123",
-  },
-  {
-    id: "3",
-    name: "đợt 3",
-    startTime: "2024-01-14",
-    endTime: "2024-02-14",
-    description: "abc",
-    createdBy: "123",
-  },
-];
+import { authFetch } from "@/app/utils/authFetch";
+import { formatDMYHM, toIsoFromDateInput, toMidnight } from "@/app/utils/helper";
+import { useRouter } from "next/navigation";
+import API from "@/api/api";
+
+/* ---------- Types ---------- */
+export type Campaign = {
+  id: string;
+  name: string;
+  startTime: string | null;
+  endTime: string | null;
+  description: string;
+  createdBy?: string | null;
+  createdByName?: string | null;
+};
 
 export default function CampaignPage() {
-  const [campaigns, setCampaigns] = useState(campaignsData);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editing, setEditing] = useState<Campaign | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState<Campaign | null>(null);
-  const { toast } = useToast();
 
-  const toMidnight = (d: string | Date) => {
-    const date = typeof d === "string" ? new Date(d) : d;
-    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  // Pagination state
+  const [page, setPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(5);
+
+  const { toast } = useToast();
+  const router = useRouter();
+
+  // ---- API helpers ---------------------------------------------------------
+  const mapFromApi = (c: any): Campaign => ({
+    id: c.id,
+    name: c.name,
+    startTime: c.startTime,
+    endTime: c.endTime,
+    description: c.description,
+    createdBy: c.createdById ?? null,
+    createdByName: c.createdByName ?? null,
+  });
+
+  const mapToApi = (c: Partial<Omit<Campaign, "id">>) => {
+    const out: any = {
+      name: c.name,
+      description: c.description,
+      // fix key: startTime (not "starTime")
+      startTime: toIsoFromDateInput(c.startTime ?? null),
+      endTime: toIsoFromDateInput(c.endTime ?? null),
+      createdById: c.createdBy ?? null,
+    };
+    Object.keys(out).forEach((k) => out[k] === undefined && delete out[k]);
+    return out;
   };
 
-  const getCampaignStatus = (start: string, end: string, today = new Date()) => {
-    const dToday = toMidnight(today);
-    const dStart = toMidnight(start);
-    const dEnd = toMidnight(end);
+  const unwrap = async (res: Response) => {
+    const text = await res.text();
+    const json = text ? JSON.parse(text) : null;
+    return json?.data?.data ?? json?.data ?? json;
+  };
+
+  // GET
+  const fetchCampaigns = async (signal?: AbortSignal) => {
+    setLoading(true);
+    try {
+      const res = await authFetch(`${API.CAMPAIGN.BASE}`, { signal, cache: "no-store" });
+      if (res.status === 401) throw new Error("Unauthorized");
+      if (!res.ok) throw new Error("Failed to load campaigns");
+
+      const json = await res.json();
+      const list = (json?.data?.data ?? []) as any[];
+      setCampaigns(list.map(mapFromApi));
+    } catch (err: any) {
+      toast({
+        title: err?.message === "Unauthorized" ? "Phiên đăng nhập hết hạn" : "Lỗi tải dữ liệu",
+        description: err?.message === "Unauthorized" ? "Vui lòng đăng nhập lại." : (err?.message ?? "Không thể tải danh sách"),
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // DELETE
+  const deleteCampaign = async (id: string) => {
+    const res = await authFetch(`${API.CAMPAIGN.BASE}/${id}`, { method: "DELETE" });
+    if (res.status === 401) throw new Error("Unauthorized");
+    if (!res.ok) throw new Error((await res.text()) || "Delete failed");
+    return (await res.text()).length ? await res.json() : null;
+  };
+  // -------------------------------------------------------------------------
+
+  useEffect(() => {
+    const ctrl = new AbortController();
+    fetchCampaigns(ctrl.signal);
+    return () => ctrl.abort();
+  }, []);
+
+  // Dates / status
+  const [today, setToday] = useState(new Date());
+  useEffect(() => {
+    const now = new Date();
+    const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const ms = nextMidnight.getTime() - now.getTime();
+    const t1 = setTimeout(() => {
+      setToday(new Date());
+      const t2 = setInterval(() => setToday(new Date()), 24 * 60 * 60 * 1000);
+      return () => clearInterval(t2);
+    }, ms);
+    return () => clearTimeout(t1);
+  }, []);
+
+  const getCampaignStatus = (start: string | null, end: string | null, t = new Date()) => {
+    const dToday = toMidnight(t);
+    const dStart = toMidnight(start || new Date());
+    const dEnd = toMidnight(end || new Date());
 
     if (dToday < dStart) return "sắp bắt đầu";
     if (dToday > dEnd) return "kết thúc";
 
     const msPerDay = 24 * 60 * 60 * 1000;
     const daysLeft = Math.round((dEnd.getTime() - dToday.getTime()) / msPerDay);
-
     if (daysLeft === 0) return "kết thúc hôm nay";
-    return `còn ${daysLeft} ngày`;
+    return `Còn ${daysLeft} ngày`;
   };
 
   const getStatusColor = (status: string) => {
-    if (status === "kết thúc" || status === "kết thúc hôm nay")
-      return "bg-red-100 text-red-800";
+    if (status === "kết thúc" || status === "kết thúc hôm nay") return "bg-red-100 text-red-800";
     if (status === "sắp bắt đầu") return "bg-yellow-100 text-yellow-800";
-
     const num = Number(status.match(/\d+/)?.[0] ?? "999");
     if (num <= 2) return "bg-orange-100 text-orange-800";
     return "bg-green-100 text-green-800";
   };
 
-  const [today, setToday] = useState(new Date());
+  const getCampaignPhase = (start: string | null, end: string | null, t = new Date()) => {
+    const dToday = toMidnight(t);
+    const dStart = toMidnight(start || new Date());
+    const dEnd = toMidnight(end || new Date());
+    if (dToday < dStart) return "sap_bat_dau";
+    if (dToday > dEnd) return "ket_thuc";
+    return "dang_dien_ra";
+  };
 
+  // Filtered list (search + status)
+  const filteredCampaigns = useMemo(() => {
+    return campaigns.filter((campaign) => {
+      const matchesSearch = campaign.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const phase = getCampaignPhase(campaign.startTime ?? null, campaign.endTime ?? null, today);
+      const matchesStatus = statusFilter === "all" || phase === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [campaigns, searchTerm, statusFilter, today]);
+
+  // Reset to page 1 whenever search or filters change
   useEffect(() => {
-    const now = new Date();
-    const nextMidnight = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate() + 1
-    );
-    const ms = nextMidnight.getTime() - now.getTime();
-    const t1 = setTimeout(() => {
-      setToday(new Date());
+    setPage(1);
+  }, [searchTerm, statusFilter]);
 
-      const t2 = setInterval(() => setToday(new Date()), 24 * 60 * 60 * 1000);
-    }, ms);
-    return () => clearTimeout(t1);
-  }, []);
+  // Pagination derived data
+  const total = filteredCampaigns.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  // clamp page when data changes
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
 
-  const getCampaignPhase = (start: string, end: string, today = new Date()) => {
-    const dToday = toMidnight(today)
-    const dStart = toMidnight(start)
-    const dEnd = toMidnight(end)
+  const startIndex = (page - 1) * pageSize;
+  const endIndexExclusive = Math.min(startIndex + pageSize, total);
+  const pageRows = filteredCampaigns.slice(startIndex, endIndexExclusive);
 
-    if (dToday < dStart) return "sap_bat_dau"
-    if (dToday > dEnd) return "ket_thuc"
-    return "dang_dien_ra"
-  }
-
-  const filteredCampaigns = campaigns.filter((campaign) => {
-    const matchesSearch = campaign.name
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
-    const phase = getCampaignPhase(campaign.startTime, campaign.endTime, today);
-    const matchesStatus = statusFilter === "all" || phase === statusFilter;
-
-  return matchesSearch && matchesStatus;
-  });
-
-  const handleAddCampaign = (created: Campaign) => {
-    setCampaigns((prev : any) => [...prev, created]);
-    toast({ title: "Success", description: "Campaign added successfully!" });
-  };
-
-  const handleUpdateCampaign = (updated: Campaign) => {
-    setCampaigns((prev : any) =>
-      prev.map((c : any) => (c.id === updated.id ? { ...c, ...updated } : c))
-    );
-    toast({ title: "Đã cập nhật", description: "Cập nhật đợt tuyển dụng thành công." });
-  };
-
+  // Dialog helpers
   const openDelete = (c: Campaign) => {
     setDeleting(c);
     setDeleteOpen(true);
   };
 
-  const handleDeleteCampaign = async (id: string) => {
-    setCampaigns((prev : any) => prev.filter((c : any) => c.id !== id));
-    toast({ title: "Đã xóa", description: "Xóa đợt tuyển dụng thành công." });
+  // Handlers (update from dialog & delete)
+  const handleUpdateCampaign = (saved: Campaign) => {
+    setCampaigns((prev) => prev.map((c) => (c.id === saved.id ? { ...c, ...saved } : c)));
+    // keep current page as-is
   };
+
+  const handleDeleteCampaign = async (id: string) => {
+    try {
+      await deleteCampaign(id);
+      setCampaigns((prev) => prev.filter((c) => c.id !== id));
+      toast({ title: "Đã xóa", description: "Xóa đợt tuyển dụng thành công." });
+      setDeleteOpen(false);
+      setDeleting(null);
+      // adjust page if we removed the last item on the last page
+      const remaining = total - 1;
+      const newTotalPages = Math.max(1, Math.ceil(remaining / pageSize));
+      if (page > newTotalPages) setPage(newTotalPages);
+    } catch (err: any) {
+      toast({ title: "Xóa thất bại", description: err?.message ?? "Không thể xóa", variant: "destructive" });
+    }
+  };
+
+  // Pagination controls
+  const goFirst = () => setPage(1);
+  const goPrev = () => setPage((p) => Math.max(1, p - 1));
+  const goNext = () => setPage((p) => Math.min(totalPages, p + 1));
+  const goLast = () => setPage(totalPages);
 
   return (
     <div className="p-6 space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">
-            Các đợt tuyển dụng
-          </h1>
-          <p className="text-gray-600 mt-1">Quản lý đợt tuyển dụng </p>
+          <h1 className="text-3xl font-bold text-gray-900">Các đợt tuyển dụng</h1>
+          <p className="text-gray-600 mt-1">Quản lý đợt tuyển dụng</p>
         </div>
         <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => setIsAddDialogOpen(true)}>
           <Plus className="w-4 h-4 mr-2" />
-              Thêm đợt tuyển dụng
+          Thêm đợt tuyển dụng
         </Button>
       </div>
 
@@ -212,7 +261,7 @@ export default function CampaignPage() {
               </div>
             </div>
             <div className="flex gap-2">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v)}>
                 <SelectTrigger className="w-[180px]">
                   <Filter className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="Lọc theo trạng thái" />
@@ -231,7 +280,9 @@ export default function CampaignPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Tất cả đợt ({filteredCampaigns.length})</CardTitle>
+          <CardTitle>
+            {loading ? "Đang tải..." : `Tất cả đợt (${total})`}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -243,26 +294,25 @@ export default function CampaignPage() {
                   <TableHead>Bắt đầu</TableHead>
                   <TableHead>Kết thúc</TableHead>
                   <TableHead>Mô tả</TableHead>
-                  <TableHead>Tạo bởi</TableHead>                  
+                  <TableHead>Tạo bởi</TableHead>
+                  <TableHead className="text-right">Thao tác</TableHead>
                 </TableRow>
               </TableHeader>
 
               <TableBody>
-                {filteredCampaigns.map((campaign) => (
+                {!loading && pageRows.map((campaign) => (
                   <TableRow key={campaign.id}>
-                    <TableCell className="font-medium">
-                      {campaign.name}
-                    </TableCell>
+                    <TableCell className="font-medium">{campaign.name}</TableCell>
                     <TableCell>
                       {(() => {
-                        const status = getCampaignStatus(campaign.startTime, campaign.endTime, today)
-                        return <Badge className={getStatusColor(status)}>{status}</Badge>
+                        const status = getCampaignStatus(campaign.startTime ?? null, campaign.endTime ?? null, today);
+                        return <Badge className={getStatusColor(status)}>{status}</Badge>;
                       })()}
                     </TableCell>
-                    <TableCell>{campaign.startTime}</TableCell>
-                    <TableCell>{campaign.endTime}</TableCell>
+                    <TableCell>{formatDMYHM(campaign.startTime)}</TableCell>
+                    <TableCell>{formatDMYHM(campaign.endTime)}</TableCell>
                     <TableCell>{campaign.description}</TableCell>
-                    <TableCell>{campaign.createdBy}</TableCell>
+                    <TableCell>{campaign.createdByName ?? "—"}</TableCell>
 
                     <TableCell className="text-right">
                       <DropdownMenu>
@@ -271,42 +321,135 @@ export default function CampaignPage() {
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">                          
-                          <DropdownMenuItem>
-                            <Eye className="mr-2 h-4 w-4" />
-                            Chi tiết
+
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => router.push(`/dashboard/campaigns/${campaign.id}`)}>
+                            <Eye className="mr-2 h-4 w-4" /> Chi tiết
                           </DropdownMenuItem>
-                          <DropdownMenuItem 
+                          <DropdownMenuItem
                             onClick={() => {
                               setEditing(campaign);
                               setEditOpen(true);
-                            }}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Sửa
+                            }}
+                          >
+                            <Edit className="mr-2 h-4 w-4" /> Sửa
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-red-600"
-                            onClick={() => openDelete(campaign)}>
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Xóa
+                          <DropdownMenuItem className="text-red-600" onClick={() => openDelete(campaign)}>
+                            <Trash2 className="mr-2 h-4 w-4" /> Xóa
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))}
+
+                {loading && (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center text-gray-500">
+                      Đang tải dữ liệu...
+                    </TableCell>
+                  </TableRow>
+                )}
+
+                {!loading && pageRows.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center text-gray-500">
+                      Không có dữ liệu.
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </div>
+
+          {/* Pagination footer */}
+          <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="text-sm text-gray-600">
+              {total > 0
+                ? `${startIndex + 1}–${endIndexExclusive} trong ${total}`
+                : `0 trong 0`}
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600">Hiển thị</span>
+                <Select
+                  value={String(pageSize)}
+                  onValueChange={(v) => {
+                    const newSize = Number(v);
+                    const firstItemIndex = startIndex; // keep the top row stable when possible
+                    const newPage = Math.floor(firstItemIndex / newSize) + 1;
+                    setPageSize(newSize);
+                    setPage(newPage);
+                  }}
+                >
+                  <SelectTrigger className="w-[90px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="20">20</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span className="text-sm text-gray-600">mục</span>
+              </div>
+
+              <div className="flex items-center gap-1">
+                <Button variant="outline" size="icon" onClick={goFirst} disabled={page <= 1}>
+                  <ChevronsLeft className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="icon" onClick={goPrev} disabled={page <= 1}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+
+                {/* Simple numbered buttons (up to 5 around current) */}
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }).slice(
+                    Math.max(0, page - 3),
+                    Math.max(0, page - 3) + Math.min(5, totalPages)
+                  ).map((_, i, arr) => {
+                    const start = Math.max(1, page - 2);
+                    const p = start + i;
+                    if (p > totalPages) return null;
+                    const isActive = p === page;
+                    return (
+                      <Button
+                        key={p}
+                        variant={isActive ? "default" : "outline"}
+                        size="sm"
+                        className="px-3"
+                        onClick={() => setPage(p)}
+                      >
+                        {p}
+                      </Button>
+                    );
+                  })}
+                </div>
+
+                <Button variant="outline" size="icon" onClick={goNext} disabled={page >= totalPages}>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="icon" onClick={goLast} disabled={page >= totalPages}>
+                  <ChevronsRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
-   
+
+      {/* Add dialog performs POST and bubbles the created item back */}
       <AddCampaignDialog
         open={isAddDialogOpen}
         onOpenChange={setIsAddDialogOpen}
-        onCreate={handleAddCampaign}
         nextId={campaigns.length + 1}
-        defaultCreatedBy={"null"}
+        defaultCreatedBy={null}
+        onCreated={(saved) => {
+          setCampaigns((prev) => [...prev, saved]); // update immediately
+          // Optional: jump to the page that contains the new item (here we keep current page)
+        }}
       />
 
       <UpdateCampaignDialog
@@ -316,13 +459,12 @@ export default function CampaignPage() {
         onSave={handleUpdateCampaign}
       />
 
-      <DeleteCampaignDialog
+      {/* <DeleteCampaignDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         campaign={deleting}
-        onConfirm={handleDeleteCampaign}
-      />
-
+        onConfirm={(id) => handleDeleteCampaign(id)}
+      /> */}
     </div>
   );
 }
