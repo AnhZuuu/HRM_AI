@@ -1,17 +1,51 @@
 import API from "@/api/api";
+import { authFetch } from "@/app/utils/authFetch";
 import DepartmentDetailClient from "@/components/department/detailDepartmentPage";
 import { notFound } from "next/navigation";
 
-// Match the API shape you showed
-export interface DepartmentDetail {
+// ===== Types aligned with your API response =====
+export type accountRoles = {
+  status: number | null;
+  role: number | null;
+}
+export type Employee = Account;
+
+export type CampaignPositionDetailModel = {
   id: string;
-  departmentName: string;
-  code: string;
+  campaignPositionId: string;
+  type: string | null;
+  key: string | null;
+  value: string | null;
+  groupIndex: number | null;
+  creationDate?: string | null;
+};
+
+export type CampaignPositionModel = {
+  id: string;
+  totalSlot: number;
   description: string | null;
-  numOfCampaignPosition: number;
-  numOfEmployee: number;
-  // Optional fields the API may include
-  campaignPositionModels?: any[]; // keep if you want to render positions later
+  campaignPositionDetailModels: CampaignPositionDetailModel[];
+  creationDate?: string | null;
+};
+
+// New types for interview process
+export type InterviewStageModel = {
+  id: string;
+  name?: string | null;
+  description?: string | null;
+  order?: number | null;
+  duration?: number | null;
+  type?: string | null;
+};
+
+export type InterviewProcessModel = {
+  id: string;
+  departmentId: string;
+  processName: string;
+  description: string | null;
+  departmentName: string | null;
+  countOfStage: number;
+  interviewStageModels: InterviewStageModel[];
   creationDate?: string | null;
   createdById?: string | null;
   modificationDate?: string | null;
@@ -19,7 +53,26 @@ export interface DepartmentDetail {
   deletionDate?: string | null;
   deletedById?: string | null;
   isDeleted?: boolean;
-}
+};
+
+export type DepartmentDetail = {
+  id: string;
+  departmentName: string;
+  code: string;
+  description: string | null;
+  numOfCampaignPosition: number;
+  numOfEmployee: number;
+  employees: Employee[];
+  campaignPositionModels: CampaignPositionModel[];
+  interviewProcessModels: InterviewProcessModel[]; // <-- added
+  creationDate?: string | null;
+  createdById?: string | null;
+  modificationDate?: string | null;
+  modifiedById?: string | null;
+  deletionDate?: string | null;
+  deletedById?: string | null;
+  isDeleted?: boolean;
+};
 
 type ApiEnvelope<T> = {
   code: number;
@@ -28,12 +81,10 @@ type ApiEnvelope<T> = {
   data: T;
 };
 
-
-const unwrap = async (res: Response) => {
+const unwrap = async <T,>(res: Response): Promise<T> => {
   const txt = await res.text();
   const json = txt ? JSON.parse(txt) : null;
-  // detail endpoint should return { data: <object> } (not paginated)
-  return json?.data ?? json;
+  return (json?.data ?? json) as T;
 };
 
 export default async function DepartmentDetailPage({
@@ -43,23 +94,24 @@ export default async function DepartmentDetailPage({
 }) {
   const { id } = await params;
 
-  const res = await fetch(`${API.DEPARTMENT.BASE}/${id}`, {
+  const res = await authFetch(`${API.DEPARTMENT.BASE}/${id}`, {
     cache: "no-store",
   });
 
   if (res.status === 404) return notFound();
   if (!res.ok) return notFound();
 
-  const payload = (await unwrap(res)) as DepartmentDetail | ApiEnvelope<DepartmentDetail>;
-  // Support either raw object or envelope
+  const data = await unwrap<DepartmentDetail | ApiEnvelope<DepartmentDetail>>(res);
+  console.log("Fetched department data:", data);
+
   const entity: DepartmentDetail =
-    (payload as any)?.departmentName
-      ? (payload as DepartmentDetail)
-      : ((payload as ApiEnvelope<DepartmentDetail>)?.data as DepartmentDetail);
+    (data as any)?.departmentName
+      ? (data as DepartmentDetail)
+      : ((data as ApiEnvelope<DepartmentDetail>)?.data as DepartmentDetail);
 
   if (!entity) return notFound();
 
-  // Make sure counts are always numbers (employees backend not ready => default 0)
+  // Normalize defensive fields
   const dept: DepartmentDetail = {
     id: entity.id,
     departmentName: entity.departmentName,
@@ -67,7 +119,13 @@ export default async function DepartmentDetailPage({
     description: entity.description ?? null,
     numOfCampaignPosition: Number(entity.numOfCampaignPosition ?? 0),
     numOfEmployee: Number(entity.numOfEmployee ?? 0),
-    campaignPositionModels: entity.campaignPositionModels ?? [],
+    employees: Array.isArray(entity.employees) ? entity.employees : [],
+    campaignPositionModels: Array.isArray(entity.campaignPositionModels)
+      ? entity.campaignPositionModels
+      : [],
+    interviewProcessModels: Array.isArray(entity.interviewProcessModels)
+      ? entity.interviewProcessModels
+      : [],
     creationDate: entity.creationDate ?? null,
     createdById: entity.createdById ?? null,
     modificationDate: entity.modificationDate ?? null,
@@ -77,5 +135,5 @@ export default async function DepartmentDetailPage({
     isDeleted: Boolean(entity.isDeleted ?? false),
   };
 
-  return <DepartmentDetailClient dept={dept as any} />;
+  return <DepartmentDetailClient dept={dept} />;
 }

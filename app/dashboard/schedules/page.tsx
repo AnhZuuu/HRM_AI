@@ -78,7 +78,13 @@ const statusToString = (n: number | null | undefined): string | null => {
 const mapItem = (x: ApiItem): RowType => ({
   id: x.id,
   cvApplicantId: x.cvApplicantId,
-  cvApplicant: null as UICVApplicant | null,
+  cvApplicantModel: (x as any).cvApplicantModel
+    ? {
+        id: (x as any).cvApplicantModel.id,
+        fullName: (x as any).cvApplicantModel.fullName ?? "",
+        email: (x as any).cvApplicantModel.email ?? null,
+      }
+    : null,
   startTime: x.startTime,
   endTime: x.endTime ?? null,
   createdBy: x.createdById ?? null,
@@ -90,6 +96,14 @@ const mapItem = (x: ApiItem): RowType => ({
   notes: x.notes ?? null,
   departmentId: null,
   interviewers: [],
+  campaignPositionModel: (x as any).campaignPositionModel
+    ? {
+        id: (x as any).campaignPositionModel.id,
+        departmentId: (x as any).campaignPositionModel.departmentId,
+        departmentName: (x as any).campaignPositionModel.departmentName ?? null,
+      }
+    : null,
+
 });
 
 export default function InterviewSchedulesPage() {
@@ -119,7 +133,7 @@ export default function InterviewSchedulesPage() {
         let tp = 1;
 
         do {
-          const url = `${API.INTERVIEW.SCHEDULE}?pageNumber=${p}&pageSize=${pageSize}`;
+          const url = `${API.INTERVIEW.SCHEDULE}`;
           const res = await authFetch(url, { method: "GET", signal: controller.signal });
           if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
 
@@ -153,7 +167,7 @@ export default function InterviewSchedulesPage() {
     (async () => {
       setListLoading(true);
       try {
-        const url = `${API.INTERVIEW.SCHEDULE}?pageNumber=${page}&pageSize=${pageSize}`;
+        const url = `${API.INTERVIEW.SCHEDULE}`;
         const res = await authFetch(url, { method: "GET", signal: controller.signal });
         if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
 
@@ -302,11 +316,11 @@ export default function InterviewSchedulesPage() {
 
       {/* Today-only table (always full dataset) */}
       <h2 className="text-lg font-semibold text-gray-900">Danh sách lịch phỏng vấn hôm nay</h2>
-      {err && <div className="text-sm text-red-600 mb-2">Lỗi tải dữ liệu: {err}</div>}
+      {/* {err && <div className="text-sm text-red-600 mb-2">Lỗi tải dữ liệu: {err}</div>}   */}
       {loadingStats ? (
         <div className="rounded-xl border border-gray-200 p-6 bg-white shadow-sm text-gray-500">Đang tải…</div>
       ) : (
-        <InterviewSchedulesTable title="Lịch phỏng vấn" variant="range" data={todayItems} />
+        <InterviewSchedulesTable title="" variant="range" data={todayItems} />
       )}
 
       {/* All table (paginated) */}
