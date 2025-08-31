@@ -12,9 +12,25 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
-  return <ClientLayout>{children}</ClientLayout>
+  return <ClientLayout>
+    <RouteTransitionOverlay />  
+    <ToastProvider />
+            <Suspense
+              fallback={
+                null
+              } /* Mình dùng App Router nó sẽ tự động gọi đến app/loading.tsx */
+            >
+              {/* <Header/> */}
+              {children}
+              {/* <Footer/> */}
+            </Suspense>
+    </ClientLayout>
 }
 
 
 import '../globals.css'
 import ClientLayout from "../clientLayout"
+import { ToastProvider } from "@/components/toast/toast-provider"
+import { Suspense } from "react"
+import RouteTransitionOverlay from "@/components/route-transition-overlay"
+
