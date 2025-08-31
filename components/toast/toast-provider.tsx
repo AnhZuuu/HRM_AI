@@ -4,6 +4,8 @@
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
+
+
 export function ToastProvider() {
   return (
     <ToastContainer
@@ -15,6 +17,9 @@ export function ToastProvider() {
       pauseOnHover
       draggable
       theme="light"
+      style={{ zIndex: 2147483647 }} // max-ish
+      toastClassName={() => "pointer-events-auto"} // clickable even if overlay exists
+      containerId="app-toaster"
     />
   );
 }

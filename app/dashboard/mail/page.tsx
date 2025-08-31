@@ -25,10 +25,10 @@ type TemplateTypeOption = { value: string; label: string };
  */
 const DEFAULT_TYPE_OPTIONS: TemplateTypeOption[] = [
   { value: "0", label: "Xác minh email" },                // VERIFY_EMAIL
-  { value: "1", label: "— (chưa triển khai)" },           // not implemented
+  { value: "1", label: "Thông báo kết quả phỏng vấn" },           
   { value: "2", label: "Thông báo lịch phỏng vấn" },
   { value: "3", label: "Thông báo offer" },
-  { value: "4", label: "— (chưa triển khai)" },           // not implemented
+  { value: "4", label: "Kết quả ứng tuyển" },           
   { value: "5", label: "Thư mới (Newsletter)" },
 ];
 
