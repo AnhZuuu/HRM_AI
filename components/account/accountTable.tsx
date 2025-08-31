@@ -36,14 +36,11 @@ import { useEffect, useState } from "react";
 import ConfirmBlockDialog from "./handleBlockAccount";
 import API from "@/api/api";
 import { isAdmin } from "@/lib/auth";
+import { fmtDate } from "@/app/utils/helper";
+import { ROLE_MAP_COLOR } from "@/app/utils/enum";
 
 interface AccountTableProps {
   accounts: Account[];
-}
-
-function formatDate(date: string | null) {
-  if (!date) return "—";
-  return new Date(date).toLocaleDateString();
 }
 
 function statusBadgeClass(deleted: boolean) {
@@ -120,9 +117,11 @@ export function AccountTable({ accounts }: AccountTableProps) {
               <TableCell>
                 {a.accountRoles?.length
                   ? a.accountRoles.map((r) => (
-                      <Badge key={r.id} className="mr-1">
-                        {r.roleName}
-                      </Badge>
+                      <div className="mr-1">
+                        <Badge key={r.id} className={ROLE_MAP_COLOR[r.role ?? 0].className}>
+                          {r.roleName}
+                        </Badge>
+                      </div>
                     ))
                   : "—"}
               </TableCell>
@@ -131,7 +130,7 @@ export function AccountTable({ accounts }: AccountTableProps) {
                   {a.isDeleted ? "Đã khóa" : "Hoạt động"}
                 </Badge>
               </TableCell>
-              <TableCell>{formatDate(a.creationDate)}</TableCell>
+              <TableCell>{fmtDate(a.creationDate)}</TableCell>
               <TableCell className="text-right">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

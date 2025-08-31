@@ -31,6 +31,13 @@ export const formatDMYHM = (s?: string | null): string => {
   return `${dd}-${mm}-${yyyy} ${hh}:${mi}`;
 };
 
+/**
+ * Formats an ISO date string into `dd/MM/yyyy` format.
+ *
+ * Example:
+ * formatISODate("2025-08-31T17:00:00Z"); // "31/08/2025"
+ * formatISODate(undefined); // "—"
+ */
 export const formatISODate = (iso?: string) => {
   if (!iso) return "—";
   try {
