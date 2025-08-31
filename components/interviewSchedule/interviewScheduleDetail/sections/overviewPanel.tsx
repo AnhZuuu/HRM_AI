@@ -1,50 +1,45 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import { Calendar } from "lucide-react";
 import { INTERVIEW_STATUS_MAP } from "@/app/utils/enum";
-import { Props } from "../type";
 import SectionCard from "../../ui/sectionCard";
 import InfoRow from "../../ui/infoRow";
-import { fmt } from "../../hooks/useInterviewScheduleDetail";
+import { formatDate } from "@/app/utils/helper";
 
 
 export default function OverviewPanel({
   schedule,
   durationMin,
-}: Pick<Props, "schedule" | "durationMin">) {
+}: Pick<any, "schedule" | "durationMin">) {
   return (
     <div className="mt-6 space-y-6">
-      <SectionCard title="Basic Information">
-        <InfoRow label="Interview Type" value={"—"} />
-        <InfoRow label="Round" value={schedule?.interviewStageModel?.order} />
+      <SectionCard title="Thông tin cơ bản">
+        <InfoRow label="Vòng" value={schedule?.interviewStageModel?.stageName} />
         <InfoRow
-          label="Status"
+          label="Trạng thái"
           value={
             <Badge className={INTERVIEW_STATUS_MAP[schedule?.status ?? 0].className}>
               {INTERVIEW_STATUS_MAP[schedule?.status ?? 0].label}
             </Badge>
           }
         />
-        <InfoRow label="Duration" value={`${durationMin} minutes`} />
+        <InfoRow label="Thời gian" value={`${durationMin} phút`} />
       </SectionCard>
 
-      <SectionCard title="Schedule Timing">
+      <SectionCard title="Ngày giờ phỏng vấn">
         <InfoRow
-          label="Start"
+          label="Bắt đầu"
           value={
             <span className="inline-flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-              {fmt(schedule?.startTime)}
+              {formatDate(schedule?.startTime)}
             </span>
           }
         />
         <InfoRow
-          label="End"
+          label="Kết thúc"
           value={
             <span className="inline-flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-              {fmt(schedule?.endTime)}
+              {formatDate(schedule?.endTime)}
             </span>
           }
         />
