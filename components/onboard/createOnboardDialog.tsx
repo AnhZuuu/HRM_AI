@@ -108,7 +108,7 @@ export default function CreateOnboardForm({
             <Separator />
 
             {/* Interview outcome */}
-            <div className="space-y-2">
+            {/* <div className="space-y-2">
               <Label>Interview Outcome</Label>
               <Select
                 value={form.watch("interviewOutcomeId")}
@@ -135,7 +135,7 @@ export default function CreateOnboardForm({
               {form.formState.errors.interviewOutcomeId && (
                 <p className="text-sm text-destructive">{form.formState.errors.interviewOutcomeId.message}</p>
               )}
-            </div>
+            </div> */}
 
             {/* Proposed salary with $ prefix */}
             <div className="space-y-2">
@@ -195,7 +195,7 @@ export default function CreateOnboardForm({
             <div className="space-y-2">
               <Label>Comments</Label>
               <Textarea
-                placeholder="Type your comment here"
+                placeholder="Viết ghi chú tại đây"
                 value={form.watch("notes") || ""}
                 onChange={(e) => form.setValue("notes", e.target.value)}
               />
