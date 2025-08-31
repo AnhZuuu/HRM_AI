@@ -44,7 +44,7 @@ export default function DepartmentDetailClient({ dept }: { dept: DepartmentDetai
           ) : null}
 
           <div className="text-xs text-muted-foreground">
-            ID: <span className="font-mono">{dept.id}</span>
+            {/* ID: <span className="font-mono">{dept.id}</span> */}
             {" • "}
             Tạo lúc: {dept.creationDate ? new Date(dept.creationDate).toLocaleString("vi-VN") : "—"}
           </div>
@@ -53,7 +53,7 @@ export default function DepartmentDetailClient({ dept }: { dept: DepartmentDetai
 
       <Tabs defaultValue="positions" className="w-full">
         <TabsList>
-          <TabsTrigger value="positions">Vị trí ({positions.length})</TabsTrigger>
+          <TabsTrigger value="positions">Vị trí tuyển dụng({positions.length})</TabsTrigger>
           <TabsTrigger value="interview-process">Quy trình phỏng vấn ({processes.length})</TabsTrigger>
           <TabsTrigger value="employees">Nhân sự ({employees.length})</TabsTrigger>
 
