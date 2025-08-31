@@ -24,7 +24,7 @@ export default function PositionsTable({ items }: { items: CampaignPositionModel
               <TableHead className="w-[100px]">Tổng slot</TableHead>
               <TableHead>Tiêu chí / Chi tiết</TableHead>
               <TableHead className="w-[220px]">Ngày tạo</TableHead>
-              <TableHead className="w-[260px]">ID</TableHead>
+              {/* <TableHead className="w-[260px]">ID</TableHead> */}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -59,7 +59,7 @@ export default function PositionsTable({ items }: { items: CampaignPositionModel
                   <TableCell className="align-top">
                     {p.creationDate ? new Date(p.creationDate).toLocaleString("vi-VN") : "—"}
                   </TableCell>
-                  <TableCell className="align-top font-mono text-xs">{p.id}</TableCell>
+                  {/* <TableCell className="align-top font-mono text-xs">{p.id}</TableCell> */}
                 </TableRow>
               ))
             )}

@@ -5,8 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Dialog, DialogContent, DialogDescription,
-  DialogHeader, DialogTitle, DialogFooter
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -16,6 +20,7 @@ import LoadingDialog from "./loading";
 import ShowAllDialog, { LiveUploadItem } from "./showAll";
 import CvApplicantDialog from "./cvApplicant";
 import { toast, ToastContainer } from "react-toastify";
+import { useRouter } from "next/navigation";
 
 type CvApplicantDraft = {
   fileUrl: string;
@@ -41,9 +46,13 @@ function getPositionStatus(campaignStatus: string, pos: CampaignPosition) {
   return { label: "Mở", tone: "bg-emerald-100 text-emerald-700" };
 }
 
-export default function CampaignPositions(
-  { positions, campaignStatus }: { positions: CampaignPosition[]; campaignStatus: string }
-) {
+export default function CampaignPositions({
+  positions,
+  campaignStatus,
+}: {
+  positions: CampaignPosition[];
+  campaignStatus: string;
+}) {
   // console.log("ALOOOOOOOOOOOOOO" + positions);
   // console.log("MMMMMMMMMMMMMMMM" + campaignStatus);
   // console.log("positions:", positions);
@@ -54,10 +63,13 @@ export default function CampaignPositions(
   //   console.log("first position:", JSON.stringify(positions[0], null, 2));
   // }
 
+  const router = useRouter();
   // dialogs + selection
   const [uploadOpen, setUploadOpen] = React.useState(false);
   const [listOpen, setListOpen] = React.useState(false);
-  const [activePos, setActivePos] = React.useState<CampaignPosition | null>(null);
+  const [activePos, setActivePos] = React.useState<CampaignPosition | null>(
+    null
+  );
   const [files, setFiles] = React.useState<FileList | null>(null);
 
   // live upload result dialog
@@ -72,9 +84,7 @@ export default function CampaignPositions(
   const [loadingOpen] = React.useState(false);
 
   const appliedCount = (p: CampaignPosition) =>
-  (p.cvApplicantModels?.length ??
-    p.cvApplicants?.length ??
-    0);
+    p.cvApplicantModels?.length ?? p.cvApplicants?.length ?? 0;
 
   const openUpload = (p: CampaignPosition) => {
     console.log("Upload CV for position ID:", p.id);
@@ -82,17 +92,26 @@ export default function CampaignPositions(
     setUploadOpen(true);
   };
 
-  const openList = (p: CampaignPosition) => {
-    console.log("View applicants for position ID:", p.id);
-    setActivePos(p);
-    setListOpen(true);
-  };
+  // const openList = (p: CampaignPosition) => {
+  //   console.log("View applicants for position ID:", p.id);
+  //   setActivePos(p);
+  //   setListOpen(true);
+  // };
+  const openList = React.useCallback(
+    (p: CampaignPosition) => {
+      router.push(`/dashboard/campaignPosition/${p.id}`);
+    },
+    [router]
+  );
 
   const pickValue = (arr: any[], key: string) =>
-    (arr?.find?.((x: any) => x?.key === key)?.value) ?? null;
+    arr?.find?.((x: any) => x?.key === key)?.value ?? null;
 
   // Build draft for CvApplicantDialog from one item payload
-  const buildDraftFromItem = (item: any, campaignPositionId: string): CvApplicantDraft | null => {
+  const buildDraftFromItem = (
+    item: any,
+    campaignPositionId: string
+  ): CvApplicantDraft | null => {
     // support both shapes: item.data.data or item.data
     const inner = item?.data?.data ?? item?.data ?? {};
     const parsed = Array.isArray(inner?.parsedData) ? inner.parsedData : [];
@@ -112,10 +131,14 @@ export default function CampaignPositions(
   };
 
   // Upload one file and update its live item as it progresses
-  const uploadOne = async (file: File, index: number, campaignPositionId: string) => {
+  const uploadOne = async (
+    file: File,
+    index: number,
+    campaignPositionId: string
+  ) => {
     try {
       // mark uploading
-      setLiveItems(prev => {
+      setLiveItems((prev) => {
         const next = [...prev];
         next[index] = { ...next[index], status: "UPLOADING" };
         return next;
@@ -126,19 +149,25 @@ export default function CampaignPositions(
       fd.append("CampaignPositionId", campaignPositionId);
       fd.append("file", file);
 
-      const url = `${API.CV.PARSE}?campaignPositionId=${encodeURIComponent(campaignPositionId)}`;
+      const url = `${API.CV.PARSE}?campaignPositionId=${encodeURIComponent(
+        campaignPositionId
+      )}`;
       const res = await authFetch(url, { method: "POST", body: fd });
 
       console.log("Upload response status:", res.status, res.ok);
 
       const text = await res.text();
       let data: any = null;
-      try { data = text ? JSON.parse(text) : null; } catch { /* ignore */ }
+      try {
+        data = text ? JSON.parse(text) : null;
+      } catch {
+        /* ignore */
+      }
 
       console.log("Upload response JSON:", data);
 
       if (!res.ok) {
-        setLiveItems(prev => {
+        setLiveItems((prev) => {
           const next = [...prev];
           next[index] = {
             ...next[index],
@@ -153,7 +182,7 @@ export default function CampaignPositions(
       }
 
       // success
-      setLiveItems(prev => {
+      setLiveItems((prev) => {
         const next = [...prev];
         next[index] = {
           ...next[index],
@@ -166,7 +195,7 @@ export default function CampaignPositions(
         return next;
       });
     } catch (err: any) {
-      setLiveItems(prev => {
+      setLiveItems((prev) => {
         const next = [...prev];
         next[index] = {
           ...next[index],
@@ -204,7 +233,6 @@ export default function CampaignPositions(
     } catch {
       toast.error("Không thể tải lên file.");
     }
-
   };
 
   // “Chi tiết” handler from the live dialog
@@ -230,11 +258,11 @@ export default function CampaignPositions(
   };
   React.useEffect(() => {
     if (liveItems.length === 0) return;
-    const allFinished = liveItems.every(i => i.status !== "UPLOADING");
+    const allFinished = liveItems.every((i) => i.status !== "UPLOADING");
     if (!allFinished) return;
 
     // Build a summary like your old `items` array
-    const items = liveItems.map(it => ({
+    const items = liveItems.map((it) => ({
       fileName: it.fileName,
       fileUrl: it.fileUrl,
       originalFile: it.originalFile,
@@ -267,13 +295,17 @@ export default function CampaignPositions(
               <CardContent className="space-y-4">
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Phòng ban</p>
-                  <p className="text-base font-medium">{pos.department ?? "—"}</p>
+                  <p className="text-base font-medium">
+                    {pos.department ?? "—"}
+                  </p>
                   {/* <p className="text-base font-medium">{(pos as any).departmentName ?? "—"}</p> */}
                 </div>
 
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">Tổng số lượng</p>
+                    <p className="text-sm text-muted-foreground">
+                      Tổng số lượng
+                    </p>
                     <p className="text-base font-medium">{pos.totalSlot}</p>
                   </div>
                   <div className="space-y-1">
@@ -282,7 +314,13 @@ export default function CampaignPositions(
                   </div>
                   <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">Còn trống</p>
-                    <p className={`text-base font-medium ${left === 0 ? "text-red-600" : ""}`}>{left}</p>
+                    <p
+                      className={`text-base font-medium ${
+                        left === 0 ? "text-red-600" : ""
+                      }`}
+                    >
+                      {left}
+                    </p>
                   </div>
                 </div>
 
@@ -293,8 +331,12 @@ export default function CampaignPositions(
                     </Button>
                   ) : (
                     <>
-                      <Button onClick={() => openUpload(pos)}>Thêm ứng viên</Button>
-                      <Button variant="outline" onClick={() => openList(pos)}>Danh sách ứng viên</Button>
+                      <Button onClick={() => openUpload(pos)}>
+                        Thêm ứng viên
+                      </Button>
+                      <Button variant="outline" onClick={() => openList(pos)}>
+                        Danh sách ứng viên
+                      </Button>
                     </>
                   )}
                 </div>
@@ -310,7 +352,10 @@ export default function CampaignPositions(
           <DialogHeader>
             <DialogTitle>Thêm ứng viên</DialogTitle>
             <DialogDescription>
-              Tải lên CV cho vị trí: <span className="font-medium">{activePos?.description?.split(".")[0]}</span>
+              Tải lên CV cho vị trí:{" "}
+              <span className="font-medium">
+                {activePos?.description?.split(".")[0]}
+              </span>
             </DialogDescription>
           </DialogHeader>
 
@@ -331,8 +376,13 @@ export default function CampaignPositions(
           </div>
 
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setUploadOpen(false)}>Hủy</Button>
-            <Button onClick={handleUpload} disabled={!files || (files?.length ?? 0) === 0}>
+            <Button variant="ghost" onClick={() => setUploadOpen(false)}>
+              Hủy
+            </Button>
+            <Button
+              onClick={handleUpload}
+              disabled={!files || (files?.length ?? 0) === 0}
+            >
               Tải lên
             </Button>
           </DialogFooter>
@@ -346,7 +396,7 @@ export default function CampaignPositions(
       <ShowAllDialog
         open={resultOpen}
         onOpenChange={setResultOpen}
-        result={null}                 // using live mode
+        result={null} // using live mode
         liveItems={liveItems}
         onDetails={handleDetails}
       />
@@ -364,7 +414,10 @@ export default function CampaignPositions(
           <DialogHeader>
             <DialogTitle>Danh sách ứng viên</DialogTitle>
             <DialogDescription>
-              Vị trí: <span className="font-medium">{activePos?.description?.split(".")[0]}</span>
+              Vị trí:{" "}
+              <span className="font-medium">
+                {activePos?.description?.split(".")[0]}
+              </span>
             </DialogDescription>
           </DialogHeader>
 
@@ -372,7 +425,10 @@ export default function CampaignPositions(
             {activePos?.cvApplicants && activePos.cvApplicants.length > 0 ? (
               <ul className="space-y-2">
                 {activePos.cvApplicants.map((cv, i) => (
-                  <li key={i} className="flex items-center justify-between rounded-md border p-2">
+                  <li
+                    key={i}
+                    className="flex items-center justify-between rounded-md border p-2"
+                  >
                     <a
                       href={cv.fileUrl}
                       target="_blank"

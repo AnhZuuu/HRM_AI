@@ -78,7 +78,13 @@ const statusToString = (n: number | null | undefined): string | null => {
 const mapItem = (x: ApiItem): RowType => ({
   id: x.id,
   cvApplicantId: x.cvApplicantId,
-  cvApplicant: null as UICVApplicant | null,
+  cvApplicantModel: (x as any).cvApplicantModel
+    ? {
+        id: (x as any).cvApplicantModel.id,
+        fullName: (x as any).cvApplicantModel.fullName ?? "",
+        email: (x as any).cvApplicantModel.email ?? null,
+      }
+    : null,
   startTime: x.startTime,
   endTime: x.endTime ?? null,
   createdBy: x.createdById ?? null,
@@ -90,6 +96,14 @@ const mapItem = (x: ApiItem): RowType => ({
   notes: x.notes ?? null,
   departmentId: null,
   interviewers: [],
+  campaignPositionModel: (x as any).campaignPositionModel
+    ? {
+        id: (x as any).campaignPositionModel.id,
+        departmentId: (x as any).campaignPositionModel.departmentId,
+        departmentName: (x as any).campaignPositionModel.departmentName ?? null,
+      }
+    : null,
+
 });
 
 export default function InterviewSchedulesPage() {
@@ -316,53 +330,6 @@ export default function InterviewSchedulesPage() {
       ) : (
         <>
           <InterviewSchedulesTable title="Tất cả" variant="all" data={pageItems} />
-
-          {/* Pagination controls */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-3">
-            <div className="text-sm text-gray-600">
-              Trang {page} / {totalPages} {items.length ? `· Tổng: ${items.length}` : null}
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => setPage(1)} disabled={page <= 1}>
-                « Đầu
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>
-                ‹ Trước
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page >= totalPages}
-              >
-                Sau ›
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setPage(totalPages)} disabled={page >= totalPages}>
-                Cuối »
-              </Button>
-
-              <div className="ml-2">
-                <Select
-                  value={String(pageSize)}
-                  onValueChange={(v) => {
-                    const ps = parseInt(v, 10) || 10;
-                    setPageSize(ps);
-                    setPage(1); // reset when page size changes
-                  }}
-                >
-                  <SelectTrigger className="h-9 w-[120px]">
-                    <SelectValue placeholder="Trang / trang" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="10">10 / trang</SelectItem>
-                    <SelectItem value="20">20 / trang</SelectItem>
-                    <SelectItem value="50">50 / trang</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
         </>
       )}
     </div>
