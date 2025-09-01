@@ -169,10 +169,10 @@ export default function CvApplicantDialog({
                             <p className="text-xs text-muted-foreground">Điểm</p>
                             <p className="text-sm font-medium">{draft.point ?? "—"}</p>
                         </div>
-                        <div className="rounded-md border p-4 min-w-0">
+                        {/* <div className="rounded-md border p-4 min-w-0">
                             <p className="text-xs text-muted-foreground">CampaignPositionId</p>
                             <p className="text-sm font-medium break-all">{draft.campaignPositionId}</p>
-                        </div>
+                        </div> */}
                     </div>
 
                     {/* NEW: Skills section */}
