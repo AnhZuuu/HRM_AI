@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { MoreHorizontal, Eye, CalendarPlus, Loader2, Filter } from "lucide-react";
+import { MoreHorizontal, Eye, CalendarPlus, Loader2, Filter, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,8 +27,11 @@ import { authFetch } from "@/app/utils/authFetch";
 import API from "@/api/api";
 import { ScheduleModal } from "./ui/ScheduleModal";
 import ScheduleModal2 from "./ui/ScheduleModal2";
+import HandleUpdateStatusCandidate from "../candidates/HandleUpdateStatusCandidate";
 
 /* ============= Types ============= */
+
+
 export type Candidate = {
   id: string;
   cvApplicantId: string;
@@ -39,7 +42,10 @@ export type Candidate = {
   currentInterviewStageName: string | null;
   fileUrl: string | null;
   status: 0 | 1 | 2 | 3 | 4 | null; // 0 Pending, 1 Rejected, 2 Accepted, 3 Failed, 4 Onboarded
+
+  // ensure these get populated in normalizeCandidates()
   departmentId?: string | null;
+  department: Department[] | null;
 };
 
 const STATUS_LABEL: Record<NonNullable<Candidate["status"]>, string> = {
@@ -74,18 +80,13 @@ function getDetailValue(details: any[] | undefined, type: string, key: string): 
   return (found?.value as string) ?? null;
 }
 
+/* Updated: now maps departmentId + department[] from flexible API shapes */
 function normalizeCandidates(payload: any): Candidate[] {
   const arr =
     (Array.isArray(payload?.data) && payload.data) ||
     (Array.isArray(payload?.data?.data) && payload.data.data) ||
     (Array.isArray(payload) && payload) ||
     [];
-
-  
-  // console.log("[normalizeCandidates] input keys:", Object.keys(payload || {}));
-  // console.log("[normalizeCandidates] isArray(data):", Array.isArray(payload?.data));
-  // console.log("[normalizeCandidates] isArray(data.data):", Array.isArray(payload?.data?.data));
-  // console.log("[normalizeCandidates] final length:", arr.length);
 
   return arr.map((it: any) => {
     const details = it?.cvApplicantDetailModels as any[] | undefined;
@@ -98,6 +99,23 @@ function normalizeCandidates(payload: any): Candidate[] {
 
     const id = String(it?.id ?? it?.cvApplicantId ?? "");
 
+    // STRICT: use departmentModel only (can be null at first)
+    const deptModel = it?.departmentModel ?? null;
+
+    const departmentId = deptModel?.id ?? null;
+    const department: Department[] | null = deptModel
+      ? [
+        {
+          id: String(deptModel.id),
+          departmentName: deptModel.departmentName ?? "",
+          code: deptModel.code ?? null,
+          description: deptModel.description ?? null,
+          campaignPositionModels: deptModel.campaignPositionModels ?? [],
+          employees: deptModel.employees ?? [],
+        },
+      ]
+      : null;
+
     return {
       id,
       cvApplicantId: id,
@@ -108,15 +126,19 @@ function normalizeCandidates(payload: any): Candidate[] {
       currentInterviewStageName: it?.currentInterviewStageName ?? null,
       fileUrl: it?.fileUrl ?? null,
       status: statusVal,
+
+      // now ScheduleModal will resolve deptId correctly
+      departmentId,
+      department,
     };
   });
 }
+
 
 async function fetchCandidates(): Promise<Candidate[]> {
   const res = await authFetch(API.CV.APPLICANT, { method: "GET" });
   if (!res.ok) throw new Error(`Failed to load candidates: ${res.status}`);
 
-  // Important: don't string-concat an object (it prints [object Object]).
   const json = await res.json();
   console.log("[fetchCandidates] raw response:", json);
   console.log(
@@ -135,6 +157,8 @@ async function fetchCandidates(): Promise<Candidate[]> {
       point: x.point,
       stage: x.currentInterviewStageName,
       status: x.status,
+      departmentId: x.departmentId,
+      deptCount: Array.isArray(x.department) ? x.department.length : 0,
     }))
   );
   return normalized;
@@ -179,8 +203,17 @@ export default function CandidatesPage() {
   const [activeCandidate, setActiveCandidate] = useState<Candidate | null>(null);
 
   //Modals 2
-  const [openV2, setOpenV2] = useState(false);
+  // const [openV2, setOpenV2] = useState(false);
   const [activeCandidateV2, setActiveCandidateV2] = useState<Candidate | null>(null);
+
+  // Update candidate status modal
+  const [openUpdateStatus, setOpenUpdateStatus] = useState(false);
+  const [activeStatusCandidate, setActiveStatusCandidate] = useState<Candidate | null>(null);
+
+  function openUpdateStatusModal(c: Candidate) {
+    setActiveStatusCandidate(c);
+    setOpenUpdateStatus(true);
+  }
 
   // Fetch once
   useEffect(() => {
@@ -235,21 +268,20 @@ export default function CandidatesPage() {
 
     const qs = params.toString();
     const url = qs ? `?${qs}` : "";
-    // Avoid full reload; keep scroll
     window.history.replaceState(null, "", url);
   }, [debouncedQuery, statusFilter, safePage, pageSize]);
 
-
   //Modal 1
   function openSchedule(candidate: Candidate) {
+    console.log("[openSchedule] candidate deptId:", candidate.departmentId, "deptCount:", candidate.department?.length ?? 0);
     setActiveCandidate(candidate);
     setOpen(true);
   }
   //Modal 2
-  function openScheduleV2(candidate: Candidate) {
-    setActiveCandidateV2(candidate);
-    setOpenV2(true);
-  }
+  // function openScheduleV2(candidate: Candidate) {
+  //   setActiveCandidateV2(candidate);
+  //   setOpenV2(true);
+  // }
 
   function clearFilters() {
     setQuery("");
@@ -257,6 +289,23 @@ export default function CandidatesPage() {
     setPage(1);
     setPageSize(5);
   }
+
+  const refetchCandidates = React.useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await fetchCandidates();
+      setCandidates(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error(e);
+      setCandidates([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    refetchCandidates();
+  }, [refetchCandidates]);
 
   return (
     <div className="min-h-[90vh] w-full bg-muted/30 p-4 md:p-8">
@@ -310,6 +359,13 @@ export default function CandidatesPage() {
             <Button variant="outline" onClick={clearFilters}>
               Reset
             </Button>
+            <Button 
+            asChild className="bg-blue-600 hover:bg-blue-700">
+              <Link href="/dashboard/schedules/new/suggest">
+                <Plus className="w-4 h-4 mr-2" />
+                Gợi ý lịch
+              </Link>
+            </Button>
           </div>
         </div>
 
@@ -360,13 +416,21 @@ export default function CandidatesPage() {
                       </td>
                       <td className="px-4 py-3">
                         {a.status !== null && a.status !== undefined ? (
-                          <Badge className={statusBadgeClass(a.status)}>
-                            {STATUS_LABEL[a.status as 0 | 1 | 2 | 3 | 4]}
-                          </Badge>
+                          <button
+                            type="button"
+                            onClick={() => openUpdateStatusModal(a)}
+                            className="focus:outline-none"
+                            title="Cập nhật trạng thái"
+                          >
+                            <Badge className={statusBadgeClass(a.status)}>
+                              {STATUS_LABEL[a.status as 0 | 1 | 2 | 3 | 4]}
+                            </Badge>
+                          </button>
                         ) : (
                           <span className="text-muted-foreground">—</span>
                         )}
                       </td>
+
                       <td className="px-4 py-3">
                         {a.fileUrl ? (
                           <Link
@@ -392,7 +456,7 @@ export default function CandidatesPage() {
                               <Eye className="mr-2 h-4 w-4" /> Chi tiết
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => openScheduleV2(a)}>
+                            <DropdownMenuItem onClick={() => openSchedule(a)}>
                               <CalendarPlus className="mr-2 h-4 w-4" /> Lên lịch phỏng vấn
                             </DropdownMenuItem>
                           </DropdownMenuContent>
@@ -433,10 +497,34 @@ export default function CandidatesPage() {
       </div>
 
       {/* Modal V1 (giữ nguyên behavior với stageId) */}
-      <ScheduleModal open={open} onOpenChange={setOpen} candidate={activeCandidate} />
+      <ScheduleModal
+        open={open}
+        onOpenChange={setOpen}
+        candidate={activeCandidate}
+        onScheduled={refetchCandidates}
+      />
 
       {/* Modal V2 (payload: interviewStageId) */}
-      <ScheduleModal2 open={openV2} onOpenChange={setOpenV2} candidate={activeCandidateV2} />
+      {/* <ScheduleModal2 open={openV2} onOpenChange={setOpenV2} candidate={activeCandidateV2} /> */}
+
+      <HandleUpdateStatusCandidate
+        open={openUpdateStatus}
+        onOpenChange={setOpenUpdateStatus}
+        candidateId={activeStatusCandidate?.id ?? ""}
+        initialStatus={
+          (activeStatusCandidate?.status as 0 | 1 | 2 | 3 | 4 | undefined) ?? 0
+        }
+        onSuccess={(updated) => {
+          // update list without refetch
+          setCandidates(prev =>
+            prev.map(c =>
+              c.id === (activeStatusCandidate?.id ?? updated.id ?? "")
+                ? { ...c, status: updated.status as Candidate["status"] }
+                : c
+            )
+          );
+        }}
+      />
     </div>
   );
 }

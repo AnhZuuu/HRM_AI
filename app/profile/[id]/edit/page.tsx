@@ -11,8 +11,8 @@ import { toast } from "react-toastify";
 import { authFetch } from "@/app/utils/authFetch";
 import API from "@/api/api";
 import { ROLE_OPTIONS, RoleOption } from "@/app/utils/enum";
-import { useDepartments } from "@/components/profile/useDepartments";
 import { ProfileForm, ProfileFormValues } from "@/components/profile/editProfileFormCard";
+import { useDecodedToken } from "@/components/auth/useDecodedToken";
 
 type Account = {
   id: string;
@@ -47,9 +47,6 @@ export default function EditAccountPage() {
   const [error, setError] = React.useState<string | null>(null);
   const [account, setAccount] = React.useState<Account | null>(null);
 
-  // departments hook (or inject from parent)
-  const { items: departments, loading: deptLoading } = useDepartments(true);
-
   React.useEffect(() => {
     (async () => {
       try {
@@ -70,7 +67,6 @@ export default function EditAccountPage() {
   if (error) return <div className="p-6 text-red-600">Lỗi: {error}</div>;
   if (!account) return <div className="p-6">Không tìm thấy tài khoản</div>;
 
-  // map default role value
   const primary = account.accountRoles?.[0];
   let roleValue: number | undefined;
   if (typeof primary?.role === "number") {
@@ -103,7 +99,6 @@ export default function EditAccountPage() {
         gender: values.gender,
         dateOfBirth: values.dateOfBirth || null,
         phoneNumber: values.phoneNumber || null,
-        departmentId: values.departmentId || null,
         roles: values.role ? [values.role] : [],
       };
       if (values.departmentId) payload.departmentId = values.departmentId;
@@ -120,7 +115,7 @@ export default function EditAccountPage() {
       }
 
       toast.success("Đã lưu thay đổi");
-      router.push(`/dashboard/accounts/${params.id}`);
+      router.push(`/profile`);
     } catch (e: any) {
       toast.error("Không thể cập nhật");
     } finally {
@@ -144,11 +139,8 @@ export default function EditAccountPage() {
         submitting={saving}
         showReset
         submitLabel="Lưu thay đổi"
-        showDepartment={true}
-        showRole={true}
-        departments={departments}
-        roles={ROLE_OPTIONS as RoleOption[]}
-        departmentsLoading={deptLoading}
+        showDepartment={false}
+        showRole={false}
         disableEmail={true}
       />
     </div>

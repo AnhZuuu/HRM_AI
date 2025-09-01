@@ -16,6 +16,7 @@ import { AccountTable } from "@/components/account/accountTable";
 import { authFetch } from "@/app/utils/authFetch";
 import API from "@/api/api";
 import { useRouter } from "next/navigation";
+import { isAdmin } from "@/lib/auth";
 
 type Department = {
   id: string;
@@ -146,10 +147,12 @@ export default function AccountPage() {
             Quản lý các tài khoản trên hệ thống
           </p>
         </div>
-        <Button onClick={() => router.push("/dashboard/accounts/create")}>
-          <Plus className="h-4 w-4 mr-2" />
-          Tạo tài khoản
-        </Button>
+        {isAdmin() && ( 
+          <Button onClick={() => router.push("/dashboard/accounts/create")}>
+            <Plus className="h-4 w-4 mr-2" />
+            Tạo tài khoản
+          </Button>
+        )}
       </div>
 
       <Card>

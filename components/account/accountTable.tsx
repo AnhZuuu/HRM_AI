@@ -35,14 +35,11 @@ import { Separator } from "../ui/separator";
 import { useEffect, useState } from "react";
 import ConfirmBlockDialog from "./handleBlockAccount";
 import API from "@/api/api";
+import { isAdmin } from "@/lib/auth";
+import { fmtDate } from "@/app/utils/helper";
 
 interface AccountTableProps {
   accounts: Account[];
-}
-
-function formatDate(date: string | null) {
-  if (!date) return "—";
-  return new Date(date).toLocaleDateString();
 }
 
 function statusBadgeClass(deleted: boolean) {
@@ -130,7 +127,7 @@ export function AccountTable({ accounts }: AccountTableProps) {
                   {a.isDeleted ? "Đã khóa" : "Hoạt động"}
                 </Badge>
               </TableCell>
-              <TableCell>{formatDate(a.creationDate)}</TableCell>
+              <TableCell>{fmtDate(a.creationDate)}</TableCell>
               <TableCell className="text-right">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -145,36 +142,40 @@ export function AccountTable({ accounts }: AccountTableProps) {
                       <Eye className="mr-2 h-4 w-4" />
                       Chi tiết
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={() =>
-                        router.push(`/dashboard/accounts/${a.id}/edit`)
-                      }
-                    >
-                      <Edit className="mr-2 h-4 w-4" />
-                      Chỉnh sửa
-                    </DropdownMenuItem>
-                    <Separator/>
-                    <DropdownMenuItem
-                      onClick={() => openBlockDialog(a)}
-                      className={
-                        a.isDeleted
-                          ? "text-emerald-600 focus:text-emerald-700"
-                          : "text-red-600 focus:text-red-700"
-                      }
-                    >
-                      {a.isDeleted ? (
-                        <>
-                          <LockOpen className="mr-2 h-4 w-4" />
-                          <span>Mở khóa tài khoản</span>
-                        </>
-                      ) : (
-                        <>
-                          <Lock className="mr-2 h-4 w-4" />
-                          <span>Khóa tài khoản</span>
-                        </>
-                      )}
-                  </DropdownMenuItem>
+                    {isAdmin() && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() =>
+                            router.push(`/dashboard/accounts/${a.id}/edit`)
+                          }
+                        >
+                          <Edit className="mr-2 h-4 w-4" />
+                          Chỉnh sửa
+                        </DropdownMenuItem>
+                        <Separator/>
+                        <DropdownMenuItem
+                          onClick={() => openBlockDialog(a)}
+                          className={
+                            a.isDeleted
+                              ? "text-emerald-600 focus:text-emerald-700"
+                              : "text-red-600 focus:text-red-700"
+                          }
+                        >
+                          {a.isDeleted ? (
+                            <>
+                              <LockOpen className="mr-2 h-4 w-4" />
+                              <span>Mở khóa tài khoản</span>
+                            </>
+                          ) : (
+                            <>
+                              <Lock className="mr-2 h-4 w-4" />
+                              <span>Khóa tài khoản</span>
+                            </>
+                          )}
+                      </DropdownMenuItem>
+                    </>
+                  )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </TableCell>
