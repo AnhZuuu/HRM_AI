@@ -100,9 +100,9 @@ export default function FlexibleFieldsForm({ positionName, onSave }: FlexibleFie
     <div className="max-w-6xl mx-auto p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl md:text-3xl font-bold">
-          Chi tiết vị trí: <span className="text-primary">{positionName}</span>
-        </h1>
+        <h3 className="text-sm md:text-xl font-bold">
+          Chi tiết vị trí - <span className="text-primary">{positionName}</span>
+        </h3>
         <Button onClick={handleSave} className="gap-2" disabled={saving || details.length === 0}>
           <Save className="w-4 h-4" />
           {saving ? "Đang lưu..." : "Lưu thay đổi"}
@@ -112,7 +112,7 @@ export default function FlexibleFieldsForm({ positionName, onSave }: FlexibleFie
       {/* Add New Field */}
       <Card>
         <CardHeader>
-          <CardTitle>Thêm trường mới</CardTitle>
+          <CardTitle>Thêm yêu cầu mới</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

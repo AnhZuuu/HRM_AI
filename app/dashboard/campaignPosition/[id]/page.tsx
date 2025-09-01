@@ -340,8 +340,8 @@ export default function CampaignPositionPage() {
 
                       {/* Metadata */}
                       <div className="text-xs text-muted-foreground">
-                        <div>ID ứng viên: {applicant.id}</div>
-                        <div>Ngày nộp: {formatDate(applicant.creationDate)}</div>
+                        {/* <div>ID ứng viên: {applicant.id}</div> */}
+                        <div>Ngày đăng tải: {formatDate(applicant.creationDate)}</div>
                       </div>
                     </div>
                   )}

@@ -15,6 +15,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
+import { isHR } from "@/lib/auth";
 import {
   ClipboardList,
   History,
@@ -320,7 +321,7 @@ export default function OnboardDetailSheet({
                 )}
               </CardContent>
             </Card>
-            {isPending && (
+            {isPending && isHR() && (
               <div className="flex items-center gap-2">
                 <Button
                   onClick={doApprove}
@@ -339,6 +340,9 @@ export default function OnboardDetailSheet({
                   {submitting === "reject" ? "Đang từ chối..." : "Từ chối"}
                 </Button>
               </div>
+            )}
+            {isPending && !isHR() && (
+              <div className="text-sm text-rose-600">Onboard đang chờ HR phê duyệt</div>
             )}
           </div>
         </div>

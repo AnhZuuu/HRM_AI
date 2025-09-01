@@ -95,7 +95,7 @@ export default function HandleUpdateCandidate({
       { value: 1 as const, label: "Rejected" },
       { value: 2 as const, label: "Accepted" },
       { value: 3 as const, label: "Failed" },
-      { value: 4 as const, label: "Onboarded" },
+      // { value: 4 as const, label: "Onboarded" },
     ],
     []
   );
