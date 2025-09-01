@@ -84,6 +84,17 @@ function Breadcrumbs() {
 }
 
 /* ===== Nav items (unchanged) ===== */
+  function getDepartmentIdFromLS(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return localStorage.getItem("departmentId");
+  } catch {
+    return null;
+  }
+}
+
+const depId = getDepartmentIdFromLS();
+
 type NavItem = { name: string; href: string; icon: React.ComponentType<{ className?: string }>; allow?: Role[]; };
 const NAVIGATION: NavItem[] = [
   { name: "Thống kê", href: "/dashboard", icon: Home },
@@ -92,7 +103,8 @@ const NAVIGATION: NavItem[] = [
   { name: "Mail", href: "/dashboard/mail", icon: Mail, allow: [Role.Admin] },
   { name: "Đợt tuyển dụng", href: "/dashboard/campaigns", icon: Megaphone, allow: [Role.HR, Role.DeparmentManager] },
   { name: "Vị trí ứng tuyển", href: "/dashboard/campaignPosition", icon: BriefcaseBusiness, allow: [Role.HR, Role.DeparmentManager] },
-  { name: "Phòng ban", href: "/dashboard/departments", icon: Building2Icon, allow: [Role.HR, Role.DeparmentManager, Role.Admin] },
+  { name: "Phòng ban", href: "/dashboard/departments", icon: Building2Icon, allow: [Role.HR, Role.Admin] },
+  { name: "Phòng ban", href: `/dashboard/departments/${depId}`, icon: Building2Icon, allow: [ Role.DeparmentManager] },
   { name: "Lịch", href: "/dashboard/schedules", icon: CalendarRange },
   { name: "Loại phỏng vấn", href: "/dashboard/interviewTypes", icon: Shapes, allow: [Role.HR, Role.Admin] },
   { name: "Onboard", href: "/dashboard/onboards", icon: ReceiptText, allow: [Role.HR, Role.DeparmentManager] },
