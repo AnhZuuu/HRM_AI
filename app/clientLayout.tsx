@@ -21,10 +21,11 @@ import { getRoleLabels, hasAnyRole, Role } from "@/lib/auth";
 
 /* ===== Breadcrumbs (unchanged) ===== */
 const LABELS: Record<string, string> = {
+  accounts: "Tài khoản",
   dashboard: "Dashboard",
   candidates: "Ứng viên",
   campaigns: "Đợt tuyển dụng",
-  mail: "Mail",
+  mail: "Mẫu mail",
   schedules: "Lịch phỏng vấn",
   department: "Phòng ban",
   departments: "Phòng ban",
@@ -33,6 +34,9 @@ const LABELS: Record<string, string> = {
   interviewStage: "Vòng phỏng vấn",
   onboards: "on-board",
   campaignPosition: "Vị trí ứng tuyển",
+  new: "Tạo mới",
+  edit: "Chỉnh sửa",
+  suggest: "Gợi ý"
 };
 const inter = Inter({ subsets: ["latin"] });
 

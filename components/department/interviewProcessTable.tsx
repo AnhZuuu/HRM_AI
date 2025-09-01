@@ -45,7 +45,7 @@ export type BackendInterviewProcess = {
   description: string | null;
   countOfStage: number;
   interviewStageModels: BackendInterviewStage[];
-   departmentId?: string | null;
+  departmentId?: string | null;
 };
 
 /**
@@ -115,7 +115,7 @@ export default function InterviewProcessTable({
   departmentId
 }: {
   items?: BackendInterviewProcess[];
-  departmentId : string
+  departmentId: string
 }) {
   const router = useRouter();
 
@@ -146,25 +146,25 @@ export default function InterviewProcessTable({
   const [addStageFor, setAddStageFor] = useState<UiProcess | null>(null);
 
 
-const handleStageCreated = (stage: CreatedStage) => {
-  const mapped: UiStage = {
-    id: `st-${Date.now()}`,
-    stageName: stage.name,
-    description: stage.description || null,
-    order: Number(stage.order ?? 0),
-    totalTime: Number(stage.duration ?? 0),
-    typeName: stage.typeName || stage.typeCode || null,
-  }
+  const handleStageCreated = (stage: CreatedStage) => {
+    const mapped: UiStage = {
+      id: `st-${Date.now()}`,
+      stageName: stage.name,
+      description: stage.description || null,
+      order: Number(stage.order ?? 0),
+      totalTime: Number(stage.duration ?? 0),
+      typeName: stage.typeName || stage.typeCode || null,
+    }
 
-  if (!addStageFor) return
-  setData((prev) =>
-    prev.map((p) =>
-      p.id === addStageFor.id ? { ...p, stages: [...(p.stages ?? []), mapped] } : p
+    if (!addStageFor) return
+    setData((prev) =>
+      prev.map((p) =>
+        p.id === addStageFor.id ? { ...p, stages: [...(p.stages ?? []), mapped] } : p
+      )
     )
-  )
-  setAddStageOpen(false)
-  setAddStageFor(null)
-}
+    setAddStageOpen(false)
+    setAddStageFor(null)
+  }
 
 
   const openStages = (proc: UiProcess) => {
@@ -177,19 +177,69 @@ const handleStageCreated = (stage: CreatedStage) => {
     setNewDesc("");
   };
 
-  const handleAddProcess = () => {
-    if (!newName.trim()) return;
-    const id = `proc-${Date.now()}`;
-    const next: UiProcess = {
-      id,
-      processName: newName.trim(),
-      description: newDesc.trim() || null,
-      stages: [],
-    };
-    setData((prev) => [next, ...prev]);
-    setOpenAdd(false);
-    resetAddForm();
+  // add this near other state:
+  const [savingAdd, setSavingAdd] = useState(false);
+
+  // replace handleAddProcess with this async version:
+  const handleAddProcess = async () => {
+    const processName = newName.trim();
+    const description = (newDesc ?? "").trim() || null;
+
+    if (!processName) {
+      toast.error("Vui lòng nhập Tên quy trình.");
+      return;
+    }
+    if (!departmentId) {
+      toast.error("Thiếu departmentId để tạo quy trình.");
+      return;
+    }
+
+    setSavingAdd(true);
+    try {
+      const res = await authFetch(API.INTERVIEW.PROCESS, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          departmentId,           // required by your POST contract
+          processName,
+          description,
+        }),
+      });
+
+      const json = await res.json().catch(() => ({} as any));
+
+      // Accept either {status:true,data:{...}} or plain 2xx w/ object
+      if (!res.ok || json?.status === false) {
+        throw new Error(json?.message || "Tạo quy trình thất bại.");
+      }
+
+      // Prefer server-returned process; otherwise synthesize from inputs
+      const server = json?.data ?? json;
+      const created: UiProcess = server?.id
+        ? normalizeProcess(server as BackendInterviewProcess)
+        : {
+          id: `proc-${Date.now()}`,
+          processName,
+          description,
+          stages: [],
+          departmentId,
+        };
+
+      setData((prev) => [created, ...prev]);
+      toast.success("Đã tạo quy trình.");
+      setOpenAdd(false);
+      setNewName("");
+      setNewDesc("");
+
+      // If you want to be perfectly in sync with server list:
+      // router.refresh();
+    } catch (e: any) {
+      toast.error(e?.message || "Không thể tạo quy trình.");
+    } finally {
+      setSavingAdd(false);
+    }
   };
+
 
   const openEditDialog = (proc: UiProcess) => {
     setEditing(proc);
@@ -202,7 +252,7 @@ const handleStageCreated = (stage: CreatedStage) => {
     if (!editing) return;
     const id = editing.id;
     const body = {
-      departmentId: departmentId, 
+      departmentId: departmentId,
       processName: editName.trim(),
       description: (editDesc ?? "").trim() || null,
     };
@@ -233,10 +283,10 @@ const handleStageCreated = (stage: CreatedStage) => {
         prev.map((p) =>
           p.id === id
             ? {
-                ...p,
-                processName: body.processName,
-                description: body.description,
-              }
+              ...p,
+              processName: body.processName,
+              description: body.description,
+            }
             : p
         )
       );
@@ -427,10 +477,12 @@ const handleStageCreated = (stage: CreatedStage) => {
           </div>
 
           <DialogFooter className="mt-4">
-            <Button variant="secondary" onClick={() => { setOpenAdd(false); setNewName(""); setNewDesc(""); }}>
+            <Button variant="secondary" onClick={() => { if (!savingAdd) { setOpenAdd(false); setNewName(""); setNewDesc(""); } }} disabled={savingAdd}>
               Hủy
             </Button>
-            <Button onClick={handleAddProcess}>Lưu</Button>
+            <Button onClick={handleAddProcess} disabled={savingAdd}>
+              {savingAdd ? "Đang lưu..." : "Lưu"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
