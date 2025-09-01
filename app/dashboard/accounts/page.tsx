@@ -232,12 +232,12 @@ export default function AccountPage() {
       <Card>
         <CardHeader>
           <CardTitle>
-            Tất cả tài khoản{" "}
+            {/* Tất cả tài khoản{" "}
             {!loading && !error ? (
               <span className="text-gray-500">
                 ({filtered.length} / {items.length} tài khoản trong trang này)
               </span>
-            ) : null}
+            ) : null} */}
           </CardTitle>
         </CardHeader>
         <CardContent>

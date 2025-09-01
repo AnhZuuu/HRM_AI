@@ -55,7 +55,7 @@ export function ProfileCard({ data, onEdit, onChangePassword, showEdit = true, s
               <div className="flex items-center gap-3 flex-wrap">
                 <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">{data.firstName}</h1>
                 {primaryRole?.roleName && (
-                  <Badge className={`text-xs ${ROLE_MAP_COLOR[primaryRole.role ?? 0].className}`}>
+                  <Badge className={`text-xs ${ROLE_MAP_COLOR[primaryRole.role ?? 0]}`}>
                     {primaryRole.roleName}
                   </Badge>
                 )}
