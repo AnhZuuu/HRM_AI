@@ -89,6 +89,7 @@ const LoginPage = () => {
       localStorage.setItem("refreshTokenExpires", data.refreshTokenExpires);
       localStorage.setItem("email", data.data.email);
       localStorage.setItem("name", data.data.name);
+      localStorage.setItem("departmentId", data.data.departmentId);
 
       // Save full roles for reference
       localStorage.setItem("roles", JSON.stringify(data.data.roles));
