@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Save, X } from "lucide-react";
 import API from "@/api/api";               // should expose API_BASE_URL or BASE_URL
 import { authFetch } from "@/app/utils/authFetch"; // if you use tokenized fetch
+import { toast } from "react-toastify";
 
 type ApiEnvelope<T> = {
   code: number;
@@ -79,8 +80,10 @@ export default function NewInterviewTypePage() {
       }
 
       const created = json.data;
-      alert(`Tạo thành công${created?.code ? `: ${created.code}` : ""}`);
-      router.push("/dashboard/interviewTypes");
+      // alert(`Tạo thành công${created?.code ? `: ${created.code}` : ""}`);
+      toast.success(`Tạo thành công`);
+      // router.push("/dashboard/interviewTypes");
+      setTimeout(() => router.push("/dashboard/interviewTypes"), 500);
     } catch (e: any) {
       setErr(e?.message ?? "Lưu thất bại.");
     } finally {

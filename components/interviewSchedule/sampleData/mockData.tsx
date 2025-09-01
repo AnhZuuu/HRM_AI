@@ -204,7 +204,7 @@ export const mockInterviewTypes: InterviewType[] = [
 export const mockInterviewSchedule: InterviewSchedule[] = [
   {
     id: "is-001",
-    cvApplicantId: "cv-01",
+    cvApplicantId: "app-001",
     cvApplicant: {
       id: "cv-01",
       fullName: "Nguyễn Văn A",

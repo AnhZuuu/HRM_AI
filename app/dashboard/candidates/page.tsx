@@ -19,9 +19,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, Filter, MoreHorizontal, Mail, Phone, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { authFetch } from "@/app/utils/authFetch";
+import { formatISODate } from "@/app/utils/helper";
 import API from "@/api/api";
 
-// ---------- Types ----------
+/* ---------- Types ---------- */
 type ApiEnvelope<T> = {
   code: number;
   status: boolean;
@@ -39,102 +40,92 @@ type CvApplicantDetail = {
 
 type CvApplicant = {
   id: string;
-  fullName: string;
-  email: string;
-  point: string; // "36/100" format
-  status: 0 | 1 | 2 | 3; // 0 Pending, 1 Reviewed, 2 Rejected, 3 Accepted
+  fullName: string | null;
+  email: string | null;
+  point: string | null; // e.g. "36/100"
+  // New status mapping:
+  // 0: Pending, 1: Rejected, 2: Accepted, 3: Failed, 4: Onboarded
+  status: 0 | 1 | 2 | 3 | 4;
   campaignPositionId?: string | null;
+  campaignPositionDescription?: string | null;
   fileUrl?: string | null;
   fileAlt?: string | null;
   cvApplicantDetailModels?: CvApplicantDetail[];
-  creationDate?: string;
+  creationDate?: string | null;
 };
 
-type Paged<T> = {
+type FlatList<T> = {
   data: T[];
-  currentPage: number;
-  pageSize: number;
-  totalPages: number;
+  // server might add paging fields, but we ignore them now
 };
 
-// ---------- Helpers ----------
+/* ---------- Helpers ---------- */
 const STATUS_LABEL: Record<CvApplicant["status"], string> = {
   0: "Pending",
-  1: "Reviewed",
-  2: "Rejected",
-  3: "Accepted",
+  1: "Rejected",
+  2: "Accepted",
+  3: "Failed",
+  4: "Onboarded",
 };
 
 const statusBadgeClass = (s: CvApplicant["status"]) => {
   switch (s) {
-    case 3:
-      return "bg-green-100 text-green-800";
-    case 1:
-      return "bg-purple-100 text-purple-800";
-    case 0:
+    case 4:
       return "bg-blue-100 text-blue-800";
     case 2:
+      return "bg-green-100 text-green-800";
+    case 1:
       return "bg-red-100 text-red-800";
+    case 0:
+      return "bg-yellow-100 text-blue-800";
+    case 3:
+      return "bg-red-300 text-red-800";
     default:
       return "bg-gray-100 text-gray-800";
   }
 };
 
-const shortId = (id?: string | null) => (id ? `${id.slice(0, 8)}…` : "—");
-
-const formatISODate = (iso?: string) => {
-  if (!iso) return "—";
-  try {
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return "—";
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const dd = String(d.getDate()).padStart(2, "0");
-    return `${yyyy}-${mm}-${dd}`;
-  } catch {
-    return "—";
-  }
-};
-
-// ---------- Component ----------
 export default function CandidatesPage() {
   const router = useRouter();
   const { toast } = useToast();
 
   // UI state
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "0" | "1" | "2" | "3">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "0" | "1" | "2" | "3" | "4">("all");
 
   // Data state
   const [items, setItems] = useState<CvApplicant[]>([]);
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(10);
-  const [totalPages, setTotalPages] = useState(1);
+  const [pageSize] = useState(5);
 
   // Loading / error
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch data
+  /* ---------- Fetch all (no server pagination) ---------- */
   useEffect(() => {
     let cancelled = false;
+
     (async () => {
       setLoading(true);
       setError(null);
       try {
-        const res = await authFetch(`${API.CV.APPLICANT}?page=${page}&pageSize=${pageSize}`, {
-          method: "GET",
-        });
+        // Removed ?page=&pageSize= — we pull everything and paginate client-side
+        const res = await authFetch(`${API.CV.APPLICANT}`, { method: "GET" });
         const text = await res.text();
-        const json: ApiEnvelope<Paged<CvApplicant>> = text ? JSON.parse(text) : ({} as any);
+        const json: ApiEnvelope<FlatList<CvApplicant> | any> = text ? JSON.parse(text) : ({} as any);
 
         if (!res.ok || !json?.status) {
           throw new Error(json?.message || "Failed to load applicants");
         }
 
+        // The API you showed has data: { data: [...] }
+        // Normalize to items[]
+        const raw = json.data;
+        const array = Array.isArray(raw?.data) ? raw.data : Array.isArray(raw) ? raw : [];
+
         if (!cancelled) {
-          setItems(json.data?.data ?? []);
-          setTotalPages(json.data?.totalPages ?? 1);
+          setItems(array as CvApplicant[]);
         }
       } catch (e: any) {
         if (!cancelled) {
@@ -149,35 +140,47 @@ export default function CandidatesPage() {
         if (!cancelled) setLoading(false);
       }
     })();
+
     return () => {
       cancelled = true;
     };
-  }, [page, pageSize, toast]);
+  }, [toast]);
 
-  // Client-side filter/search
+  /* ---------- Client-side search + filter ---------- */
   const filtered = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
     return items.filter((c) => {
       const matchesSearch =
         !term ||
-        c.fullName?.toLowerCase().includes(term) ||
-        c.email?.toLowerCase().includes(term) ||
-        c.point?.toLowerCase().includes(term);
+        (c.fullName ?? "").toLowerCase().includes(term) ||
+        (c.email ?? "").toLowerCase().includes(term) ||
+        (c.point ?? "").toLowerCase().includes(term) ||
+        (c.campaignPositionDescription ?? "").toLowerCase().includes(term);
+
       const matchesStatus = statusFilter === "all" || String(c.status) === statusFilter;
       return matchesSearch && matchesStatus;
     });
   }, [items, searchTerm, statusFilter]);
+
+  /* ---------- Client-side pagination ---------- */
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const startIndex = (page - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paged = filtered.slice(startIndex, endIndex);
+
+  // Reset to page 1 if filters change and current page would be out of range
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, statusFilter]);
 
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Candidates</h1>
-          <p className="text-gray-600 mt-1">Manage your candidate pipeline</p>
+          <h1 className="text-3xl font-bold text-gray-900">Trang ứng viên</h1>
+          <p className="text-gray-600 mt-1">Quản lý ứng viên của bạn</p>
         </div>
-
-        {/* (Optional) Actions on header — kept minimal for read-only list */}
       </div>
 
       {/* Filters */}
@@ -188,7 +191,7 @@ export default function CandidatesPage() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
-                  placeholder="Search by name, email, or point…"
+                  placeholder="Search by name, email, point, or position…"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -197,16 +200,17 @@ export default function CandidatesPage() {
             </div>
             <div className="flex gap-2">
               <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
-                <SelectTrigger className="w-[200px]">
+                <SelectTrigger className="w-[220px]">
                   <Filter className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="0">Pending</SelectItem>
-                  <SelectItem value="1">Reviewed</SelectItem>
-                  <SelectItem value="2">Rejected</SelectItem>
-                  <SelectItem value="3">Accepted</SelectItem>
+                  <SelectItem value="all">Tất cả trạng thái</SelectItem>
+                  <SelectItem value="0">Đang chờ</SelectItem>
+                  <SelectItem value="1">Đã từ chối</SelectItem>
+                  <SelectItem value="2">Đã chấp nhận</SelectItem>
+                  <SelectItem value="3">Thất bại</SelectItem>
+                  <SelectItem value="4">Onboard</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -218,62 +222,71 @@ export default function CandidatesPage() {
       <Card>
         <CardHeader>
           <CardTitle>
-            All Candidates{" "}
+            Tất cả ứng viên{" "}
             {!loading && !error ? (
-              <span className="text-gray-500">({filtered.length} of {items.length})</span>
+              <span className="text-gray-500">
+               Đang hiển thị ({paged.length} trên {filtered.length})
+              </span>
             ) : null}
           </CardTitle>
         </CardHeader>
+
         <CardContent>
-          {/* Loading / Error states */}
           {loading ? (
-            <div className="p-6 text-sm text-gray-500">Loading candidates…</div>
+            <div className="p-6 text-sm text-gray-500">Đang tải ứng viên…</div>
           ) : error ? (
-            <div className="p-6 text-sm text-red-600">Error: {error}</div>
+            <div className="p-6 text-sm text-red-600">Lỗi: {error}</div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Full Name</TableHead>
+                    <TableHead>Họ tên</TableHead>
                     <TableHead>Email</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Point</TableHead>
-                    <TableHead>Campaign Position</TableHead>
-                    <TableHead>Applied</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    {/* Updated header to reflect the new status mapping */}
+                    <TableHead>Trạng thái</TableHead>
+                    <TableHead>Điểm</TableHead>
+                    <TableHead>Vị trí ứng tuyển</TableHead>
+                    <TableHead>Ngày đăng tải</TableHead>
+                    <TableHead className="text-right">Hành động</TableHead>
                   </TableRow>
                 </TableHeader>
+
                 <TableBody>
-                  {filtered.map((c) => (
+                  {paged.map((c) => (
                     <TableRow key={c.id}>
                       <TableCell className="font-medium">{c.fullName || "—"}</TableCell>
+
                       <TableCell>
                         <div className="text-sm text-gray-700 flex items-center gap-2">
                           <Mail className="h-3 w-3" />
                           {c.email || "—"}
                         </div>
-                        {/* If phone is parsed in future from details, show it here */}
                         {false && (
                           <div className="text-xs text-gray-500 flex items-center gap-2">
                             <Phone className="h-3 w-3" /> +84 …
                           </div>
                         )}
                       </TableCell>
+
                       <TableCell>
-                        <Badge className={statusBadgeClass(c.status)}>{STATUS_LABEL[c.status]}</Badge>
+                        <Badge className={statusBadgeClass(c.status)}>
+                          {STATUS_LABEL[c.status]}
+                        </Badge>
                       </TableCell>
+
                       <TableCell>{c.point || "—"}</TableCell>
+
                       <TableCell>
-                        {/* You don't have the joined entity yet; show a friendly placeholder */}
                         <span className="inline-flex items-center gap-2">
                           <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-xs">
-                            {shortId(c.campaignPositionId)}
+                            {c.campaignPositionDescription || "—"}
                           </span>
-                          <span className="text-gray-400 text-xs">(position)</span>
                         </span>
                       </TableCell>
-                      <TableCell>{formatISODate(c.creationDate)}</TableCell>
+
+                      <TableCell>{formatISODate(c.creationDate || undefined)}</TableCell>
+
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -282,12 +295,10 @@ export default function CandidatesPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem
-                              onClick={() => router.push(`/dashboard/candidates/${c.id}`)}
-                            >
+                            <DropdownMenuLabel>Hành động</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => router.push(`/dashboard/candidates/${c.id}`)}>
                               <Eye className="mr-2 h-4 w-4" />
-                              View Details
+                              Xem chi tiết
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
@@ -304,10 +315,11 @@ export default function CandidatesPage() {
                       </TableCell>
                     </TableRow>
                   ))}
-                  {filtered.length === 0 && (
+
+                  {paged.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center text-sm text-gray-500 py-8">
-                        No candidates found.
+                        Không tìm thấy ứng viên nào.
                       </TableCell>
                     </TableRow>
                   )}
@@ -316,7 +328,7 @@ export default function CandidatesPage() {
             </div>
           )}
 
-          {/* Pagination */}
+          {/* Client-side Pagination */}
           {!loading && !error && totalPages > 1 && (
             <div className="flex items-center justify-between mt-4">
               <div className="text-sm text-gray-500">

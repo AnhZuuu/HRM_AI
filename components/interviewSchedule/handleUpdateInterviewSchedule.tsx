@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { authFetch } from "@/app/utils/authFetch";
+import { toast } from "react-toastify";
 
 // -------- Types (keep in sync with your app) --------
 interface Campaign { id: string; name: string }
@@ -309,7 +310,7 @@ const bootRef = useRef<boolean>(true);
       // Adjust this route to your list/details page
       router.push("/dashboard/interview-schedules");
     } catch (err: any) {
-      alert(err?.message ?? "Lỗi cập nhật");
+      toast.error(err?.message ?? "Lỗi cập nhật");
     } finally {
       setBusy(false);
     }

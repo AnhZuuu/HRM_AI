@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -9,15 +9,27 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Loader2, RefreshCcw } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import API from "@/api/api";               // adjust if your API export differs
+import API from "@/api/api";
 import { authFetch } from "@/app/utils/authFetch";
 
 type TemplateTypeOption = { value: string; label: string };
+
+/**
+ * Use numeric string values ("0"…"5") so the backend gets numbers every time.
+ * 0: Xác minh email
+ * 1: (chưa làm)
+ * 2: Thông báo lịch phỏng vấn
+ * 3: Thông báo offer
+ * 4: (chưa làm)
+ * 5: Thư mới / Newsletter
+ */
 const DEFAULT_TYPE_OPTIONS: TemplateTypeOption[] = [
-  { value: "VERIFY_EMAIL", label: "Xác minh email" },
-  { value: "RESET_PASSWORD", label: "Lấy lại mật khẩu" },
-  { value: "WELCOME", label: "Chào mừng" },
-  { value: "NEWSLETTER", label: "Thư mới" },
+  { value: "0", label: "Xác minh email" },                // VERIFY_EMAIL
+  { value: "1", label: "Thông báo kết quả phỏng vấn" },           
+  { value: "2", label: "Thông báo lịch phỏng vấn" },
+  { value: "3", label: "Thông báo offer" },
+  { value: "4", label: "Kết quả ứng tuyển" },           
+  { value: "5", label: "Thư mới (Newsletter)" },
 ];
 
 const EMAILS_URL = `${API.MAIL.BASE}`;
@@ -35,6 +47,7 @@ export default function EmailTemplateEditor({
 }) {
   const { toast } = useToast();
 
+  // "type" holds a numeric string "0"…"5"
   const [type, setType] = useState("");
   const [templateId, setTemplateId] = useState<string | null>(null);
   const [subject, setSubject] = useState("");
@@ -43,45 +56,87 @@ export default function EmailTemplateEditor({
   const [saving, setSaving] = useState(false);
   const [touched, setTouched] = useState(false);
 
+  // AbortController to cancel older requests when switching fast
+  const abortRef = useRef<AbortController | null>(null);
+
   const canSave = useMemo(
     () => Boolean(templateId && subject.trim() && body.trim()) && !loading && !saving,
     [templateId, subject, body, loading, saving]
   );
 
-  const fetchTemplate = async (templateType: string) => {
+  const resetFields = () => {
+    setTemplateId(null);
+    setSubject("");
+    setBody("");
+    setTouched(false);
+  };
+
+  const fetchTemplate = async (emailTypeStr: string) => {
+    // cancel any in-flight request
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setLoading(true);
+    resetFields();
+
     try {
-      const url = `${EMAILS_URL}?type=${encodeURIComponent(templateType)}`;
-      const res = await authFetch(url, { method: "GET" });
-      if (!res.ok) {
-        const msg = (await res.text()) || "Failed to load template";
-        throw new Error(msg);
+      // Ensure number for backend
+      const emailType = Number(emailTypeStr);
+      if (!Number.isFinite(emailType)) {
+        throw new Error("Loại mẫu không hợp lệ.");
       }
-      const data = await unwrap(res); // expect: { id, subject, body }
+
+      const url = `${EMAILS_URL}?emailType=${emailType}`;
+      const res = await authFetch(url, { method: "GET", signal: controller.signal });
+
+      if (!res.ok) {
+        // For unimplemented types (1, 4), backend may return 400/404.
+        // We’ll show a friendly note and keep fields empty.
+        const txt = await res.text();
+        let msg = "Không tải được mẫu email.";
+        try {
+          const j = txt ? JSON.parse(txt) : null;
+          msg = j?.message || msg;
+        } catch {
+          /* ignore parse error */
+        }
+        // Only toast if not aborted
+        if (!controller.signal.aborted) {
+          toast({
+            title: "Không tải được mẫu",
+            description: msg || "Mẫu chưa triển khai hoặc không tồn tại.",
+            variant: "destructive",
+          });
+        }
+        resetFields();
+        return;
+      }
+
+      const data = await unwrap(res); // expect: { id, subject, body } or null
+
+      if (controller.signal.aborted) return; // ignore if aborted
+
       setTemplateId(data?.id ?? null);
       setSubject(data?.subject ?? "");
       setBody(data?.body ?? "");
       setTouched(false);
     } catch (err: any) {
-      setTemplateId(null);
-      setSubject("");
-      setBody("");
+      if (err?.name === "AbortError") return; // ignore aborted fetch
       toast({
-        title: "Không tải được mẫu email",
+        title: "Lỗi tải mẫu",
         description: err?.message || "Vui lòng thử lại.",
         variant: "destructive",
       });
+      resetFields();
     } finally {
-      setLoading(false);
+      if (!abortRef.current?.signal.aborted) setLoading(false);
     }
   };
 
   useEffect(() => {
     if (!type) {
-      setTemplateId(null);
-      setSubject("");
-      setBody("");
-      setTouched(false);
+      resetFields();
       return;
     }
     fetchTemplate(type);
@@ -90,17 +145,16 @@ export default function EmailTemplateEditor({
 
   const handleSave = async () => {
     if (!templateId) {
-      toast({ title: "Chưa có templateId. Vui lòng chọn type hợp lệ.", variant: "destructive" });
+      toast({ title: "Chưa có templateId.", description: "Vui lòng chọn loại mẫu đã triển khai.", variant: "destructive" });
       return;
     }
     if (!subject.trim() || !body.trim()) {
-      toast({ title: "Vui lòng nhập đầy đủ subject và body.", variant: "destructive" });
+      toast({ title: "Thiếu dữ liệu", description: "Vui lòng nhập đầy đủ subject và body.", variant: "destructive" });
       return;
     }
 
     try {
       setSaving(true);
-      // PUT /emails/{id} with { subject, body }
       const res = await authFetch(`${EMAILS_URL}/${templateId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -113,15 +167,13 @@ export default function EmailTemplateEditor({
         try {
           const j = txt ? JSON.parse(txt) : null;
           message = j?.message || message;
-        } catch {
-          /* ignore */
-        }
+        } catch { /* ignore */ }
         throw new Error(message);
       }
 
       await unwrap(res);
       setTouched(false);
-      toast({ title: "Đã lưu mẫu email", description: `Type: ${type}` });
+      toast({ title: "Đã lưu mẫu email", description: `Loại: ${type}` });
     } catch (err: any) {
       toast({
         title: "Không thể lưu mẫu email",
@@ -137,7 +189,7 @@ export default function EmailTemplateEditor({
     <div className="p-6 max-w-2xl mx-auto">
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl text-gray-900">📧 Email Template Editor</CardTitle>
+          <CardTitle className="text-2xl text-gray-900">📧 Chỉnh sửa mẫu email</CardTitle>
         </CardHeader>
 
         <CardContent className="space-y-5">
@@ -178,11 +230,7 @@ export default function EmailTemplateEditor({
 
           {/* Body (HTML with placeholders) */}
           <div className="space-y-2">
-            <Label htmlFor="body">
-              {/* Escape the curly braces in JSX: */}
-              {/* Nội dung (body, hỗ trợ HTML + {"{{Placeholders}}"}) * */}
-              Nội dung*
-            </Label>
+            <Label htmlFor="body">Nội dung*</Label>
             <Textarea
               id="body"
               rows={10}
@@ -195,7 +243,7 @@ export default function EmailTemplateEditor({
               disabled={!type || loading}
             />
             <p className="text-xs text-muted-foreground">
-              Lưu ý: Không đổi tên các placeholder {"("}ví dụ {"{{UserName}}"}, {"{{VerificationCode}}"}, {"{{ExpiryMinutes}}"}{")"} nếu backend đang dùng chúng.
+              Lưu ý: Không đổi tên các placeholder (ví dụ {"{{UserName}}"}, {"{{VerificationCode}}"}, {"{{ExpiryMinutes}}"}) nếu backend đang dùng chúng.
             </p>
           </div>
 
