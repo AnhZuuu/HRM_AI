@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { MoreHorizontal, Eye, CalendarPlus, Loader2, Filter } from "lucide-react";
+import { MoreHorizontal, Eye, CalendarPlus, Loader2, Filter, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -105,15 +105,15 @@ function normalizeCandidates(payload: any): Candidate[] {
     const departmentId = deptModel?.id ?? null;
     const department: Department[] | null = deptModel
       ? [
-          {
-            id: String(deptModel.id),
-            departmentName: deptModel.departmentName ?? "",
-            code: deptModel.code ?? null,
-            description: deptModel.description ?? null,
-            campaignPositionModels: deptModel.campaignPositionModels ?? [],
-            employees: deptModel.employees ?? [],
-          },
-        ]
+        {
+          id: String(deptModel.id),
+          departmentName: deptModel.departmentName ?? "",
+          code: deptModel.code ?? null,
+          description: deptModel.description ?? null,
+          campaignPositionModels: deptModel.campaignPositionModels ?? [],
+          employees: deptModel.employees ?? [],
+        },
+      ]
       : null;
 
     return {
@@ -359,6 +359,13 @@ export default function CandidatesPage() {
             <Button variant="outline" onClick={clearFilters}>
               Reset
             </Button>
+            <Button 
+            asChild className="bg-blue-600 hover:bg-blue-700">
+              <Link href="/dashboard/schedules/new/suggest">
+                <Plus className="w-4 h-4 mr-2" />
+                Gợi ý lịch
+              </Link>
+            </Button>
           </div>
         </div>
 
@@ -490,11 +497,11 @@ export default function CandidatesPage() {
       </div>
 
       {/* Modal V1 (giữ nguyên behavior với stageId) */}
-      <ScheduleModal 
-      open={open} 
-      onOpenChange={setOpen} 
-      candidate={activeCandidate}
-      onScheduled={refetchCandidates}
+      <ScheduleModal
+        open={open}
+        onOpenChange={setOpen}
+        candidate={activeCandidate}
+        onScheduled={refetchCandidates}
       />
 
       {/* Modal V2 (payload: interviewStageId) */}
