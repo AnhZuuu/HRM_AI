@@ -25,7 +25,9 @@ export const OUTCOME_STATUS: Record<number, { label: string; className: string }
 };
 
 export const INTERVIEW_STATUS_MAP: Record<number, { label: string; className: string }> = {
-  0: { label: "Scheduled", className: "bg-blue-100 text-blue-700" },
-  1: { label: "Completed", className: "bg-emerald-100 text-emerald-700" },
-  2: { label: "Canceled", className: "bg-rose-100 text-rose-700" },
+  0: { label: "Pending", className: "bg-blue-100 text-blue-700" },
+  1: { label: "Canceled", className: "bg-slate-200 text-slate-700 border-slate-300" },
+  2: { label: "Pass", className: "bg-emerald-100 text-emerald-700" },
+  3: { label: "Fail", className: "bg-rose-100 text-rose-700" },
+
 };

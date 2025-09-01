@@ -13,6 +13,7 @@ import type {
 import PositionsTable from "./positionTable";
 import EmployeesTable from "./employeesTable";
 import InterviewProcessTable from "./interviewProcessTable";
+import { fmtDate } from "@/app/utils/helper";
 
 
 export default function DepartmentDetailClient({ dept }: { dept: DepartmentDetail }) {
@@ -46,7 +47,8 @@ export default function DepartmentDetailClient({ dept }: { dept: DepartmentDetai
           <div className="text-xs text-muted-foreground">
             {/* ID: <span className="font-mono">{dept.id}</span> */}
             {" • "}
-            Tạo lúc: {dept.creationDate ? new Date(dept.creationDate).toLocaleString("vi-VN") : "—"}
+            {/* Tạo lúc: {dept.creationDate ? new Date(dept.creationDate).toLocaleString("vi-VN") : "—"} */}
+            Ngày tạo : {fmtDate(dept.creationDate) ?? "—"}
           </div>
         </CardContent>
       </Card>
