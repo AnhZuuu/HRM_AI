@@ -4,6 +4,7 @@ import { formatDMYHM, toMidnight } from "@/app/utils/helper";
 import AddPositionDialog from "@/components/campaignPosition/handleAddCampaignPosition";
 import CampaignPositions from "@/components/campaignPosition/positionCard";
 import { Button } from "@/components/ui/button";
+import { isHR } from "@/lib/auth";
 import { Plus } from "lucide-react";
 import { notFound } from "next/navigation";
 
@@ -225,7 +226,7 @@ export default async function CampaignDetailPage({
             {status} – {message}
           </div>
 
-          {!showAddPosition && (
+          {!showAddPosition && isHR() && (
             <AddPositionDialog campaignId={campaign.id} />
           )}
         </div>
