@@ -11,6 +11,9 @@ import {
     Target,
     Star,
     FileText,
+    X,
+    CircleCheckBig,
+    Loader,
 } from "lucide-react";
 import API from "@/api/api";
 import { authFetch } from "@/app/utils/authFetch";
@@ -33,9 +36,9 @@ type ApiEnvelope<T> = {
 };
 
 const stageIcons = [
-    CheckCircle,    // order 1
-    Users,          // order 2
-    Award,          // order 3
+    Loader,    // order 1
+    CircleCheckBig,          // order 2
+    X,    ,          // order 3
     UserCheck,      // order 4
     MessageSquare,  // order 5
     Calendar,       // order 6

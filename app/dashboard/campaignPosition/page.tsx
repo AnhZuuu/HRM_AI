@@ -156,10 +156,10 @@ export default function CampaignPositionPage() {
           <Plus className="w-4 h-4 mr-2" />
           Thêm vị trí
         </Button> */}
-        <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => notReady()}>
+        {/* <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => notReady()}>
           <Plus className="w-4 h-4 mr-2" />
           Thêm vị trí
-        </Button>
+        </Button> */}
       </div>
 
       <Card>
