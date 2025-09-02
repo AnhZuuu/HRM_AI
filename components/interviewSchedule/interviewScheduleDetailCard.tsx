@@ -7,7 +7,7 @@ import { authFetch } from "@/app/utils/authFetch";
 import { toast } from "react-toastify";
 import API from "@/api/api";
 import { FancyTextarea } from "./ui/fancyTextarea";
-import { ArrowLeft, Copy, FileText } from "lucide-react";
+import { ArrowLeft, Copy, FileText, TypeOutline, User, UserCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback } from "../ui/avatar";
 import { formatDate } from "@/app/utils/helper";
@@ -99,6 +99,11 @@ export default function InterviewScheduleDetail({ interviewScheduleId }: { inter
     }
   };
 
+  const isBeforeInterview = useMemo(() => {
+    if (!scheduleData?.startTime) return false;
+    return new Date(scheduleData.startTime) > new Date();
+  }, [scheduleData]);
+
   const handleCreateOutcome = async () => {
     setSubmitting(true);
     try {
@@ -157,10 +162,11 @@ export default function InterviewScheduleDetail({ interviewScheduleId }: { inter
                 <CardTitle className="text-lg font-semibold">Thông tin ứng viên</CardTitle>
               </CardHeader>
               <div className="relative h-24 w-24 rounded-full bg-gradient-to-b from-blue-100 to-blue-200 overflow-hidden">
-                <Avatar className="h-24 w-24 rounded-2xl ring-1 ring-border">
-                  <AvatarFallback className="text-2xl font-semibold">
-                    {/* {initials(applicant.fullName)} */}
-                  </AvatarFallback>
+                <Avatar className="h-24 w-24 rounded-2xl ring-1 ring-border bg-blue-50 flex items-end justify-center">
+                  <User className="w-20 h-20 text-gray-500" />
+                  {/* <AvatarFallback className="text-2xl font-semibold">
+                    {initials(applicant.fullName)}
+                  </AvatarFallback> */}
                 </Avatar>
               </div>
               <CardContent className="space-y-2">
@@ -288,9 +294,24 @@ export default function InterviewScheduleDetail({ interviewScheduleId }: { inter
                           </div>
                         ) : (
                           <div>
-                            <Label htmlFor="feedback"></Label>
-                            <FancyTextarea value={feedbackText} onChange={setFeedbackText} maxLength={1000} />
-                            <Button disabled={submitting} onClick={handleCreateOutcome} className="mt-2">Gửi đánh giá</Button>
+                            {isBeforeInterview ? (
+                              <div className="text-sm text-muted-foreground italic mb-4">
+                                Bạn chỉ có thể đánh giá sau khi phỏng vấn bắt đầu.
+                                <p className="text-xs text-muted-foreground">
+                                  Thời gian phỏng vấn: {formatDate(scheduleData.startTime)}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  Hiện tại: {formatDate(new Date().toISOString())}
+                                </p>
+                              </div>
+                              
+                            ) : (
+                              <div>
+                                <Label htmlFor="feedback"></Label>
+                                <FancyTextarea value={feedbackText} onChange={setFeedbackText} maxLength={1000} />
+                                <Button disabled={submitting} onClick={handleCreateOutcome} className="mt-2">Gửi đánh giá</Button>                         
+                              </div>
+                            )}
                           </div>
                         )}
                       </CardContent>
