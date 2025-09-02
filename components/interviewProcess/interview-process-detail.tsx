@@ -20,7 +20,7 @@ type InterviewStage = {
   modifiedById: string | null
   deletionDate: string | null
   deletedById: string | null
-  isDeleted: boolean
+  isDeleted: boolean | null
 }
 
 type InterviewProcessData = {
@@ -48,6 +48,8 @@ export function InterviewProcessDetail({ data }: { data: InterviewProcessData })
     [stages]
   )
 
+  console.log("DATAAAAAAAAAAAAAAAA" + data);
+  console.log("SORTED STAGESAAAAAAAAAAAAAAA" + sortedStages);
   const getStageIcon = (order: number) => {
     switch (order) {
       case 1:
@@ -161,7 +163,7 @@ export function InterviewProcessDetail({ data }: { data: InterviewProcessData })
       )}
 
       {/* Action Buttons (blue primary) */}
-      <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6">
+      {/* <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6">
         <Button size="lg" className="px-8 bg-blue-600 hover:bg-blue-600/90 text-white">
           <Calendar className="h-4 w-4 mr-2" />
           Lên Lịch Phỏng Vấn
@@ -170,10 +172,10 @@ export function InterviewProcessDetail({ data }: { data: InterviewProcessData })
           <FileText className="h-4 w-4 mr-2" />
           Xuất Báo Cáo
         </Button>
-      </div>
+      </div> */}
 
       {/* Process Info (same layout as liked UI) */}
-      <Card className="bg-muted/50">
+      {/* <Card className="bg-muted/50">
         <CardHeader>
           <CardTitle className="text-lg">Thông Tin Quy Trình</CardTitle>
         </CardHeader>
@@ -195,7 +197,7 @@ export function InterviewProcessDetail({ data }: { data: InterviewProcessData })
             <p className="text-sm">{Number(data.countOfStage) || 0} vòng</p>
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
     </div>
   )
 }

@@ -7,12 +7,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Search, Plus } from "lucide-react";
 
-// If you have these utilities in your project, keep them.
-// Falls back to window.fetch if authFetch isn't available.
 import { authFetch } from "@/app/utils/authFetch";
-import API from "@/api/api"; // should export API.API_BASE_URL or similar
+import API from "@/api/api"; 
 
-// ---------- Types ----------
 type ApiEnvelope<T> = {
   code: number;
   status: boolean;
@@ -41,10 +38,8 @@ type Row = {
   description: string | null;
 };
 
-// ---------- Data loader ----------
 async function fetchInterviewTypes(): Promise<Row[]> {
   const base =
-    // prefer API.API_BASE_URL if your API helper exports it; otherwise adjust to your constant
     (API as any)?.BASE_URL ??
     (API as any)?.API_BASE_URL ??
     process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -55,7 +50,6 @@ async function fetchInterviewTypes(): Promise<Row[]> {
 
   const url = `${base}/interview-types`;
 
-  // use authFetch if available to attach tokens, otherwise use fetch
   const doFetch: typeof fetch =
     typeof authFetch === "function" ? (authFetch as any) : fetch;
 
@@ -77,7 +71,6 @@ async function fetchInterviewTypes(): Promise<Row[]> {
   }));
 }
 
-// ---------- Page ----------
 export default function InterviewTypesListPage() {
   const [items, setItems] = useState<Row[]>([]);
   const [q, setQ] = useState("");
@@ -179,7 +172,12 @@ export default function InterviewTypesListPage() {
                     <tr key={row.id} className="border-top">
                       <td className="py-2 pr-4 font-mono">{row.code}</td>
                       <td className="py-2 pr-4">{row.name}</td>
-                      <td className="py-2 pr-4">{row.description ?? "—"}</td>
+                      <td className="py-2 pr-4">{row.description ?? "—"}</td>   
+                      <td className="py-2 pr-4">
+                        <Button asChild variant="outline" size="sm">
+                          <Link href={`/dashboard/interviewTypes/${row.id}/edit`}>Chỉnh sửa</Link>
+                        </Button>
+                      </td>                   
                     </tr>
                   ))}
                 </tbody>

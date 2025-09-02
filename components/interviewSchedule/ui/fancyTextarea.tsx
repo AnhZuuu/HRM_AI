@@ -16,7 +16,7 @@ export function FancyTextarea({
   onChange,
   maxLength = 800,
   placeholder = "Đánh giá ứng viên...",
-  suggestions = ["Đúng giờ", "Kỹ năng tốt", "Giao tiếp rõ ràng", "Cần đào sâu thêm", "Đề xuất pass vòng sau"],
+  suggestions = ["Đúng giờ", "Kỹ năng tốt", "Giao tiếp rõ ràng", "Cần đào sâu thêm"],
   minHeight = 120,
 }: FancyTextareaProps) {
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -47,6 +47,7 @@ export function FancyTextarea({
           placeholder:text-gray-400
         "
       />
+      <div className="text-xs text-gray-500 items-end">{value.length}/{maxLength}</div>
 
       {/* Actions row */}
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
@@ -63,7 +64,6 @@ export function FancyTextarea({
             </button>
           ))}
         </div>
-        <div className="text-xs text-gray-500">{value.length}/{maxLength}</div>
       </div>
     </div>
   );

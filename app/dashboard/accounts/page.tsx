@@ -16,6 +16,7 @@ import { AccountTable } from "@/components/account/accountTable";
 import { authFetch } from "@/app/utils/authFetch";
 import API from "@/api/api";
 import { useRouter } from "next/navigation";
+import { isAdmin } from "@/lib/auth";
 
 type Department = {
   id: string;
@@ -37,8 +38,8 @@ export default function AccountPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(10);
-  const [totalPages, setTotalPages] = useState(1);
+  const pageSize = 10;
+  // const [totalPages, setTotalPages] = useState(1);
   const [deptFilter, setDeptFilter] = useState<string>("all");
   const [departments, setDepartments] = useState<Department[]>([]);
   const [depLoading, setDepLoading] = useState(true);
@@ -94,7 +95,6 @@ export default function AccountPage() {
       } catch (e: any) {
         console.error(e);
         setItems([]);
-        setTotalPages(1);
         setError(e?.message ?? "Unknown error");
       } finally {
         setLoading(false);
@@ -137,6 +137,20 @@ export default function AccountPage() {
     return out;
   }, [items, searchTerm, roleFilter, deptFilter]);
 
+   const totalPages = useMemo(
+    () => Math.max(1, Math.ceil(filtered.length / pageSize)),
+    [filtered.length, pageSize]
+  );
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [totalPages, page]);
+
+  const pagedAccounts = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [filtered, page, pageSize]);
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -146,10 +160,12 @@ export default function AccountPage() {
             Quản lý các tài khoản trên hệ thống
           </p>
         </div>
-        <Button onClick={() => router.push("/dashboard/accounts/create")}>
-          <Plus className="h-4 w-4 mr-2" />
-          Tạo tài khoản
-        </Button>
+        {isAdmin() && ( 
+          <Button onClick={() => router.push("/dashboard/accounts/create")}>
+            <Plus className="h-4 w-4 mr-2" />
+            Tạo tài khoản
+          </Button>
+        )}
       </div>
 
       <Card>
@@ -162,6 +178,7 @@ export default function AccountPage() {
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value);
+                  setPage(1); 
                 }}
                 className="pl-10"
               />
@@ -170,6 +187,7 @@ export default function AccountPage() {
               value={roleFilter}
               onValueChange={(v) => {
                 setRoleFilter(v);
+                setPage(1); 
               }}
             >
               <SelectTrigger className="w-[200px]">
@@ -185,7 +203,7 @@ export default function AccountPage() {
               </SelectContent>
             </Select>
 
-            <Select value={deptFilter} onValueChange={(v) => setDeptFilter(v)}>
+            <Select value={deptFilter} onValueChange={(v) => {setDeptFilter(v); setPage(1); }}>
               <SelectTrigger className="w-[220px]">
                 <Building2 className="h-4 w-4 mr-2" />
                 <SelectValue placeholder={depLoading ? "Đang tải..." : "Lọc theo phòng ban"} />
@@ -214,12 +232,12 @@ export default function AccountPage() {
       <Card>
         <CardHeader>
           <CardTitle>
-            Tất cả tài khoản{" "}
+            {/* Tất cả tài khoản{" "}
             {!loading && !error ? (
               <span className="text-gray-500">
                 ({filtered.length} / {items.length} tài khoản trong trang này)
               </span>
-            ) : null}
+            ) : null} */}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -228,15 +246,22 @@ export default function AccountPage() {
           ) : error ? (
             <div className="p-6 text-sm text-red-600">Lỗi: {error}</div>
           ) : (
-            <AccountTable accounts={filtered} />
+            <AccountTable accounts={pagedAccounts} />
           )}
 
-          {!loading && !error && totalPages > 1 && (
+          {!loading && !error && filtered.length > 0 && (
             <div className="flex items-center justify-between mt-4">
               <div className="text-sm text-gray-500">
                 Trang {page} / {totalPages}
               </div>
               <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setPage(1)}
+                  disabled={page <= 1}
+                >
+                  Đầu
+                </Button>
                 <Button
                   variant="outline"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -250,6 +275,13 @@ export default function AccountPage() {
                   disabled={page >= totalPages}
                 >
                   Tiếp
+                </Button>
+                 <Button
+                  variant="outline"
+                  onClick={() => setPage(totalPages)}
+                  disabled={page >= totalPages}
+                >
+                  Cuối
                 </Button>
               </div>
             </div>

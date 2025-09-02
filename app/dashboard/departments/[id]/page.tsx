@@ -4,16 +4,11 @@ import DepartmentDetailClient from "@/components/department/detailDepartmentPage
 import { notFound } from "next/navigation";
 
 // ===== Types aligned with your API response =====
-export type Employee = {
-  id: string;
-  firstName: string | null;
-  lastName: string | null;
-  email: string | null;
-  phoneNumber: string | null;
+export type accountRoles = {
   status: number | null;
-  creationDate?: string | null;
-  roleName?: string;
-};
+  role: number | null;
+}
+export type Employee = Account;
 
 export type CampaignPositionDetailModel = {
   id: string;

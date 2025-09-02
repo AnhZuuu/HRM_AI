@@ -13,6 +13,7 @@ import { authFetch } from "@/app/utils/authFetch";
 import API from "@/api/api";
 import CreateAccountFormCard, { CreateAccountFormValues, DepartmentOption, RoleOption } from "@/components/account/createAccountForm";
 import { ROLE_OPTIONS } from "@/app/utils/enum";
+import { toast } from "react-toastify";
 
 
 
@@ -174,8 +175,10 @@ export default function CreateAccountPage() {
         if (createdId) router.push(`/dashboard/accounts/${createdId}`);
         else router.push(`/dashboard/accounts`);
       }, 400);
+      toast.success("Tạo tài khoản thành công.")
     } catch (e: any) {
       setSaveError(e?.message ?? "Vui lòng thử lại.");
+      toast.error("Tạo tài khoản thất bại. " + e?.message )
     } finally {
       setSubmitting(false);
     }

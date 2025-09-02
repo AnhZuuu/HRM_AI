@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { authFetch } from "@/app/utils/authFetch";
 import API from "@/api/api";
+import { InterviewTracker } from "@/components/candidates/tracking/CvTracking";
 
 /* ========= types unchanged ========= */
 interface CvApplicantDetail { type: string; key: string; value: string; groupIndex: number; }
@@ -95,7 +96,7 @@ export default function CampaignPositionPage() {
 
   const formatDate = (dateString: string) =>
     new Date(dateString).toLocaleDateString("vi-VN", {
-      year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit",
+      year: "numeric", month: "long", day: "numeric",
     });
 
   if (loading) {
@@ -135,7 +136,7 @@ export default function CampaignPositionPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-xl">{campaignData.description}</CardTitle>
-              <CardDescription>ID Chiến dịch: {campaignData.campaignId}</CardDescription>
+              {/* <CardDescription>ID Chiến dịch: {campaignData.campaignId}</CardDescription> */}
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -145,12 +146,12 @@ export default function CampaignPositionPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <FileText className="w-5 h-5 text-muted-foreground" />
-                  <span className="text-sm">Đã ứng tuyển: <strong>{applicantCount}</strong></span>
+                  <Badge className="text-sm">Đã ứng tuyển: {applicantCount}</Badge>
                 </div>
-                <div className="flex items-center gap-2">
+                {/* <div className="flex items-center gap-2">
                   <Calendar className="w-5 h-5 text-muted-foreground" />
-                  <span className="text-sm">Tạo lúc: <strong>{formatDate(campaignData.creationDate)}</strong></span>
-                </div>
+                  <span className="text-sm">Thời gian tạo: <strong>{formatDate(campaignData.creationDate)}</strong></span>
+                </div> */}
               </div>
 
               {campaignData.campaignPositionDetailModels.length > 0 && (
@@ -202,7 +203,7 @@ export default function CampaignPositionPage() {
                         {position && <span className="text-sm text-muted-foreground">{position}</span>}
                       </CardDescription>
                       <div className="mt-2">
-                        <Badge variant={applicant.status === 0 ? "secondary" : "default"}>
+                        <Badge >
                           Điểm: {applicant.point}
                         </Badge>
                       </div>
@@ -226,7 +227,7 @@ export default function CampaignPositionPage() {
                   {/* Contact */}
                   <div className="mb-4">
                     <h4 className="font-semibold mb-3 flex items-center gap-2">
-                      <Phone className="w-4 h-4" /> Thông tin liên hệ
+                      Thông tin liên hệ
                     </h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                       {email && <div className="flex items-center gap-2"><Mail className="w-4 h-4 text-muted-foreground" />{email}</div>}
@@ -335,13 +336,15 @@ export default function CampaignPositionPage() {
                           </div>
                         </div>
                       )}
-
+                      <div className="space-y-2">
+                        <InterviewTracker cvApplicantId={applicant.id}/>
+                      </div>
                       <Separator />
 
                       {/* Metadata */}
                       <div className="text-xs text-muted-foreground">
-                        <div>ID ứng viên: {applicant.id}</div>
-                        <div>Ngày nộp: {formatDate(applicant.creationDate)}</div>
+                        {/* <div>ID ứng viên: {applicant.id}</div> */}
+                        <div>Ngày đăng tải: {formatDate(applicant.creationDate)}</div>
                       </div>
                     </div>
                   )}

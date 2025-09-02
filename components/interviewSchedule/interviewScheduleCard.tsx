@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarDays, Clock, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -27,16 +27,13 @@ import { Input } from "@/components/ui/input";
 export type CampaignPosition = {
   id: string;
   departmentId?: string;
-  campaignId?: string;
-  campaign?: string | null;
-  department?: string | null;
+  departmentName?: string | null;
 };
 
 export type CVApplicant = {
   id: string;
   fullName: string;
   email: string | null;
-  campaignPosition?: CampaignPosition | null;
 };
 
 export type Interviewer = {
@@ -50,7 +47,7 @@ export type Interviewer = {
 export type InterviewSchedule = {
   id: string;
   cvApplicantId: string;
-  cvApplicant: CVApplicant | null;
+  cvApplicantModel: CVApplicant | null;
   startTime: string;            // ISO
   endTime: string | null;       // ISO | null
   createdBy: string | null;
@@ -62,6 +59,7 @@ export type InterviewSchedule = {
   notes: string | null;
   departmentId?: string | null;
   interviewers?: Interviewer[] | string;
+  campaignPositionModel? : CampaignPosition | null;
 };
 
 // ---------- Helpers ----------
@@ -69,9 +67,9 @@ type RangeKey = "today" | "week" | "month";
 
 function parseLocal(iso?: string | null) {
   if (!iso) return null;
-  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+  const m = iso?.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
   if (m) return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], 0, 0);
-  const d = new Date(iso);
+  const d = new Date(iso!);
   return isNaN(d.getTime()) ? null : d;
 }
 function startOfTodayLocal() {
@@ -116,7 +114,7 @@ function getRange(key: RangeKey) {
 function fmtDT(iso?: string | null, locale = "vi-VN") {
   if (!iso) return "—";
   const d = new Date(iso);
-  if (isNaN(d.getTime())) return iso;
+  if (isNaN(d.getTime())) return iso!;
   return `${d.toLocaleDateString(locale)} ${d.toLocaleTimeString(locale, {
     hour: "2-digit",
     minute: "2-digit",
@@ -207,10 +205,14 @@ export default function InterviewSchedulesTable({
   const [selectedDate, setSelectedDate] = useState<string>(""); // for "all" (YYYY-MM-DD)
   const [roundFilter, setRoundFilter] = useState<string>("all");
 
+  // Pagination
+  const [page, setPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(5);
+
   const filtered = useMemo(() => {
     const byText = (it: InterviewSchedule) => {
       if (!q) return true;
-      const name = it.cvApplicant?.fullName?.toLowerCase() ?? "";
+      const name = it.cvApplicantModel?.fullName?.toLowerCase() ?? "";
       const t = (it.interviewType ?? it.interviewTypeName ?? "").toLowerCase();
       const st = it.status?.toLowerCase() ?? "";
       return (
@@ -253,6 +255,26 @@ export default function InterviewSchedulesTable({
       .sort(sortByStartDesc);
   }, [data, q, statusFilter, range, selectedDate, variant, roundFilter]);
 
+  // Calculate paging values
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  // Clamp/reset page when dependencies change
+  useEffect(() => {
+    setPage(1);
+  }, [q, statusFilter, range, selectedDate, roundFilter, pageSize, variant]);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
+
+  const paged = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [filtered, page, pageSize]);
+
   return (
     <Card>
       <CardContent className="p-6 space-y-4">
@@ -261,7 +283,7 @@ export default function InterviewSchedulesTable({
           <div className="flex items-center gap-2">
             <CalendarDays className="w-5 h-5 text-gray-700" />
             <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
-            <Badge variant="secondary">{filtered.length} lịch phỏng vấn</Badge>
+            <Badge variant="secondary">{total} lịch phỏng vấn</Badge>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
@@ -338,6 +360,7 @@ export default function InterviewSchedulesTable({
                 setSelectedDate("");
                 setRange("today");
                 setRoundFilter("all");
+                setPage(1);
               }}
             >
               Đặt lại
@@ -361,83 +384,164 @@ export default function InterviewSchedulesTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((it) => {
-                const dur = durationMin(it.startTime, it.endTime);
-                const dept =
-                  it.cvApplicant?.campaignPosition?.department ?? "—";
-                const typeName =
-                  it.interviewType ??
-                  it.interviewTypeName ??
-                  it.interviewTypeId;
-                const ivNames = normalizeInterviewers(it.interviewers);
+              {paged.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
+                    không có lịch phỏng vấn
+                  </TableCell>
+                </TableRow>
+              ) : (
+                paged.map((it) => {
+                  const dur = durationMin(it.startTime, it.endTime);
+                  const dept =
+                    it.campaignPositionModel?.departmentName ?? "—";
+                  const typeName =
+                    it.interviewType ??
+                    it.interviewTypeName ??
+                    it.interviewTypeId;
+                  const ivNames = normalizeInterviewers(it.interviewers);
 
-                return (
-                  <TableRow key={it.id} className="align-top">
-                    <TableCell>
-                      <div className="font-medium">
-                        {it.cvApplicant?.fullName ?? "Unknown"}
-                      </div>
-                      <div className="text-xs text-gray-600">
-                        {it.cvApplicant?.email ?? "—"}
-                      </div>
-                    </TableCell>
+                  return (
+                    <TableRow key={it.id} className="align-top">
+                      <TableCell>
+                        <div className="font-medium">
+                          {it.cvApplicantModel?.fullName}
+                        </div>
+                        <div className="text-xs text-gray-600">
+                          {it.cvApplicantModel?.email ?? "—"}
+                        </div>
+                      </TableCell>
 
-                    <TableCell>{dept}</TableCell>
+                      <TableCell>{dept}</TableCell>
 
-                    <TableCell>
-                      <div className="text-sm">Vòng {it.round ?? "—"}</div>
-                      <div className="text-xs text-gray-600">{typeName}</div>
-                    </TableCell>
+                      <TableCell>
+                        <div className="text-sm">Vòng {it.round ?? "—"}</div>
+                        <div className="text-xs text-gray-600">{typeName}</div>
+                      </TableCell>
 
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Clock className="w-4 h-4 text-gray-500" />
-                        <span className="text-sm">{fmtDT(it.startTime)}</span>
-                      </div>
-                    </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Clock className="w-4 h-4 text-gray-500" />
+                          <span className="text-sm">{fmtDT(it.startTime)}</span>
+                        </div>
+                      </TableCell>
 
-                    <TableCell className="text-sm">
-                      {dur != null ? `${dur} min` : "—"}
-                    </TableCell>
+                      <TableCell className="text-sm">
+                        {dur != null ? `${dur} min` : "—"}
+                      </TableCell>
 
-                    <TableCell>
-                      <StatusBadge status={it.status} />
-                    </TableCell>
+                      <TableCell>
+                        <StatusBadge status={it.status} />
+                      </TableCell>
 
-                    <TableCell className="text-sm">
-                      <div className="flex items-center gap-1">
-                        <User className="w-4 h-4 text-gray-500" />
-                        <span className="truncate">{ivNames}</span>
-                      </div>
-                    </TableCell>
+                      <TableCell className="text-sm">
+                        <div className="flex items-center gap-1">
+                          <User className="w-4 h-4 text-gray-500" />
+                          <span className="truncate">{ivNames}</span>
+                        </div>
+                      </TableCell>
 
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            router.push(`/dashboard/schedules/${it.id}/edit`)
-                          }
-                        >
-                          Chỉnh lịch
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            router.push(`/dashboard/schedules/${it.id}`)
-                          }
-                        >
-                          Chi tiết
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              router.push(`/dashboard/schedules/${it.id}/edit`)
+                            }
+                          >
+                            Chỉnh lịch
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              router.push(`/dashboard/schedules/${it.id}`)
+                            }
+                          >
+                            Chi tiết
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
             </TableBody>
           </Table>
+        </div>
+
+        {/* Pagination controls */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="text-sm text-muted-foreground">
+            Hiển thị{" "}
+            <span className="font-medium">
+              {total === 0 ? 0 : (page - 1) * pageSize + 1}
+            </span>{" "}
+            đến{" "}
+            <span className="font-medium">
+              {Math.min(page * pageSize, total)}
+            </span>{" "}
+            trong tổng số <span className="font-medium">{total}</span> lịch
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Mỗi trang</span>
+              <Select
+                value={String(pageSize)}
+                onValueChange={(v) => setPageSize(Number(v))}
+              >
+                <SelectTrigger className="h-8 w-[90px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5">5</SelectItem>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="20">20</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page <= 1}
+              >
+                Trước
+              </Button>
+
+              {/* simple numeric pager (up to 7 buttons window) */}
+              {Array.from({ length: totalPages }).slice(
+                Math.max(0, page - 4),
+                Math.max(0, page - 4) + Math.min(7, totalPages)
+              ).map((_, i) => {
+                const btnPage = Math.max(1, page - 4) + i;
+                return (
+                  <Button
+                    key={btnPage}
+                    variant={btnPage === page ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setPage(btnPage)}
+                  >
+                    {btnPage}
+                  </Button>
+                );
+              })}
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+              >
+                Sau
+              </Button>
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>

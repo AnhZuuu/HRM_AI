@@ -3,10 +3,11 @@ import { FaEnvelope, FaLock } from "react-icons/fa";
 import VerificationForm from "./verificationForm";
 import API from "@/api/api";
 
-import { toast } from "react-toastify";
+import { toast, ToastContainer } from "react-toastify";
 
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
+import { isAdmin, isDepartmentManager, isHR } from "@/lib/auth";
 
 
 const LoginPage = () => {
@@ -73,7 +74,7 @@ const LoginPage = () => {
         try {
           const prob = await response.json();
           message = prob?.message ?? prob?.detail ?? message;
-        } catch {}
+        } catch { }
         throw new Error(message);
       }
 
@@ -89,22 +90,43 @@ const LoginPage = () => {
       localStorage.setItem("refreshTokenExpires", data.refreshTokenExpires);
       localStorage.setItem("email", data.data.email);
       localStorage.setItem("name", data.data.name);
+      localStorage.setItem("departmentId", data.data.departmentId);
+
+      // Save full roles for reference
+      localStorage.setItem("roles", JSON.stringify(data.data.roles));
+      // Also save numeric role IDs for fast checks
+      const roleIds = data.data.roles.map((r: { role: number }) => r.role);
+      localStorage.setItem("roleIds", JSON.stringify(roleIds));
 
       console.log("Saved test token:", localStorage.getItem("accessToken"));
-
+      toast.success("Đăng nhập thành công");
       // Navigate to dashboard
-      window.location.href = "/dashboard";
+      if (isHR() || isAdmin()) {
+        window.location.href = "/dashboard";
+      } else if (isDepartmentManager()) {
+       window.location.href = `/dashboard/departments/${data.data.departmentId}`;
+      } else {
+        window.location.href = "/dashboard/schedules";
+      }
     } catch (error: any) {
 
-      // toast.error("Login failed: " + error.message);
-      alert("Đăng nhập thất bại: " + error.message);
+      toast.error("Đăng nhập thất bại: " + error.message);
+      // alert("Đăng nhập thất bại: " + error.message);
       console.error("Đăng nhập thất bại:", error);
 
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-200 flex items-center justify-center p-4 relative">
+    
+    // <div className="min-h-screen bg-gray-200 flex items-center justify-center p-4 relative">
+    <div
+      className="min-h-screen flex items-center justify-center p-4 relative bg-cover bg-center bg-no-repeat"
+      style={{
+        backgroundImage:
+          "url('https://www.10wallpaper.com/wallpaper/1366x768/2003/Purple_Theme_2020_Colorful_Abstract_Design_1366x768.jpg')",
+      }}
+    >
       {showVerify && (
         <VerificationForm
           onClose={() => setShowVerify(false)}
@@ -206,6 +228,7 @@ const LoginPage = () => {
             khi đăng nhập lần đầu
           </div>
         </div>
+        <ToastContainer position="top-right" autoClose={3000} />
       </div>
 
       <style jsx>{`
@@ -224,6 +247,7 @@ const LoginPage = () => {
         }
       `}</style>
     </div>
+    
   );
 };
 

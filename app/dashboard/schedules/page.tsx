@@ -13,6 +13,8 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import API from "@/api/api";
 import { authFetch } from "@/app/utils/authFetch";
+import { useDecodedToken } from "@/components/auth/useDecodedToken";
+import { isHRorDMorAdmin } from "@/lib/auth";
 
 // ---- API shapes ----
 type ApiItem = {
@@ -78,7 +80,13 @@ const statusToString = (n: number | null | undefined): string | null => {
 const mapItem = (x: ApiItem): RowType => ({
   id: x.id,
   cvApplicantId: x.cvApplicantId,
-  cvApplicant: null as UICVApplicant | null,
+  cvApplicantModel: (x as any).cvApplicantModel
+    ? {
+        id: (x as any).cvApplicantModel.id,
+        fullName: (x as any).cvApplicantModel.fullName ?? "",
+        email: (x as any).cvApplicantModel.email ?? null,
+      }
+    : null,
   startTime: x.startTime,
   endTime: x.endTime ?? null,
   createdBy: x.createdById ?? null,
@@ -90,6 +98,14 @@ const mapItem = (x: ApiItem): RowType => ({
   notes: x.notes ?? null,
   departmentId: null,
   interviewers: [],
+  campaignPositionModel: (x as any).campaignPositionModel
+    ? {
+        id: (x as any).campaignPositionModel.id,
+        departmentId: (x as any).campaignPositionModel.departmentId,
+        departmentName: (x as any).campaignPositionModel.departmentName ?? null,
+      }
+    : null,
+
 });
 
 export default function InterviewSchedulesPage() {
@@ -104,13 +120,26 @@ export default function InterviewSchedulesPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
+  const {claims, expired} = useDecodedToken();
+  const accountId =  claims?.accountId ?? "";
+  const isAccountIdReady = useMemo(() => isHRorDMorAdmin(), [claims]); 
 
+const getSchedulesUrl = () => {
+  if (isAccountIdReady) return `${API.INTERVIEW.SCHEDULE}`;
+  if (!accountId) return null; 
+ 
+  return `${API.INTERVIEW.SCHEDULE}/${accountId}/accounts`;
+};
   // -------- fetch: full list for stats/today (iterate with real totalPages) --------
   useEffect(() => {
     let alive = true;
     const controller = new AbortController();
 
     (async () => {
+      const url = getSchedulesUrl();
+      if (expired) return;              
+      if (!url) return;     
+
       setLoadingStats(true);
       setErr("");
       try {
@@ -119,7 +148,9 @@ export default function InterviewSchedulesPage() {
         let tp = 1;
 
         do {
-          const url = `${API.INTERVIEW.SCHEDULE}?pageNumber=${p}&pageSize=${pageSize}`;
+          // const url = `${API.INTERVIEW.SCHEDULE}`;
+        console.log("url 1 " + url );
+
           const res = await authFetch(url, { method: "GET", signal: controller.signal });
           if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
 
@@ -143,7 +174,7 @@ export default function InterviewSchedulesPage() {
     };
     // If you want stats to be independent from the UI pageSize,
     // replace &pageSize=${pageSize} with a larger fixed number, e.g. 50 or 100.
-  }, [pageSize]);
+  }, [pageSize, accountId, isAccountIdReady, expired]);
 
   // -------- fetch: single page for All table --------
   useEffect(() => {
@@ -151,9 +182,14 @@ export default function InterviewSchedulesPage() {
     const controller = new AbortController();
 
     (async () => {
+      const urlBase = getSchedulesUrl();
+      if (expired) return;
+      if (!urlBase) return;
       setListLoading(true);
+        
       try {
-        const url = `${API.INTERVIEW.SCHEDULE}?pageNumber=${page}&pageSize=${pageSize}`;
+        const url = urlBase;
+        console.log("url " + url );
         const res = await authFetch(url, { method: "GET", signal: controller.signal });
         if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
 
@@ -174,7 +210,7 @@ export default function InterviewSchedulesPage() {
       alive = false;
       controller.abort();
     };
-  }, [page, pageSize]);
+  }, [page, pageSize, accountId, isAccountIdReady, expired]);
 
   // -------- stats & splits (from full items) --------
   const toLocalYMD = (d: Date) => {
@@ -247,6 +283,8 @@ export default function InterviewSchedulesPage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Lịch phỏng vấn</h1>
           <p className="text-gray-600 mt-1">Danh sách lịch phỏng vấn của ứng viên</p>
+          <p className="text-gray-600 mt-1">AccountId: {accountId}</p>
+
         </div>
         <Button asChild className="bg-blue-600 hover:bg-blue-700">
           <Link href="/dashboard/schedules/new">
@@ -302,11 +340,11 @@ export default function InterviewSchedulesPage() {
 
       {/* Today-only table (always full dataset) */}
       <h2 className="text-lg font-semibold text-gray-900">Danh sách lịch phỏng vấn hôm nay</h2>
-      {err && <div className="text-sm text-red-600 mb-2">Lỗi tải dữ liệu: {err}</div>}
+      {/* {err && <div className="text-sm text-red-600 mb-2">Lỗi tải dữ liệu: {err}</div>}   */}
       {loadingStats ? (
         <div className="rounded-xl border border-gray-200 p-6 bg-white shadow-sm text-gray-500">Đang tải…</div>
       ) : (
-        <InterviewSchedulesTable title="Lịch phỏng vấn" variant="range" data={todayItems} />
+        <InterviewSchedulesTable title="" variant="range" data={todayItems} />
       )}
 
       {/* All table (paginated) */}
@@ -316,53 +354,6 @@ export default function InterviewSchedulesPage() {
       ) : (
         <>
           <InterviewSchedulesTable title="Tất cả" variant="all" data={pageItems} />
-
-          {/* Pagination controls */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-3">
-            <div className="text-sm text-gray-600">
-              Trang {page} / {totalPages} {items.length ? `· Tổng: ${items.length}` : null}
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => setPage(1)} disabled={page <= 1}>
-                « Đầu
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>
-                ‹ Trước
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page >= totalPages}
-              >
-                Sau ›
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setPage(totalPages)} disabled={page >= totalPages}>
-                Cuối »
-              </Button>
-
-              <div className="ml-2">
-                <Select
-                  value={String(pageSize)}
-                  onValueChange={(v) => {
-                    const ps = parseInt(v, 10) || 10;
-                    setPageSize(ps);
-                    setPage(1); // reset when page size changes
-                  }}
-                >
-                  <SelectTrigger className="h-9 w-[120px]">
-                    <SelectValue placeholder="Trang / trang" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="10">10 / trang</SelectItem>
-                    <SelectItem value="20">20 / trang</SelectItem>
-                    <SelectItem value="50">50 / trang</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
         </>
       )}
     </div>
