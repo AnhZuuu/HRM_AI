@@ -332,7 +332,7 @@ export default function CandidatesPage() {
           {!loading && !error && totalPages > 1 && (
             <div className="flex items-center justify-between mt-4">
               <div className="text-sm text-gray-500">
-                Page {page} of {totalPages}
+                Trang {page} trên {totalPages}
               </div>
               <div className="flex gap-2">
                 <Button
@@ -340,14 +340,14 @@ export default function CandidatesPage() {
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page <= 1}
                 >
-                  Previous
+                  Trước
                 </Button>
                 <Button
                   variant="outline"
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page >= totalPages}
                 >
-                  Next
+                  Sau
                 </Button>
               </div>
             </div>
