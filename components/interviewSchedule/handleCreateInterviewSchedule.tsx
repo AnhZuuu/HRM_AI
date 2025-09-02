@@ -198,6 +198,12 @@ export default function CandidatesPage() {
   const [page, setPage] = useState(initialPage);
   const [pageSize, setPageSize] = useState<number>(initialPageSize);
 
+  // Which statuses are allowed to schedule? Only "Accepted" (2)
+  const canSchedule = (s: Candidate["status"]) => s === 2;
+
+  // Toggle behavior: false = gray out; true = hide completely
+  const HIDE_UNSCHEDULABLE_SCHEDULE = false;
+
   // Modals 1
   const [open, setOpen] = useState(false);
   const [activeCandidate, setActiveCandidate] = useState<Candidate | null>(null);
@@ -359,8 +365,8 @@ export default function CandidatesPage() {
             <Button variant="outline" onClick={clearFilters}>
               Reset
             </Button>
-            <Button 
-            asChild className="bg-blue-600 hover:bg-blue-700">
+            <Button
+              asChild className="bg-blue-600 hover:bg-blue-700">
               <Link href="/dashboard/schedules/new/suggest">
                 <Plus className="w-4 h-4 mr-2" />
                 Gợi ý lịch
@@ -451,16 +457,40 @@ export default function CandidatesPage() {
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
+
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => router.push(`/dashboard/accounts/${a.id}`)}>
                               <Eye className="mr-2 h-4 w-4" /> Chi tiết
                             </DropdownMenuItem>
+
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => openSchedule(a)}>
-                              <CalendarPlus className="mr-2 h-4 w-4" /> Lên lịch phỏng vấn
-                            </DropdownMenuItem>
+
+                            {canSchedule(a.status)
+                              ? (
+                                // Enabled
+                                <DropdownMenuItem onClick={() => openSchedule(a)}>
+                                  <CalendarPlus className="mr-2 h-4 w-4" /> Lên lịch phỏng vấn
+                                </DropdownMenuItem>
+                              )
+                              : (
+                                HIDE_UNSCHEDULABLE_SCHEDULE
+                                  ? null
+                                  : (
+                                    // Gray out (disabled)
+                                    <DropdownMenuItem
+                                      disabled
+                                      aria-disabled="true"
+                                      className="opacity-50 pointer-events-none select-none"
+                                      // no onClick when disabled
+                                      title="Không thể lên lịch cho trạng thái hiện tại"
+                                    >
+                                      <CalendarPlus className="mr-2 h-4 w-4" /> Lên lịch phỏng vấn
+                                    </DropdownMenuItem>
+                                  )
+                              )}
                           </DropdownMenuContent>
                         </DropdownMenu>
+
                       </td>
                     </tr>
                   ))
@@ -473,7 +503,7 @@ export default function CandidatesPage() {
           {!loading && filtered.length > 0 && (
             <div className="flex flex-col gap-2 border-t p-3 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
               <span>
-                Page {safePage} of {totalPages} • Showing {paged.length} / {filtered.length} filtered • {candidates.length} total
+                Trang {safePage} trên {totalPages} • Hiển thị {paged.length} / {filtered.length} • {candidates.length} tổng
               </span>
               <div className="flex gap-2">
                 <Button
@@ -481,14 +511,14 @@ export default function CandidatesPage() {
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={safePage <= 1}
                 >
-                  Previous
+                  Trước
                 </Button>
                 <Button
                   variant="outline"
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={safePage >= totalPages}
                 >
-                  Next
+                  Sau
                 </Button>
               </div>
             </div>

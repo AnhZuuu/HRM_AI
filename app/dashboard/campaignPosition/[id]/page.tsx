@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { authFetch } from "@/app/utils/authFetch";
 import API from "@/api/api";
+import { InterviewTracker } from "@/components/candidates/tracking/CvTracking";
 
 /* ========= types unchanged ========= */
 interface CvApplicantDetail { type: string; key: string; value: string; groupIndex: number; }
@@ -135,7 +136,7 @@ export default function CampaignPositionPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-xl">{campaignData.description}</CardTitle>
-              <CardDescription>ID Chiến dịch: {campaignData.campaignId}</CardDescription>
+              {/* <CardDescription>ID Chiến dịch: {campaignData.campaignId}</CardDescription> */}
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -202,7 +203,7 @@ export default function CampaignPositionPage() {
                         {position && <span className="text-sm text-muted-foreground">{position}</span>}
                       </CardDescription>
                       <div className="mt-2">
-                        <Badge variant={applicant.status === 0 ? "secondary" : "default"}>
+                        <Badge >
                           Điểm: {applicant.point}
                         </Badge>
                       </div>
@@ -335,7 +336,9 @@ export default function CampaignPositionPage() {
                           </div>
                         </div>
                       )}
-
+                      <div className="space-y-2">
+                        <InterviewTracker cvApplicantId={applicant.id}/>
+                      </div>
                       <Separator />
 
                       {/* Metadata */}

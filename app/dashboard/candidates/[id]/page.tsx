@@ -14,6 +14,7 @@ import API from "@/api/api";
 import { formatISODate } from "@/app/utils/helper";
 import HandleUpdateCandidate from "@/components/candidates/handleUpdateCandidate";
 import HandleUpdateStatusCandidate from "@/components/candidates/HandleUpdateStatusCandidate";
+import { InterviewTracker } from "@/components/candidates/tracking/CvTracking";
 
 
 
@@ -224,10 +225,10 @@ export default function CvApplicantDetailPage() {
                       <span className="inline-flex items-center gap-1">
                         <Star className="h-4 w-4" /> {item.point || "—"}
                       </span>
-                      <Separator orientation="vertical" className="h-4" />
+                      {/* <Separator orientation="vertical" className="h-4" />
                       <span className="inline-flex items-center gap-1">
                         <FileText className="h-4 w-4" /> Created {formatISODate(item.creationDate)}
-                      </span>
+                      </span> */}
                       <Separator orientation="vertical" className="h-4" />
                       <span className="inline-flex items-center gap-1">
                         <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-xs">
@@ -279,6 +280,12 @@ export default function CvApplicantDetailPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left column */}
             <div className="space-y-6 lg:col-span-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Theo dõi phỏng vấn</CardTitle>
+                </CardHeader>
+                <CardContent><InterviewTracker cvApplicantId={item.id}/></CardContent>
+              </Card>
               {/* Objective */}
               {(sections.objective.length > 0 || field(sections.objective, "objective")) && (
                 <Card>

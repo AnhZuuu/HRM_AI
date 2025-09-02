@@ -53,6 +53,7 @@ type NextStageResponse = {
   id: string;
   stageName: string | null;
   description?: string | null;
+  totalTime?: number | null;
 };
 
 type Interviewer = { id: string; fullName: string; title?: string };
@@ -90,6 +91,7 @@ async function fetchNextStage(cvApplicantId: string): Promise<NextStageResponse 
     id: String(data.id),
     stageName: data.stageName ?? null,
     description: data.description ?? null,
+    totalTime : data.totalTime ?? null
   };
 }
 
