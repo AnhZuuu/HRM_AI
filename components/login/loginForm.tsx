@@ -89,6 +89,7 @@ const LoginPage = () => {
       localStorage.setItem("refreshTokenExpires", data.refreshTokenExpires);
       localStorage.setItem("email", data.data.email);
       localStorage.setItem("name", data.data.name);
+      localStorage.setItem("departmentId", data.data.departmentId);
 
       // Save full roles for reference
       localStorage.setItem("roles", JSON.stringify(data.data.roles));
@@ -111,7 +112,14 @@ const LoginPage = () => {
 
   return (
     
-    <div className="min-h-screen bg-gray-200 flex items-center justify-center p-4 relative">
+    // <div className="min-h-screen bg-gray-200 flex items-center justify-center p-4 relative">
+    <div
+      className="min-h-screen flex items-center justify-center p-4 relative bg-cover bg-center bg-no-repeat"
+      style={{
+        backgroundImage:
+          "url('https://www.10wallpaper.com/wallpaper/1366x768/2003/Purple_Theme_2020_Colorful_Abstract_Design_1366x768.jpg')",
+      }}
+    >
       {showVerify && (
         <VerificationForm
           onClose={() => setShowVerify(false)}

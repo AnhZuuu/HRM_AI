@@ -247,7 +247,7 @@ export default function CandidatesPage() {
                     <TableHead>Trạng thái</TableHead>
                     <TableHead>Điểm</TableHead>
                     <TableHead>Vị trí ứng tuyển</TableHead>
-                    <TableHead>Ngày nộp</TableHead>
+                    <TableHead>Ngày đăng tải</TableHead>
                     <TableHead className="text-right">Hành động</TableHead>
                   </TableRow>
                 </TableHeader>

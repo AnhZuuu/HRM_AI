@@ -13,6 +13,8 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import API from "@/api/api";
 import { authFetch } from "@/app/utils/authFetch";
+import { useDecodedToken } from "@/components/auth/useDecodedToken";
+import { isHRorDMorAdmin } from "@/lib/auth";
 
 // ---- API shapes ----
 type ApiItem = {
@@ -118,13 +120,26 @@ export default function InterviewSchedulesPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
+  const {claims, expired} = useDecodedToken();
+  const accountId =  claims?.accountId ?? "";
+  const isAccountIdReady = useMemo(() => isHRorDMorAdmin(), [claims]); 
 
+const getSchedulesUrl = () => {
+  if (isAccountIdReady) return `${API.INTERVIEW.SCHEDULE}`;
+  if (!accountId) return null; 
+ 
+  return `${API.INTERVIEW.SCHEDULE}/${accountId}/accounts`;
+};
   // -------- fetch: full list for stats/today (iterate with real totalPages) --------
   useEffect(() => {
     let alive = true;
     const controller = new AbortController();
 
     (async () => {
+      const url = getSchedulesUrl();
+      if (expired) return;              
+      if (!url) return;     
+
       setLoadingStats(true);
       setErr("");
       try {
@@ -133,7 +148,9 @@ export default function InterviewSchedulesPage() {
         let tp = 1;
 
         do {
-          const url = `${API.INTERVIEW.SCHEDULE}`;
+          // const url = `${API.INTERVIEW.SCHEDULE}`;
+        console.log("url 1 " + url );
+
           const res = await authFetch(url, { method: "GET", signal: controller.signal });
           if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
 
@@ -157,7 +174,7 @@ export default function InterviewSchedulesPage() {
     };
     // If you want stats to be independent from the UI pageSize,
     // replace &pageSize=${pageSize} with a larger fixed number, e.g. 50 or 100.
-  }, [pageSize]);
+  }, [pageSize, accountId, isAccountIdReady, expired]);
 
   // -------- fetch: single page for All table --------
   useEffect(() => {
@@ -165,9 +182,14 @@ export default function InterviewSchedulesPage() {
     const controller = new AbortController();
 
     (async () => {
+      const urlBase = getSchedulesUrl();
+      if (expired) return;
+      if (!urlBase) return;
       setListLoading(true);
+        
       try {
-        const url = `${API.INTERVIEW.SCHEDULE}`;
+        const url = urlBase;
+        console.log("url " + url );
         const res = await authFetch(url, { method: "GET", signal: controller.signal });
         if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
 
@@ -188,7 +210,7 @@ export default function InterviewSchedulesPage() {
       alive = false;
       controller.abort();
     };
-  }, [page, pageSize]);
+  }, [page, pageSize, accountId, isAccountIdReady, expired]);
 
   // -------- stats & splits (from full items) --------
   const toLocalYMD = (d: Date) => {
@@ -261,6 +283,8 @@ export default function InterviewSchedulesPage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Lịch phỏng vấn</h1>
           <p className="text-gray-600 mt-1">Danh sách lịch phỏng vấn của ứng viên</p>
+          <p className="text-gray-600 mt-1">AccountId: {accountId}</p>
+
         </div>
         <Button asChild className="bg-blue-600 hover:bg-blue-700">
           <Link href="/dashboard/schedules/new">
