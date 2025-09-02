@@ -7,6 +7,12 @@ export const ROLE_OPTIONS: RoleOption[] = [
   { value: 3, label: "Employee" },
   { value: 4, label: "Admin" },
 ];
+export const ROLE_MAP_COLOR: Record<number, { label: string; className: string }> = {
+  1: { label: "HR", className: "bg-indigo-100 text-indigo-700" },
+  2: { label: "Department Manager", className: "bg-amber-100 text-amber-700" },
+  3: { label: "Employee", className: "bg-sky-100 text-sky-700" },
+  4: { label: "Admin", className: "bg-rose-100 text-rose-700" },
+};
 
 export const SalaryTpe: Record<number, string> = { 0: "Net", 1: "Gross"};
 export const OnboardRequestStatus: Record<number, string> = { 0: "Pending", 1: "Approved", 2: "Rejected", 3: "Cancelled", 4: "Completed" };
