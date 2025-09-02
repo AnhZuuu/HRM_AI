@@ -225,10 +225,14 @@ export default function CvApplicantDetailPage() {
                       <span className="inline-flex items-center gap-1">
                         Điểm: {item.point || "—"}
                       </span>
+
+
                       {/* <Separator orientation="vertical" className="h-4" />
                       <span className="inline-flex items-center gap-1">
                         <FileText className="h-4 w-4" /> Tạo {formatISODate(item.creationDate)}
-                      </span>
+                      </span> */}
+
+
                       <Separator orientation="vertical" className="h-4" />
                       <span className="inline-flex items-center gap-1">
                         <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-xs">
@@ -250,11 +254,14 @@ export default function CvApplicantDetailPage() {
                     </Button>
                   )}
                   <Button className="gap-2" onClick={() => setOpenUpdate(true)}>
-                    Cập nhật
+                    Cập nhật thông tin
                   </Button>
-                  <Button variant="outline" className="gap-2" onClick={() => navigator.clipboard.writeText(item.id)}>
-                    Copy ID
-                  </Button>
+                  <Button
+                        onClick={() => setOpenUpdateStatus(true)}
+                        className="gap-2"
+                      >
+                        Cập nhật trạng thái
+                      </Button>
                 </div>
               </div>
 
