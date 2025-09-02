@@ -254,11 +254,14 @@ export default function CvApplicantDetailPage() {
                     </Button>
                   )}
                   <Button className="gap-2" onClick={() => setOpenUpdate(true)}>
-                    Cập nhật
+                    Cập nhật thông tin
                   </Button>
-                  <Button variant="outline" className="gap-2" onClick={() => navigator.clipboard.writeText(item.id)}>
-                    Copy ID
-                  </Button>
+                  <Button
+                        onClick={() => setOpenUpdateStatus(true)}
+                        className="gap-2"
+                      >
+                        Cập nhật trạng thái
+                      </Button>
                 </div>
               </div>
 
