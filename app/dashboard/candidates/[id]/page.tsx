@@ -225,10 +225,14 @@ export default function CvApplicantDetailPage() {
                       <span className="inline-flex items-center gap-1">
                         Điểm: {item.point || "—"}
                       </span>
+
+
                       {/* <Separator orientation="vertical" className="h-4" />
                       <span className="inline-flex items-center gap-1">
                         <FileText className="h-4 w-4" /> Tạo {formatISODate(item.creationDate)}
-                      </span>
+                      </span> */}
+
+
                       <Separator orientation="vertical" className="h-4" />
                       <span className="inline-flex items-center gap-1">
                         <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-xs">
