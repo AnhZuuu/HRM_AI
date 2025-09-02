@@ -17,7 +17,7 @@ import PanelDetails from "./interviewScheduleDetail/panels/panelDetails";
 import InfoRow from "./ui/infoRow";
 import { OUTCOME_STATUS } from "@/app/utils/enum";
 import RightTimeline from "./interviewScheduleDetail/sections/rightTimeline";
-import { isHR } from "@/lib/auth";
+import { isHR, isHRorDM } from "@/lib/auth";
 import { Candidate, Department } from "@/components/interviewSchedule/ui/ScheduleModal";
 import { ScheduleModal } from "./ui/ScheduleModal";
 
@@ -264,7 +264,7 @@ export default function InterviewScheduleDetail({ interviewScheduleId }: { inter
                                 <Button variant="destructive" onClick={() => handleChangeOutcomeStatus(2)}>Fail</Button>
                               </div>
                             )}
-                            {outcome.interviewOutcomeStatus === 1 && hasCompletedAllStages === true && isHR() && (
+                            {outcome.interviewOutcomeStatus === 1 && hasCompletedAllStages === true && isHRorDM() && (
                               <div className="space-x-2 flex flex-row justify-center">
                                 <Button
                                   className="mt-2"
