@@ -155,12 +155,12 @@ export default function HandleUpdateCandidate({
     <Dialog open={open} onOpenChange={(v) => !submitting && onOpenChange(v)}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Cập nhật ứng viên</DialogTitle>
+          <DialogTitle>Cập nhật thông tin ứng viên</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 mt-2">
           <div className="space-y-2">
-            <Label htmlFor="fullName">Full name</Label>
+            <Label htmlFor="fullName">Họ tên</Label>
             <Input
               id="fullName"
               value={form.fullName ?? ""}
@@ -180,7 +180,7 @@ export default function HandleUpdateCandidate({
             />
           </div>
 
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <Label htmlFor="point">Point</Label>
             <Input
               id="point"
@@ -188,9 +188,9 @@ export default function HandleUpdateCandidate({
               onChange={(e) => setForm((f) => ({ ...f, point: e.target.value }))}
               placeholder="36/100"
             />
-          </div>
+          </div> */}
 
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <Label htmlFor="status">Status</Label>
             <Select
               value={String(form.status)}
@@ -207,10 +207,10 @@ export default function HandleUpdateCandidate({
                 ))}
               </SelectContent>
             </Select>
-          </div>
+          </div> */}
 
           <div className="space-y-2">
-            <Label htmlFor="fileUrl">CV file URL</Label>
+            <Label htmlFor="fileUrl">Đường dẫn file CV</Label>
             <Input
               id="fileUrl"
               value={form.fileUrl ?? ""}
