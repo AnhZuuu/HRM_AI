@@ -46,6 +46,10 @@ export const API = {
   },
   ONBOARD : {
     BASE: `${API_BASE_URL}/request-onboards`
+  },
+  DASHBOARD : {
+    COLUMN_CANDIDATE : `${API_BASE_URL}/dashboard/candidates-by-department/column`,
+    PIE_STATUS_CANDIDATE :`${API_BASE_URL}/dashboard/candidate-status/pie`
   }
 };
 

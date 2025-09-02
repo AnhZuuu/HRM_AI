@@ -7,6 +7,7 @@ import { toast, ToastContainer } from "react-toastify";
 
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
+import { isAdmin, isDepartmentManager, isHR } from "@/lib/auth";
 
 
 const LoginPage = () => {
@@ -100,7 +101,13 @@ const LoginPage = () => {
       console.log("Saved test token:", localStorage.getItem("accessToken"));
       toast.success("Đăng nhập thành công");
       // Navigate to dashboard
-      window.location.href = "/dashboard";
+      if (isHR() || isAdmin()) {
+        window.location.href = "/dashboard";
+      } else if (isDepartmentManager()) {
+       window.location.href = `/dashboard/departments/${data.data.departmentId}`;
+      } else {
+        window.location.href = "/dashboard/schedules";
+      }
     } catch (error: any) {
 
       toast.error("Đăng nhập thất bại: " + error.message);
