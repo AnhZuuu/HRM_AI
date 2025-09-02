@@ -7,6 +7,7 @@ import { toast, ToastContainer } from "react-toastify";
 
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
+import { isAdmin, isDepartmentManager, isHR } from "@/lib/auth";
 
 
 const LoginPage = () => {
@@ -100,7 +101,13 @@ const LoginPage = () => {
       console.log("Saved test token:", localStorage.getItem("accessToken"));
       toast.success("Đăng nhập thành công");
       // Navigate to dashboard
-      window.location.href = "/dashboard";
+      if (isHR() || isAdmin()) {
+        window.location.href = "/dashboard";
+      } else if (isDepartmentManager()) {
+       window.location.href = `/dashboard/departments/${data.data.departmentId}`;
+      } else {
+        window.location.href = "/dashboard/schedules";
+      }
     } catch (error: any) {
 
       toast.error("Đăng nhập thất bại: " + error.message);
@@ -112,7 +119,14 @@ const LoginPage = () => {
 
   return (
     
-    <div className="min-h-screen bg-gray-200 flex items-center justify-center p-4 relative">
+    // <div className="min-h-screen bg-gray-200 flex items-center justify-center p-4 relative">
+    <div
+      className="min-h-screen flex items-center justify-center p-4 relative bg-cover bg-center bg-no-repeat"
+      style={{
+        backgroundImage:
+          "url('https://www.10wallpaper.com/wallpaper/1366x768/2003/Purple_Theme_2020_Colorful_Abstract_Design_1366x768.jpg')",
+      }}
+    >
       {showVerify && (
         <VerificationForm
           onClose={() => setShowVerify(false)}

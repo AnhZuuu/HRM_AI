@@ -22,7 +22,7 @@ import { getRoleLabels, hasAnyRole, Role } from "@/lib/auth";
 /* ===== Breadcrumbs (unchanged) ===== */
 const LABELS: Record<string, string> = {
   accounts: "Tài khoản",
-  dashboard: "Dashboard",
+  dashboard: "",
   candidates: "Ứng viên",
   campaigns: "Đợt tuyển dụng",
   mail: "Mẫu mail",
@@ -97,14 +97,14 @@ const depId = getDepartmentIdFromLS();
 
 type NavItem = { name: string; href: string; icon: React.ComponentType<{ className?: string }>; allow?: Role[]; };
 const NAVIGATION: NavItem[] = [
-  { name: "Thống kê", href: "/dashboard", icon: Home },
+  { name: "Thống kê", href: "/dashboard", icon: Home, allow: [Role.HR, Role.Admin] },
+  { name: "Phòng ban", href: `/dashboard/departments/${depId}`, icon: Building2Icon, allow: [ Role.DeparmentManager] },
   { name: "Tài khoản", href: "/dashboard/accounts", icon: Users, allow: [Role.HR, Role.Admin] },
   { name: "Ứng viên", href: "/dashboard/candidates", icon: Users, allow: [Role.HR, Role.DeparmentManager, Role.Admin] },
   { name: "Mail", href: "/dashboard/mail", icon: Mail, allow: [Role.Admin] },
   { name: "Đợt tuyển dụng", href: "/dashboard/campaigns", icon: Megaphone, allow: [Role.HR, Role.DeparmentManager] },
   { name: "Vị trí ứng tuyển", href: "/dashboard/campaignPosition", icon: BriefcaseBusiness, allow: [Role.HR, Role.DeparmentManager] },
   { name: "Phòng ban", href: "/dashboard/departments", icon: Building2Icon, allow: [Role.HR, Role.Admin] },
-  { name: "Phòng ban", href: `/dashboard/departments/${depId}`, icon: Building2Icon, allow: [ Role.DeparmentManager] },
   { name: "Lịch", href: "/dashboard/schedules", icon: CalendarRange },
   { name: "Loại phỏng vấn", href: "/dashboard/interviewTypes", icon: Shapes, allow: [Role.HR, Role.Admin] },
   { name: "Onboard", href: "/dashboard/onboards", icon: ReceiptText, allow: [Role.HR, Role.DeparmentManager] },

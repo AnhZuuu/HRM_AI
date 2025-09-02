@@ -37,6 +37,8 @@ import ConfirmBlockDialog from "./handleBlockAccount";
 import API from "@/api/api";
 import { isAdmin } from "@/lib/auth";
 import { fmtDate } from "@/app/utils/helper";
+import { ROLE_MAP_COLOR } from "@/app/utils/enum";
+
 
 interface AccountTableProps {
   accounts: Account[];
@@ -116,9 +118,11 @@ export function AccountTable({ accounts }: AccountTableProps) {
               <TableCell>
                 {a.accountRoles?.length
                   ? a.accountRoles.map((r) => (
-                      <Badge key={r.id} className="mr-1">
-                        {r.roleName}
-                      </Badge>
+                      <div className="mr-1">
+                        <Badge key={r.id} className={ROLE_MAP_COLOR[r.role ?? 0].className}>
+                          {r.roleName}
+                        </Badge>
+                      </div>
                     ))
                   : "—"}
               </TableCell>

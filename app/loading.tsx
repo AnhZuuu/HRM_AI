@@ -24,7 +24,7 @@ export default function GlobalLoading() {
               HRM<span className="text-primary">_AI</span>
             </h1>
             <p className="text-sm text-muted-foreground font-medium">
-              Human Resource Management System
+              Hệ thống quản lý nhân sự
             </p>
           </div>
         </div>

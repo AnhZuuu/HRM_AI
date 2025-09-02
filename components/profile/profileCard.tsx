@@ -23,7 +23,7 @@ import {
 
 // Update these paths to match your project
 import { copy, formatDate, formatDOB, initials } from "@/app/utils/helper";
-import { genderLabel } from "@/app/utils/enum";
+import { genderLabel, ROLE_MAP_COLOR } from "@/app/utils/enum";
 
 type ProfileCardProps = {
   data: Account;
@@ -55,7 +55,7 @@ export function ProfileCard({ data, onEdit, onChangePassword, showEdit = true, s
               <div className="flex items-center gap-3 flex-wrap">
                 <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">{data.firstName}</h1>
                 {primaryRole?.roleName && (
-                  <Badge variant="secondary" className="text-xs">
+                  <Badge className={`text-xs ${ROLE_MAP_COLOR[primaryRole.role ?? 0]}`}>
                     {primaryRole.roleName}
                   </Badge>
                 )}
