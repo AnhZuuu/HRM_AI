@@ -46,9 +46,9 @@ export default function PositionsTable({ items }: { items: CampaignPositionModel
                           <li key={d.id}>
                             <span className="font-medium">{d.type ?? "Tiêu chí"}:</span>{" "}
                             {d.key ?? "—"} — {d.value ?? "—"}
-                            {typeof d.groupIndex === "number" ? (
+                            {/* {typeof d.groupIndex === "number" ? (
                               <span className="text-muted-foreground"> (Nhóm {d.groupIndex})</span>
-                            ) : null}
+                            ) : null} */}
                           </li>
                         ))}
                       </ul>

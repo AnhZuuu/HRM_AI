@@ -276,7 +276,7 @@ export default function FlexibleFieldsForm({ positionName, onSave }: FlexibleFie
       </div>
 
       {/* JSON Output */}
-      <Card>
+      {/* <Card>
         <CardHeader>
           <CardTitle>Dữ liệu JSON</CardTitle>
         </CardHeader>
@@ -285,7 +285,7 @@ export default function FlexibleFieldsForm({ positionName, onSave }: FlexibleFie
             {JSON.stringify({ campaignPositionDetailAddModels: details }, null, 2)}
           </pre>
         </CardContent>
-      </Card>
+      </Card> */}
     </div>
   );
 }

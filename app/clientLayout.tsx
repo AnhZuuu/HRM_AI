@@ -18,11 +18,12 @@ import { ToastContainer, toast } from "react-toastify";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { getRoleLabels, hasAnyRole, Role } from "@/lib/auth";
+import { AuthGate } from "@/components/auth/authGate";
 
 /* ===== Breadcrumbs (unchanged) ===== */
 const LABELS: Record<string, string> = {
   accounts: "Tài khoản",
-  dashboard: "Dashboard",
+  dashboard: "",
   candidates: "Ứng viên",
   campaigns: "Đợt tuyển dụng",
   mail: "Mẫu mail",
@@ -84,7 +85,7 @@ function Breadcrumbs() {
 }
 
 /* ===== Nav items (unchanged) ===== */
-  function getDepartmentIdFromLS(): string | null {
+function getDepartmentIdFromLS(): string | null {
   if (typeof window === "undefined") return null;
   try {
     return localStorage.getItem("departmentId");
@@ -97,14 +98,14 @@ const depId = getDepartmentIdFromLS();
 
 type NavItem = { name: string; href: string; icon: React.ComponentType<{ className?: string }>; allow?: Role[]; };
 const NAVIGATION: NavItem[] = [
-  { name: "Thống kê", href: "/dashboard", icon: Home },
+  { name: "Thống kê", href: "/dashboard", icon: Home, allow: [Role.HR, Role.Admin] },
+  { name: "Phòng ban", href: `/dashboard/departments/${depId}`, icon: Building2Icon, allow: [Role.DeparmentManager] },
   { name: "Tài khoản", href: "/dashboard/accounts", icon: Users, allow: [Role.HR, Role.Admin] },
   { name: "Ứng viên", href: "/dashboard/candidates", icon: Users, allow: [Role.HR, Role.DeparmentManager, Role.Admin] },
   { name: "Mail", href: "/dashboard/mail", icon: Mail, allow: [Role.Admin] },
   { name: "Đợt tuyển dụng", href: "/dashboard/campaigns", icon: Megaphone, allow: [Role.HR, Role.DeparmentManager] },
   { name: "Vị trí ứng tuyển", href: "/dashboard/campaignPosition", icon: BriefcaseBusiness, allow: [Role.HR, Role.DeparmentManager] },
   { name: "Phòng ban", href: "/dashboard/departments", icon: Building2Icon, allow: [Role.HR, Role.Admin] },
-  { name: "Phòng ban", href: `/dashboard/departments/${depId}`, icon: Building2Icon, allow: [ Role.DeparmentManager] },
   { name: "Lịch", href: "/dashboard/schedules", icon: CalendarRange },
   { name: "Loại phỏng vấn", href: "/dashboard/interviewTypes", icon: Shapes, allow: [Role.HR, Role.Admin] },
   { name: "Onboard", href: "/dashboard/onboards", icon: ReceiptText, allow: [Role.HR, Role.DeparmentManager] },
@@ -137,71 +138,73 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       setName(localStorage.getItem("name") ?? "");
       setEmail(localStorage.getItem("email") ?? "");
       setRole(getRoleLabels().join(" / "));
-    } catch {}
+    } catch { }
   }, []);
 
   return (
     <html lang="en">
       <body className={inter.className}>
-        <div className="min-h-screen bg-gray-50">
-          {/* Mobile sidebar drawer */}
-          {sidebarOpen && (
-            <div className="fixed inset-0 z-40 lg:hidden">
-              <div className="fixed inset-0 bg-gray-600/75" onClick={() => setSidebarOpen(false)} />
-              <div className="relative flex w-full max-w-xs flex-1 flex-col bg-white">
-                <div className="absolute top-0 right-0 -mr-12 pt-2">
-                  <button
-                    type="button"
-                    className="ml-1 flex h-10 w-10 items-center justify-center rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
-                    onClick={() => setSidebarOpen(false)}
-                  >
-                    <X className="h-6 w-6 text-white" />
-                  </button>
+        <AuthGate>
+          <div className="min-h-screen bg-gray-50">
+            {/* Mobile sidebar drawer */}
+            {sidebarOpen && (
+              <div className="fixed inset-0 z-40 lg:hidden">
+                <div className="fixed inset-0 bg-gray-600/75" onClick={() => setSidebarOpen(false)} />
+                <div className="relative flex w-full max-w-xs flex-1 flex-col bg-white">
+                  <div className="absolute top-0 right-0 -mr-12 pt-2">
+                    <button
+                      type="button"
+                      className="ml-1 flex h-10 w-10 items-center justify-center rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
+                      onClick={() => setSidebarOpen(false)}
+                    >
+                      <X className="h-6 w-6 text-white" />
+                    </button>
+                  </div>
+                  <Suspense fallback={"Loading"}>
+                    <SidebarContent name={name} email={email} role={role} onLogout={handleLogout} />
+                  </Suspense>
                 </div>
-                <Suspense fallback={"Loading"}>
-                  <SidebarContent name={name} email={email} role={role} onLogout={handleLogout} />
-                </Suspense>
               </div>
+            )}
+
+            {/* Desktop sidebar only */}
+            <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
+              <Suspense fallback={"Loading"}>
+                <SidebarContent name={name} email={email} role={role} onLogout={handleLogout} />
+              </Suspense>
             </div>
-          )}
 
-          {/* Desktop sidebar only */}
-          <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
-            <Suspense fallback={"Loading"}>
-              <SidebarContent name={name} email={email} role={role} onLogout={handleLogout} />
-            </Suspense>
+            {/* Main area (no top bar) */}
+            <div className="lg:pl-64">
+              {/* Mobile floating trigger to open sidebar */}
+              <button
+                type="button"
+                className="fixed bottom-4 right-4 z-30 inline-flex items-center justify-center rounded-full p-3 shadow-md bg-white border text-gray-700 lg:hidden"
+                aria-label="Open navigation"
+                onClick={() => setSidebarOpen(true)}
+              >
+                <Menu className="h-6 w-6" />
+              </button>
+
+              {/* Breadcrumbs + Page content */}
+              <Breadcrumbs />
+              <main className="flex-1">{children}</main>
+            </div>
           </div>
 
-          {/* Main area (no top bar) */}
-          <div className="lg:pl-64">
-            {/* Mobile floating trigger to open sidebar */}
-            <button
-              type="button"
-              className="fixed bottom-4 right-4 z-30 inline-flex items-center justify-center rounded-full p-3 shadow-md bg-white border text-gray-700 lg:hidden"
-              aria-label="Open navigation"
-              onClick={() => setSidebarOpen(true)}
-            >
-              <Menu className="h-6 w-6" />
-            </button>
-
-            {/* Breadcrumbs + Page content */}
-            <Breadcrumbs />
-            <main className="flex-1">{children}</main>
-          </div>
-        </div>
-
-        <ToastContainer
-          position="top-right"
-          autoClose={3000}
-          hideProgressBar={false}
-          newestOnTop={false}
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          style={{ zIndex: 9999 }}
-        />
+          <ToastContainer
+            position="top-right"
+            autoClose={3000}
+            hideProgressBar={false}
+            newestOnTop={false}
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+            style={{ zIndex: 9999 }}
+          />
+        </AuthGate>
       </body>
     </html>
   );
@@ -248,16 +251,14 @@ function SidebarContent({
                   <li key={item.name}>
                     <Link
                       href={item.href}
-                      className={`group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold transition-colors ${
-                        isActive
+                      className={`group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold transition-colors ${isActive
                           ? "bg-blue-50 text-blue-600"
                           : "text-gray-700 hover:text-blue-600 hover:bg-gray-50"
-                      }`}
+                        }`}
                     >
                       <item.icon
-                        className={`h-6 w-6 shrink-0 ${
-                          isActive ? "text-blue-600" : "text-gray-400 group-hover:text-blue-600"
-                        }`}
+                        className={`h-6 w-6 shrink-0 ${isActive ? "text-blue-600" : "text-gray-400 group-hover:text-blue-600"
+                          }`}
                       />
                       {item.name}
                     </Link>

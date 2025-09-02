@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { authFetch } from "@/app/utils/authFetch";
 import { toast } from "react-toastify";
 import API from "@/api/api";
 import { FancyTextarea } from "./ui/fancyTextarea";
-import { ArrowLeft, Copy, FileText } from "lucide-react";
+import { ArrowLeft, Copy, FileText, TypeOutline, User, UserCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback } from "../ui/avatar";
 import { formatDate } from "@/app/utils/helper";
@@ -17,7 +17,9 @@ import PanelDetails from "./interviewScheduleDetail/panels/panelDetails";
 import InfoRow from "./ui/infoRow";
 import { OUTCOME_STATUS } from "@/app/utils/enum";
 import RightTimeline from "./interviewScheduleDetail/sections/rightTimeline";
-import { isHR } from "@/lib/auth";
+import { isHR, isHRorDM } from "@/lib/auth";
+import { Candidate, Department } from "@/components/interviewSchedule/ui/ScheduleModal";
+import { ScheduleModal } from "./ui/ScheduleModal";
 
 function durationMin(start?: string, end?: string | null) {
   if (!start || !end) return null;
@@ -35,6 +37,52 @@ export default function InterviewScheduleDetail({ interviewScheduleId }: { inter
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
 
+  // state to control the modal
+  const [openScheduleModal, setOpenScheduleModal] = useState(false);
+
+  // Build a type-correct Candidate for ScheduleModal
+  const scheduleCandidate: Candidate | null = useMemo(() => {
+    if (!scheduleData) return null;
+
+    const applicant = scheduleData.cvApplicantModel ?? null;
+    const position = scheduleData.campaignPositionModel ?? null;
+
+    // Resolve departmentId: prefer from position; fallback if your API has it on applicant
+    const resolvedDeptId: string | null =
+      position?.departmentId ??
+      (Array.isArray(applicant?.department) ? applicant?.department?.[0]?.id : null) ??
+      null;
+
+    // Build a minimal Department stub that satisfies the type
+    const dept: Department | null = resolvedDeptId
+      ? {
+        id: resolvedDeptId,
+        departmentName: position?.departmentName ?? "",   // safe empty strings if unknown
+        code: position?.departmentCode ?? "",
+        description: position?.departmentDescription ?? null,
+        employees: [],               // empty arrays are fine
+        campaignPositionModels: [],  // required by the type
+        campaignPositions: [],       // if your Department includes this too
+      }
+      : null;
+
+    return {
+      id: applicant?.id ?? "",
+      cvApplicantId: scheduleData.cvApplicantId ?? "",
+      fullName: applicant?.fullName ?? null,
+      email: applicant?.email ?? null,
+      point: applicant?.point ?? null,
+      campaignPositionDescription: position?.description ?? null,
+      currentInterviewStageName: scheduleData?.currentInterviewStageModel?.stageName ?? null,
+      fileUrl: applicant?.fileUrl ?? null,
+      status: (applicant?.status ?? null) as Candidate["status"],
+
+      // what ScheduleModal expects:
+      departmentId: resolvedDeptId,
+      department: dept ? [dept] : null,
+    };
+  }, [scheduleData]);
+
   const getScheduleData = async () => {
     const res = await authFetch(`${API.INTERVIEW.SCHEDULE}/${interviewScheduleId}`);
     const json = await res.json();
@@ -50,6 +98,11 @@ export default function InterviewScheduleDetail({ interviewScheduleId }: { inter
       setHasCompletedAllStages(status === true && message === "Applicant has completed all interview stages." && data === null);
     }
   };
+
+  const isBeforeInterview = useMemo(() => {
+    if (!scheduleData?.startTime) return false;
+    return new Date(scheduleData.startTime) > new Date();
+  }, [scheduleData]);
 
   const handleCreateOutcome = async () => {
     setSubmitting(true);
@@ -109,58 +162,59 @@ export default function InterviewScheduleDetail({ interviewScheduleId }: { inter
                 <CardTitle className="text-lg font-semibold">Thông tin ứng viên</CardTitle>
               </CardHeader>
               <div className="relative h-24 w-24 rounded-full bg-gradient-to-b from-blue-100 to-blue-200 overflow-hidden">
-                <Avatar className="h-24 w-24 rounded-2xl ring-1 ring-border">
-                  <AvatarFallback className="text-2xl font-semibold">
-                    {/* {initials(applicant.fullName)} */}
-                  </AvatarFallback>
+                <Avatar className="h-24 w-24 rounded-2xl ring-1 ring-border bg-blue-50 flex items-end justify-center">
+                  <User className="w-20 h-20 text-gray-500" />
+                  {/* <AvatarFallback className="text-2xl font-semibold">
+                    {initials(applicant.fullName)}
+                  </AvatarFallback> */}
                 </Avatar>
-               </div>
+              </div>
               <CardContent className="space-y-2">
-                  <h3 className="mt-4 text-lg font-semibold leading-tight">
-                    {applicant?.fullName ?? "—"}
-                  </h3> 
-                  <p className="mt-1 max-w-[220px] text-sm leading-relaxed text-muted-foreground">
-                    Ứng tuyển vào vị trí {scheduleData.campaignPositionModel?.description}
-                  </p>
-              </CardContent>              
+                <h3 className="mt-4 text-lg font-semibold leading-tight">
+                  {applicant?.fullName ?? "—"}
+                </h3>
+                <p className="mt-1 max-w-[220px] text-sm leading-relaxed text-muted-foreground">
+                  Ứng tuyển vào vị trí {scheduleData.campaignPositionModel?.description}
+                </p>
+              </CardContent>
             </div>
             <div className="mr-6 ml-6 mb-4 h-px bg-border" />
 
-              <CardContent className="space-y-2 text-sm mb-2">
-                {/* <a className="text-muted-foreground">Email: </a>
+            <CardContent className="space-y-2 text-sm mb-2">
+              {/* <a className="text-muted-foreground">Email: </a>
                 <a className="font-medium">{applicant?.email || "—"}</a> */}
-                <div className="flex items-start gap-2">
-                  <span className="text-slate-600 shrink-0">Email:</span>
-                  <span
-                    className="min-w-0 flex-1 truncate"
-                    title={applicant?.email || "—"}              
-                  >
-                    {applicant?.email || "—"}
-                  </span>
-              
-                  {applicant?.email && (
-                    <button
-                      onClick={() => navigator.clipboard.writeText(applicant?.email)}
-                      className="ml-1 rounded hover:bg-slate-100"
-                      aria-label="Copy email"
-                      title="Copy email"
-                    >
-                      <Copy className="h-3 w-3" />
-                    </button>
-                  )}
-              </div>
-                <a
-                  className="flex w-full items-center gap-2 text-left text-sm text-primary underline-offset-4 hover:underline"
-                  href={applicant?.fileUrl}
+              <div className="flex items-start gap-2">
+                <span className="text-slate-600 shrink-0">Email:</span>
+                <span
+                  className="min-w-0 flex-1 truncate"
+                  title={applicant?.email || "—"}
                 >
-                  <FileText className="h-4 w-4" /> CV đính kèm
-                </a>
+                  {applicant?.email || "—"}
+                </span>
+
+                {applicant?.email && (
+                  <button
+                    onClick={() => navigator.clipboard.writeText(applicant?.email)}
+                    className="ml-1 rounded hover:bg-slate-100"
+                    aria-label="Copy email"
+                    title="Copy email"
+                  >
+                    <Copy className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+              <a
+                className="flex w-full items-center gap-2 text-left text-sm text-primary underline-offset-4 hover:underline"
+                href={applicant?.fileUrl}
+              >
+                <FileText className="h-4 w-4" /> CV đính kèm
+              </a>
             </CardContent>
           </Card>
 
           {/* Middle: Interview Details */}
           <Card>
-            <CardHeader>              
+            <CardHeader>
               <CardTitle className="text-lg font-semibold">Thông tin cuộc phỏng vấn</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
@@ -181,8 +235,8 @@ export default function InterviewScheduleDetail({ interviewScheduleId }: { inter
                 <TabsContent value="overview">
                   <OverviewPanel schedule={scheduleData} durationMin={duration ?? 0} />
                 </TabsContent>
-                <TabsContent value="panel">            
-                  <PanelDetails schedule={scheduleData} />                  
+                <TabsContent value="panel">
+                  <PanelDetails schedule={scheduleData} />
                 </TabsContent>
                 <TabsContent value="feedback">
                   <div className="mt-6">
@@ -196,19 +250,19 @@ export default function InterviewScheduleDetail({ interviewScheduleId }: { inter
                         {outcome ? (
                           <div className="space-y-2">
                             <div className="text-sm text-muted-foreground">Gửi lúc: {formatDate(outcome?.creationDate ?? undefined)}</div>
-                            
+
                             <div className="rounded-xl border bg-muted/40 p-3 text-sm whitespace-pre-wrap">{outcome.feedback}</div>
 
                             <div className="mt-2 rounded-xl border pl-3">
                               <InfoRow label="Phê duyệt" value={
                                 <Badge className={OUTCOME_STATUS[outcome.interviewOutcomeStatus ?? 0].className}>
                                   {outcome.interviewOutcomeStatus === 0 ? "Pending" : outcome.interviewOutcomeStatus === 1 ? "Pass" : "Fail"}
-                                  
+
                                 </Badge>
-                              }/>        
+                              } />
                               {outcome.interviewOutcomeStatus === 2 && (
-                                    <span className="text-sm text-muted-foreground"> - Đã gửi mail thông báo rớt phỏng vấn đến cho ứng viên</span>
-                                  )}                      
+                                <span className="text-sm text-muted-foreground"> - Đã gửi mail thông báo rớt phỏng vấn đến cho ứng viên</span>
+                              )}
                             </div>
                             {outcome.interviewOutcomeStatus === 0 && (
                               <div className="space-x-2 flex flex-row justify-center">
@@ -216,9 +270,9 @@ export default function InterviewScheduleDetail({ interviewScheduleId }: { inter
                                 <Button variant="destructive" onClick={() => handleChangeOutcomeStatus(2)}>Fail</Button>
                               </div>
                             )}
-                            {outcome.interviewOutcomeStatus === 1 && hasCompletedAllStages === true && isHR() && (
+                            {outcome.interviewOutcomeStatus === 1 && hasCompletedAllStages === true && isHRorDM() && (
                               <div className="space-x-2 flex flex-row justify-center">
-                                <Button 
+                                <Button
                                   className="mt-2"
                                   type="button"
                                   disabled={!outcome?.id || !scheduleData?.cvApplicantId}
@@ -226,38 +280,68 @@ export default function InterviewScheduleDetail({ interviewScheduleId }: { inter
                                     const outcomeId = outcome?.id;
                                     const applicantId = applicant?.fullName;
                                     router.push(`/dashboard/onboards/new?outcomeId=${outcomeId}&applicantId=${applicantId}`);
-                                }}>Tạo Onboard</Button>
-                              </div>  
-                            )}
-                            {outcome.interviewOutcomeStatus === 1 && hasCompletedAllStages === false && (
-                              <div className="space-x-2 flex flex-row justify-center">
-                              <Button className="mt-2" variant="outline" onClick={() => router.push(`/dashboard/schedules/new`)}>Tạo lịch phỏng vấn tiếp theo</Button>
+                                  }}>Tạo Onboard</Button>
                               </div>
                             )}
+                            {outcome?.interviewOutcomeStatus === 1 && hasCompletedAllStages === false && (
+                              <div className="space-x-2 flex flex-row justify-center">
+                                <Button className="mt-2" variant="outline" onClick={() => setOpenScheduleModal(true)}>
+                                  Tạo lịch phỏng vấn tiếp theo
+                                </Button>
+                              </div>
+                            )}
+
                           </div>
                         ) : (
                           <div>
-                            <Label htmlFor="feedback"></Label>
-                            <FancyTextarea value={feedbackText} onChange={setFeedbackText} maxLength={1000}/>
-                            <Button disabled={submitting} onClick={handleCreateOutcome} className="mt-2">Gửi đánh giá</Button>
+                            {isBeforeInterview ? (
+                              <div className="text-sm text-muted-foreground italic mb-4">
+                                Bạn chỉ có thể đánh giá sau khi phỏng vấn bắt đầu.
+                                <p className="text-xs text-muted-foreground">
+                                  Thời gian phỏng vấn: {formatDate(scheduleData.startTime)}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  Hiện tại: {formatDate(new Date().toISOString())}
+                                </p>
+                              </div>
+                              
+                            ) : (
+                              <div>
+                                <Label htmlFor="feedback"></Label>
+                                <FancyTextarea value={feedbackText} onChange={setFeedbackText} maxLength={1000} />
+                                <Button disabled={submitting} onClick={handleCreateOutcome} className="mt-2">Gửi đánh giá</Button>                         
+                              </div>
+                            )}
                           </div>
-                        )}                        
+                        )}
                       </CardContent>
                     </Card>
                   </div>
-                 
+
                 </TabsContent>
               </Tabs>
             </CardContent>
           </Card>
 
-          {/* Right: Past schedules */}     
+          {/* Right: Past schedules */}
           <Card>
-              <RightTimeline schedules={schedules} />
+            <RightTimeline schedules={schedules} />
           </Card>
         </div>
       </div>
-     
+      {scheduleCandidate && (
+        <ScheduleModal
+          open={openScheduleModal}
+          onOpenChange={setOpenScheduleModal}
+          candidate={scheduleCandidate}
+          onScheduled={async () => {
+            await getScheduleData();
+            toast.success("Đã tạo lịch phỏng vấn.");
+            // safe redirect to schedules list
+            router.push("/dashboard/schedules");
+          }}
+        />
+      )}
     </div>
   );
 }

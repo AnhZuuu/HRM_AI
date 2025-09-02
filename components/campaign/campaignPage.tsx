@@ -29,6 +29,7 @@ import { authFetch } from "@/app/utils/authFetch";
 import { formatDMYHM, toIsoFromDateInput, toMidnight } from "@/app/utils/helper";
 import { useRouter } from "next/navigation";
 import API from "@/api/api";
+import { isHR } from "@/lib/auth";
 
 /* ---------- Types ---------- */
 export type Campaign = {
@@ -245,10 +246,13 @@ export default function CampaignPage() {
           <h1 className="text-3xl font-bold text-gray-900">Các đợt tuyển dụng</h1>
           <p className="text-gray-600 mt-1">Quản lý đợt tuyển dụng</p>
         </div>
-        <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => setIsAddDialogOpen(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          Thêm đợt tuyển dụng
-        </Button>
+        {isHR() && (
+          <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => setIsAddDialogOpen(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Thêm đợt tuyển dụng
+          </Button>
+        )}
+       
       </div>
 
       <Card>
@@ -331,18 +335,21 @@ export default function CampaignPage() {
                           <DropdownMenuItem onClick={() => router.push(`/dashboard/campaigns/${campaign.id}`)}>
                             <Eye className="mr-2 h-4 w-4" /> Chi tiết
                           </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setEditing(campaign);
-                              setEditOpen(true);
-                            }}
-                          >
-                            <Edit className="mr-2 h-4 w-4" /> Sửa
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
+                          {isHR() && (
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setEditing(campaign);
+                                setEditOpen(true);
+                              }}
+                            >
+                              <Edit className="mr-2 h-4 w-4" /> Sửa
+                            </DropdownMenuItem>
+                          )}
+                          
+                          {/* <DropdownMenuSeparator />
                           <DropdownMenuItem className="text-red-600" onClick={() => openDelete(campaign)}>
                             <Trash2 className="mr-2 h-4 w-4" /> Xóa
-                          </DropdownMenuItem>
+                          </DropdownMenuItem> */}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>

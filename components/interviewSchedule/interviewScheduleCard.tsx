@@ -22,6 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import { isHR } from "@/lib/auth";
 
 // ---------- Types (shared with the page) ----------
 export type CampaignPosition = {
@@ -443,15 +444,17 @@ export default function InterviewSchedulesTable({
 
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              router.push(`/dashboard/schedules/${it.id}/edit`)
-                            }
-                          >
-                            Chỉnh lịch
-                          </Button>
+                          {isHR() && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                router.push(`/dashboard/schedules/${it.id}/edit`)
+                              }
+                            >
+                              Chỉnh lịch
+                            </Button>
+                          )}                          
                           <Button
                             variant="outline"
                             size="sm"
