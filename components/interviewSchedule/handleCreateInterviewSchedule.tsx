@@ -1,8 +1,20 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { MoreHorizontal, Eye, CalendarPlus, Loader2, Filter, Plus } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -10,618 +22,539 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { useRouter } from "next/navigation";
+
 import { authFetch } from "@/app/utils/authFetch";
-import { getApplicantsByCampaign, getCampaigns, getDepartmentsByCampaign, getEmployeesByDepartment, getInterviewTypes, getPositionsByCampaign } from "./dataSource";
+import API from "@/api/api";
+import { ScheduleModal } from "./ui/ScheduleModal";
+import ScheduleModal2 from "./ui/ScheduleModal2";
+import HandleUpdateStatusCandidate from "../candidates/HandleUpdateStatusCandidate";
 
-// ---------------- Types ----------------
-export interface Campaign {
-  id: string;
-  name: string;
-}
+/* ============= Types ============= */
 
-export interface Department {
-  id: string;
-  name: string;
-}
 
-export interface InterviewType {
+export type Candidate = {
   id: string;
-  name: string;
-}
-
-export interface CVApplicant {
-  id: string;
-  fileUrl: string;
-  fileAlt: string;
-  fullName: string;
+  cvApplicantId: string;
+  fullName: string | null;
   email: string | null;
   point: string | null;
-  status: string | null;
-  createdBy: string | null;
-  campaignPositionId: string;
-  campaignPosition: CampaignPosition | null;
-  cvApplicantDetails: any[];
-  interviewSchedules: any[];
-}
+  campaignPositionDescription: string | null;
+  currentInterviewStageName: string | null;
+  fileUrl: string | null;
+  status: 0 | 1 | 2 | 3 | 4 | null; // 0 Pending, 1 Rejected, 2 Accepted, 3 Failed, 4 Onboarded
 
-export interface Account {
-  id: string;
-  firstName?: string;
-  lastName?: string;
-  username?: string;
-  email?: string;
-}
-
-export interface CampaignPosition {
-  id: string;
-  departmentId: string;
-  campaignId: string;
-  campaign: string | null;
-  department: string | null;
-  createdBy: string | null;
-  totalSlot: number;
-  description: string;
-  cvApplicants?: CVApplicant[];
-}
-
-// ------------- Helpers / constants -------------
-const unwrap = async (res: Response) => {
-  const txt = await res.text();
-  const json = txt ? JSON.parse(txt) : null;
-  return json?.data?.data ?? json?.data ?? json;
+  // ensure these get populated in normalizeCandidates()
+  departmentId?: string | null;
+  department: Department[] | null;
 };
 
-const roundOptions = [1, 2, 3, 4, 5];
-const durationOptions = [15, 30, 45, 60, 90];
+const STATUS_LABEL: Record<NonNullable<Candidate["status"]>, string> = {
+  0: "Pending",
+  1: "Rejected",
+  2: "Accepted",
+  3: "Failed",
+  4: "Onboarded",
+};
 
-const generateTimeSlots = (start = 8, end = 18, interval = 15) => {
-  const slots: string[] = [];
-  for (let h = start; h <= end; h++) {
-    for (let m = 0; m < 60; m += interval) {
-      const hh = String(h).padStart(2, "0");
-      const mm = String(m).padStart(2, "0");
-      slots.push(`${hh}:${mm}`);
-    }
+function statusBadgeClass(s: Candidate["status"]) {
+  switch (s) {
+    case 4:
+      return "bg-amber-100 text-amber-800";
+    case 2:
+      return "bg-green-100 text-green-800";
+    case 0:
+      return "bg-blue-100 text-blue-800";
+    case 1:
+      return "bg-red-100 text-red-800";
+    case 3:
+      return "bg-gray-200 text-gray-800";
+    default:
+      return "bg-gray-100 text-gray-800";
   }
-  return slots;
-};
-const timeSlots = generateTimeSlots();
+}
 
-// ------------- Page component -------------
-export default function HandleCreateInterviewSchedule() {
-  const router = useRouter();
+/* ============= Small Utils ============= */
+function getDetailValue(details: any[] | undefined, type: string, key: string): string | null {
+  if (!Array.isArray(details)) return null;
+  const found = details.find((d) => d?.type === type && d?.key === key && d?.value);
+  return (found?.value as string) ?? null;
+}
 
-  // form state
-  const [form, setForm] = useState<{
-    campaignId?: string;
-    campaignPositionId?: string;
-    departmentId?: string;
-    cvApplicantId?: string;
-    interviewers: Account[];
-    round?: number;
-    interviewTypeId?: string;
-    notes?: string;
-    startTime?: string; // ISO
-    endTime?: string;   // ISO
-  }>({ interviewers: [] });
+/* Updated: now maps departmentId + department[] from flexible API shapes */
+function normalizeCandidates(payload: any): Candidate[] {
+  const arr =
+    (Array.isArray(payload?.data) && payload.data) ||
+    (Array.isArray(payload?.data?.data) && payload.data.data) ||
+    (Array.isArray(payload) && payload) ||
+    [];
 
-  // UI state
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [busy, setBusy] = useState(false);
+  return arr.map((it: any) => {
+    const details = it?.cvApplicantDetailModels as any[] | undefined;
+    const fallbackFullName = getDetailValue(details, "personal_info", "full_name");
+    const fallbackPosition = getDetailValue(details, "personal_info", "position");
 
-  // dependent select data
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [positions, setPositions] = useState<CampaignPosition[]>([]);
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [applicants, setApplicants] = useState<CVApplicant[]>([]);
-  const [employees, setEmployees] = useState<Account[]>([]);
-  const [interviewTypes, setInterviewTypes] = useState<InterviewType[]>([]);
+    const rawStatus = it?.status;
+    const statusVal =
+      Number.isInteger(rawStatus) && rawStatus >= 0 && rawStatus <= 4 ? (rawStatus as 0 | 1 | 2 | 3 | 4) : null;
 
-  // loading flags
-  const [loadingCampaigns, setLoadingCampaigns] = useState(false);
-  const [loadingPositions, setLoadingPositions] = useState(false);
-  const [loadingDepartments, setLoadingDepartments] = useState(false);
-  const [loadingApplicants, setLoadingApplicants] = useState(false);
-  const [loadingEmployees, setLoadingEmployees] = useState(false);
+    const id = String(it?.id ?? it?.cvApplicantId ?? "");
 
-  // date/time split
-  const [datePart, setDatePart] = useState("");
-  const [timePart, setTimePart] = useState("");
-  const [duration, setDuration] = useState<number | "">("");
+    // STRICT: use departmentModel only (can be null at first)
+    const deptModel = it?.departmentModel ?? null;
 
-  const interviewerIds = useMemo(
-    () => new Set(form.interviewers.map((x) => x.id)),
-    [form.interviewers]
+    const departmentId = deptModel?.id ?? null;
+    const department: Department[] | null = deptModel
+      ? [
+        {
+          id: String(deptModel.id),
+          departmentName: deptModel.departmentName ?? "",
+          code: deptModel.code ?? null,
+          description: deptModel.description ?? null,
+          campaignPositionModels: deptModel.campaignPositionModels ?? [],
+          employees: deptModel.employees ?? [],
+        },
+      ]
+      : null;
+
+    return {
+      id,
+      cvApplicantId: id,
+      fullName: it?.fullName ?? fallbackFullName ?? null,
+      email: it?.email ?? null,
+      point: it?.point ?? null,
+      campaignPositionDescription: it?.campaignPositionDescription ?? fallbackPosition ?? null,
+      currentInterviewStageName: it?.currentInterviewStageName ?? null,
+      fileUrl: it?.fileUrl ?? null,
+      status: statusVal,
+
+      // now ScheduleModal will resolve deptId correctly
+      departmentId,
+      department,
+    };
+  });
+}
+
+
+async function fetchCandidates(): Promise<Candidate[]> {
+  const res = await authFetch(API.CV.APPLICANT, { method: "GET" });
+  if (!res.ok) throw new Error(`Failed to load candidates: ${res.status}`);
+
+  const json = await res.json();
+  console.log("[fetchCandidates] raw response:", json);
+  console.log(
+    "[fetchCandidates] shapes =>",
+    "Array.isArray(json.data):", Array.isArray(json?.data),
+    "| Array.isArray(json.data?.data):", Array.isArray(json?.data?.data)
   );
 
-  // ---------- fetch master data ----------
-  // useEffect(() => {
-  //   (async () => {
-  //     setLoadingCampaigns(true);
-  //     try {
-  //       const [cps, itypes] = await Promise.all([
-  //         authFetch("/api/campaigns").then(unwrap),
-  //         authFetch("/api/interview-types").then(unwrap),
-  //       ]);
-  //       setCampaigns(cps ?? []);
-  //       setInterviewTypes(itypes ?? []);
-  //     } finally {
-  //       setLoadingCampaigns(false);
-  //     }
-  //   })();
-  // }, []);
+  const normalized = normalizeCandidates(json);
+  console.log("[fetchCandidates] normalized length:", normalized.length);
+  console.table(
+    normalized.map(x => ({
+      id: x.id,
+      name: x.fullName,
+      email: x.email,
+      point: x.point,
+      stage: x.currentInterviewStageName,
+      status: x.status,
+      departmentId: x.departmentId,
+      deptCount: Array.isArray(x.department) ? x.department.length : 0,
+    }))
+  );
+  return normalized;
+}
 
-  // // when campaign changes -> load positions, departments, applicants
-  // useEffect(() => {
-  //   const { campaignId } = form;
-  //   if (!campaignId) {
-  //     setPositions([]);
-  //     setDepartments([]);
-  //     setApplicants([]);
-  //     return;
-  //   }
-  //   (async () => {
-  //     setLoadingPositions(true);
-  //     setLoadingDepartments(true);
-  //     setLoadingApplicants(true);
-  //     try {
-  //       const [pos, deps, apps] = await Promise.all([
-  //         // positions linked to this campaign
-  //         authFetch(`/api/campaign-positions?campaignId=${campaignId}`).then(
-  //           unwrap
-  //         ),
-  //         // departments participating in this campaign
-  //         authFetch(`/api/departments?campaignId=${campaignId}`).then(unwrap),
-  //         // applicants of this campaign with status "Chưa phỏng vấn"
-  //         authFetch(
-  //           `/api/cv-applicants?campaignId=${campaignId}&status=${encodeURIComponent(
-  //             "Chưa phỏng vấn"
-  //           )}`
-  //         ).then(unwrap),
-  //       ]);
-  //       setPositions(pos ?? []);
-  //       setDepartments(deps ?? []);
-  //       setApplicants(apps ?? []);
-  //       // reset dependent selections
-  //       setForm((s) => ({
-  //         ...s,
-  //         campaignPositionId: undefined,
-  //         departmentId: undefined,
-  //         cvApplicantId: undefined,
-  //         interviewers: [],
-  //       }));
-  //     } finally {
-  //       setLoadingPositions(false);
-  //       setLoadingDepartments(false);
-  //       setLoadingApplicants(false);
-  //     }
-  //   })();
-  // }, [form.campaignId]);
-
-  // when position changes -> auto-set department (from the position)
+/* Debounce without external deps */
+function useDebouncedValue<T>(value: T, delay = 300): T {
+  const [debounced, setDebounced] = useState(value);
   useEffect(() => {
-    if (!form.campaignPositionId) return;
-    const pos = positions.find((p) => p.id === form.campaignPositionId);
-    if (pos?.departmentId) {
-      setForm((s) => ({
-        ...s,
-        departmentId: pos.departmentId,
-        interviewers: [],
-      }));
-    }
-  }, [form.campaignPositionId, positions]);
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+}
 
-  // when department changes -> load employees
-  // useEffect(() => {
-  //   const { departmentId } = form;
-  //   if (!departmentId) {
-  //     setEmployees([]);
-  //     return;
-  //   }
-  //   (async () => {
-  //     setLoadingEmployees(true);
-  //     try {
-  //       const emps = await authFetch(
-  //         `/api/departments/${departmentId}/employees`
-  //       ).then(unwrap);
-  //       setEmployees(emps ?? []);
-  //       setForm((s) => ({ ...s, interviewers: [] }));
-  //     } finally {
-  //       setLoadingEmployees(false);
-  //     }
-  //   })();
-  // }, [form.departmentId]);
+/* ============= Page ============= */
+export default function CandidatesPage() {
+  const router = useRouter();
+  const sp = useSearchParams();
 
+  // Read initial state from URL
+  const initialQuery = sp.get("q") ?? "";
+  const initialStatus = (sp.get("status") as "all" | "0" | "1" | "2" | "3" | "4" | null) ?? "all";
+  const initialPage = Math.max(1, parseInt(sp.get("page") ?? "1", 10) || 1);
+  const initialPageSize = (() => {
+    const v = parseInt(sp.get("pageSize") ?? "5", 10);
+    return [5, 10, 20, 50].includes(v) ? v : 5;
+  })();
+
+  const [loading, setLoading] = useState(true);
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [query, setQuery] = useState(initialQuery);
+  const debouncedQuery = useDebouncedValue(query, 300);
+
+  const [statusFilter, setStatusFilter] =
+    useState<"all" | "0" | "1" | "2" | "3" | "4">(initialStatus);
+  const [page, setPage] = useState(initialPage);
+  const [pageSize, setPageSize] = useState<number>(initialPageSize);
+
+  // Which statuses are allowed to schedule? Only "Accepted" (2)
+  const canSchedule = (s: Candidate["status"]) => s === 2;
+
+  // Toggle behavior: false = gray out; true = hide completely
+  const HIDE_UNSCHEDULABLE_SCHEDULE = false;
+
+  // Modals 1
+  const [open, setOpen] = useState(false);
+  const [activeCandidate, setActiveCandidate] = useState<Candidate | null>(null);
+
+  //Modals 2
+  // const [openV2, setOpenV2] = useState(false);
+  const [activeCandidateV2, setActiveCandidateV2] = useState<Candidate | null>(null);
+
+  // Update candidate status modal
+  const [openUpdateStatus, setOpenUpdateStatus] = useState(false);
+  const [activeStatusCandidate, setActiveStatusCandidate] = useState<Candidate | null>(null);
+
+  function openUpdateStatusModal(c: Candidate) {
+    setActiveStatusCandidate(c);
+    setOpenUpdateStatus(true);
+  }
+
+  // Fetch once
   useEffect(() => {
-  (async () => {
-    const [cps, itypes] = await Promise.all([getCampaigns(), getInterviewTypes()]);
-    setCampaigns(cps);
-    setInterviewTypes(itypes);
-  })();
-}, []);
-
-// when campaign changes
-useEffect(() => {
-  if (!form.campaignId) { setPositions([]); setDepartments([]); setApplicants([]); return; }
-  (async () => {
-    const [pos, deps, apps] = await Promise.all([
-      getPositionsByCampaign(form.campaignId as any),
-      getDepartmentsByCampaign(form.campaignId as any),
-      getApplicantsByCampaign(form.campaignId as any),
-    ]);
-    setPositions(pos);
-    setDepartments(deps);
-    setApplicants(apps);
-    setForm(s => ({ ...s, campaignPositionId: undefined, departmentId: undefined, cvApplicantId: undefined, interviewers: [] }));
-  })();
-}, [form.campaignId]);
-
-// when department changes
-useEffect(() => {
-  if (!form.departmentId) { setEmployees([]); return; }
-  (async () => {
-    const emps = await getEmployeesByDepartment(form.departmentId!);
-    setEmployees(emps);
-    setForm(s => ({ ...s, interviewers: [] }));
-  })();
-}, [form.departmentId]);
-
-  // when date/time/duration changes -> compute start/end ISO
-  useEffect(() => {
-    if (!datePart || !timePart || !duration || typeof duration !== "number") {
-      setForm((s) => ({ ...s, startTime: undefined, endTime: undefined }));
-      return;
-    }
-    try {
-      const [hh, mm] = timePart.split(":").map((x) => Number(x));
-      const start = new Date(datePart);
-      start.setHours(hh, mm, 0, 0);
-      const end = new Date(start.getTime() + duration * 60_000);
-      setForm((s) => ({
-        ...s,
-        startTime: start.toISOString(),
-        endTime: end.toISOString(),
-      }));
-    } catch {
-      // ignore parsing error
-    }
-  }, [datePart, timePart, duration]);
-
-  // ---------- handlers ----------
-  const toggleInterviewer = (emp: Account) => {
-    setForm((s) => {
-      const exists = s.interviewers.find((x) => x.id === emp.id);
-      return exists
-        ? { ...s, interviewers: s.interviewers.filter((x) => x.id !== emp.id) }
-        : { ...s, interviewers: [...s.interviewers, emp] };
-    });
-  };
-
-  const validate = () => {
-    const e: Record<string, string> = {};
-    if (!form.campaignId) e.campaignId = "Hãy chọn đợt tuyển dụng.";
-    if (!form.campaignPositionId) e.campaignPositionId = "Hãy chọn vị trí tuyển dụng.";
-    if (!form.departmentId) e.departmentId = "Hãy chọn phòng ban.";
-    if (!form.cvApplicantId) e.cvApplicantId = "Hãy chọn ứng viên.";
-    if (!form.round) e.round = "Hãy chọn vòng phòng vấn.";
-    if (!form.interviewTypeId) e.interviewTypeId = "Hãy chọn loại phỏng vấn.";
-    if (!form.startTime) e.startTime = "Hãy chọn ngày/giờ/thời gian phỏng vấn.";
-    if (!form.interviewers?.length) e.interviewers = "Hãy chọn ít nhất 1 người phỏng vấn.";
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  };
-
-  const handleSubmit = async () => {
-    if (!validate()) return;
-    setBusy(true);
-    try {
-      // server expects interviewers as ids; map if necessary
-      const payload = {
-        campaignId: form.campaignId,
-        campaignPositionId: form.campaignPositionId,
-        departmentId: form.departmentId,
-        cvApplicantId: form.cvApplicantId,
-        round: form.round,
-        interviewTypeId: form.interviewTypeId,
-        interviewerIds: form.interviewers.map((x) => x.id),
-        startTime: form.startTime,
-        endTime: form.endTime,
-        notes: form.notes ?? null,
-      };
-
-      const res = await authFetch("/api/interview-schedules", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const msg = await res.text();
-        throw new Error(msg || "Thất bại. Vui lòng thử lại");
+    (async () => {
+      try {
+        setLoading(true);
+        const data = await fetchCandidates();
+        setCandidates(Array.isArray(data) ? data : []);
+      } catch (e) {
+        console.error(e);
+        setCandidates([]);
+      } finally {
+        setLoading(false);
       }
-      alert("Tạo lịch phỏng vấn thành công.");
-      router.push("/dashboard/schedules");
-    } catch (err: any) {
-      alert(err?.message ?? "Error");
+    })();
+  }, []);
+
+  // Derived filter
+  const filtered: Candidate[] = useMemo(() => {
+    const base = Array.isArray(candidates) ? candidates : [];
+    const q = debouncedQuery.trim().toLowerCase();
+
+    return base.filter((c) => {
+      const pool = [c.fullName, c.email, c.campaignPositionDescription, c.currentInterviewStageName, c.point]
+        .filter(Boolean)
+        .map((v) => String(v).toLowerCase());
+
+      const matchQuery = !q || pool.some((v) => v.includes(q));
+      const matchStatus = statusFilter === "all" || String(c.status) === statusFilter;
+      return matchQuery && matchStatus;
+    });
+  }, [candidates, debouncedQuery, statusFilter]);
+
+  // Pagination calc
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safePage = Math.min(Math.max(1, page), totalPages);
+  const start = (safePage - 1) * pageSize;
+  const paged = filtered.slice(start, start + pageSize);
+
+  // Reset page when search/filter/pageSize changes
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedQuery, statusFilter, pageSize]);
+
+  // Sync URL with state (q, status, page, pageSize)
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (debouncedQuery) params.set("q", debouncedQuery);
+    if (statusFilter !== "all") params.set("status", statusFilter);
+    if (safePage > 1) params.set("page", String(safePage));
+    if (pageSize !== 5) params.set("pageSize", String(pageSize));
+
+    const qs = params.toString();
+    const url = qs ? `?${qs}` : "";
+    window.history.replaceState(null, "", url);
+  }, [debouncedQuery, statusFilter, safePage, pageSize]);
+
+  //Modal 1
+  function openSchedule(candidate: Candidate) {
+    console.log("[openSchedule] candidate deptId:", candidate.departmentId, "deptCount:", candidate.department?.length ?? 0);
+    setActiveCandidate(candidate);
+    setOpen(true);
+  }
+  //Modal 2
+  // function openScheduleV2(candidate: Candidate) {
+  //   setActiveCandidateV2(candidate);
+  //   setOpenV2(true);
+  // }
+
+  function clearFilters() {
+    setQuery("");
+    setStatusFilter("all");
+    setPage(1);
+    setPageSize(5);
+  }
+
+  const refetchCandidates = React.useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await fetchCandidates();
+      setCandidates(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error(e);
+      setCandidates([]);
     } finally {
-      setBusy(false);
+      setLoading(false);
     }
-  };
+  }, []);
 
-  // ------------- UI -------------
+  useEffect(() => {
+    refetchCandidates();
+  }, [refetchCandidates]);
+
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <h3 className="flex justify-center text-lg font-semibold text-gray-800 mb-2">Tạo lịch phỏng vấn</h3>
-
-      <div className="space-y-2">
-        <Label>Đợt tuyển dụng <span className="text-red-500">*</span></Label>
-        <Select
-          value={form.campaignId ?? ""}
-          onValueChange={(v) => setForm((s) => ({ ...s, campaignId: v }))}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder={loadingCampaigns ? "Đang tải..." : "Chọn đợt tuyển dụng"} />
-          </SelectTrigger>
-          <SelectContent>
-            {campaigns.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {c.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {errors.campaignId && <p className="text-xs text-red-500">{errors.campaignId}</p>}
-      </div>
-
-      <div className="space-y-2">
-        <Label>Vị trí tuyển dụng <span className="text-red-500">*</span></Label>
-        <Select
-          value={form.campaignPositionId ?? ""}
-          onValueChange={(v) =>
-            setForm((s) => ({ ...s, campaignPositionId: v }))
-          }
-          disabled={!form.campaignId}
-        >
-          <SelectTrigger>
-            <SelectValue
-              placeholder={
-                !form.campaignId
-                  ? "Chọn đợt tuyển dụng trước"
-                  : loadingPositions
-                  ? "Đang tải..."
-                  : "Chọn vị trí"
-              }
-            />
-          </SelectTrigger>
-          <SelectContent>
-            {positions.map((p) => (
-              <SelectItem key={p.id} value={p.id}>
-                {p.description || p.id}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {errors.campaignPositionId && (
-          <p className="text-xs text-red-500">{errors.campaignPositionId}</p>
-        )}
-      </div>
-
-      <div className="space-y-2">
-        <Label>Phòng ban <span className="text-red-500">*</span></Label>
-        <Select
-          value={form.departmentId ?? ""}
-          onValueChange={(v) =>
-            setForm((s) => ({ ...s, departmentId: v, interviewers: [] }))
-          }
-          disabled={!form.campaignId || loadingDepartments}
-        >
-          <SelectTrigger>
-            <SelectValue
-              placeholder={
-                !form.campaignId
-                  ? "Chọn đợt tuyển dụng trước"
-                  : loadingDepartments
-                  ? "Đang tải..."
-                  : "Chọn phòng ban"
-              }
-            />
-          </SelectTrigger>
-          <SelectContent>
-            {departments.map((d) => (
-              <SelectItem key={d.id} value={d.id}>
-                {d.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {errors.departmentId && (
-          <p className="text-xs text-red-500">{errors.departmentId}</p>
-        )}
-      </div>
-
-      <div className="space-y-2">
-        <Label>Ứng viên <span className="text-red-500">*</span></Label>
-        <Select
-          value={form.cvApplicantId ?? ""}
-          onValueChange={(v) => setForm((s) => ({ ...s, cvApplicantId: v }))}
-          disabled={!form.campaignId}
-        >
-          <SelectTrigger>
-            <SelectValue
-              placeholder={
-                !form.campaignId
-                  ? "Chọn đợt tuyển dụng trước"
-                  : loadingApplicants
-                  ? "Đang tải..."
-                  : "Chọn ứng viên"
-              }
-            />
-          </SelectTrigger>
-          <SelectContent>
-            {applicants.map((a) => (
-              <SelectItem key={a.id} value={a.id}>
-                {a.fullName} {a.email ? `• ${a.email}` : ""}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {errors.cvApplicantId && (
-          <p className="text-xs text-red-500">{errors.cvApplicantId}</p>
-        )}
-      </div>
-
-      <div className="space-y-2">
-        <Label>Người phỏng vấn <span className="text-red-500">*</span></Label>
-        {!form.departmentId ? (
-          <p className="text-xs text-gray-500">
-            Chọn phòng ban để chọn người phỏng vấn.
-          </p>
-        ) : loadingEmployees ? (
-          <p className="text-sm text-gray-600">Đang tải…</p>
-        ) : employees.length === 0 ? (
-          <p className="text-sm text-gray-600">Phòng ban này chưa có nhân viên.</p>
-        ) : (
-          <div className="max-h-48 overflow-auto rounded-md border border-gray-200 p-2 space-y-1">
-            {employees.map((emp) => {
-              const checked = interviewerIds.has(emp.id);
-              const fullName =
-                `${emp.firstName ?? ""} ${emp.lastName ?? ""}`.trim() ||
-                emp.username ||
-                emp.email ||
-                emp.id;
-              return (
-                <label
-                  key={emp.id}
-                  className="flex items-center gap-2 text-sm cursor-pointer"
-                >
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4"
-                    checked={checked}
-                    onChange={() => toggleInterviewer(emp)}
-                  />
-                  <span>{fullName}</span>
-                  {emp.email && (
-                    <span className="text-xs text-gray-500">• {emp.email}</span>
-                  )}
-                </label>
-              );
-            })}
+    <div className="min-h-[90vh] w-full bg-muted/30 p-4 md:p-8">
+      <div className="mx-auto max-w-7xl space-y-4">
+        {/* Header + Controls */}
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight">Ứng viên</h1>
+            <p className="text-sm text-muted-foreground">Lên lịch phỏng vấn nhanh chóng.</p>
           </div>
-        )}
-        {errors.interviewers && (
-          <p className="text-xs text-red-500">{errors.interviewers}</p>
-        )}
-      </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Vòng phòng vấn <span className="text-red-500">*</span></Label>
-          <Select
-            value={form.round?.toString() ?? ""}
-            onValueChange={(v) => setForm((s) => ({ ...s, round: Number(v) }))}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Chọn vòng phòng vấn" />
-            </SelectTrigger>
-            <SelectContent>
-              {roundOptions.map((r) => (
-                <SelectItem key={r} value={String(r)}>
-                  Vòng {r}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {errors.round && (
-            <p className="text-xs text-red-500">{errors.round}</p>
+          <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+            <div className="w-full max-w-xs">
+              <Input
+                placeholder="Tìm kiếm ứng viên…"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </div>
+
+            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+              <SelectTrigger className="w-full sm:w-56">
+                <Filter className="mr-2 h-4 w-4" />
+                <SelectValue placeholder="Lọc theo trạng thái" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả trạng thái</SelectItem>
+                <SelectItem value="0">Đang chờ</SelectItem>
+                <SelectItem value="1">Bị từ chối</SelectItem>
+                <SelectItem value="2">Đã chấp nhận</SelectItem>
+                <SelectItem value="3">Thất bại</SelectItem>
+                <SelectItem value="4">Đang onboard</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={String(pageSize)}
+              onValueChange={(v) => setPageSize(parseInt(v, 10))}
+            >
+              <SelectTrigger className="w-full sm:w-36">
+                <SelectValue placeholder="Page size" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="5">5 / page</SelectItem>
+                <SelectItem value="10">10 / page</SelectItem>
+                <SelectItem value="20">20 / page</SelectItem>
+                <SelectItem value="50">50 / page</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Button variant="outline" onClick={clearFilters}>
+              Reset
+            </Button>
+            <Button
+              asChild className="bg-blue-600 hover:bg-blue-700">
+              <Link href="/dashboard/schedules/new/suggest">
+                <Plus className="w-4 h-4 mr-2" />
+                Gợi ý lịch
+              </Link>
+            </Button>
+          </div>
+        </div>
+
+        {/* Table */}
+        <div className="overflow-hidden rounded-xl border bg-background shadow-sm">
+          <div className="relative overflow-x-auto">
+            <table className="w-full caption-bottom text-sm">
+              <thead className="bg-muted/40">
+                <tr className="text-left">
+                  <th className="px-4 py-3 font-medium">Tên</th>
+                  <th className="px-4 py-3 font-medium">Email</th>
+                  <th className="px-4 py-3 font-medium">Điểm</th>
+                  <th className="px-4 py-3 font-medium">Vị trí</th>
+                  <th className="px-4 py-3 font-medium">Giai đoạn hiện tại</th>
+                  <th className="px-4 py-3 font-medium">Trạng thái</th>
+                  <th className="px-4 py-3 font-medium">CV</th>
+                  <th className="w-[70px] px-4 py-3 font-medium"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">
+                      <div className="flex items-center justify-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+                      </div>
+                    </td>
+                  </tr>
+                ) : paged.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">
+                      Không tìm thấy ứng viên.
+                    </td>
+                  </tr>
+                ) : (
+                  paged.map((a) => (
+                    <tr key={a.id} className="border-t">
+                      <td className="px-4 py-3">{a.fullName || "—"}</td>
+                      <td className="px-4 py-3">{a.email || "—"}</td>
+                      <td className="px-4 py-3">{a.point ?? "—"}</td>
+                      <td className="px-4 py-3">{a.campaignPositionDescription || "—"}</td>
+                      <td className="px-4 py-3">
+                        {a.currentInterviewStageName ? (
+                          <Badge variant="secondary">{a.currentInterviewStageName}</Badge>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {a.status !== null && a.status !== undefined ? (
+                          <button
+                            type="button"
+                            onClick={() => openUpdateStatusModal(a)}
+                            className="focus:outline-none"
+                            title="Cập nhật trạng thái"
+                          >
+                            <Badge className={statusBadgeClass(a.status)}>
+                              {STATUS_LABEL[a.status as 0 | 1 | 2 | 3 | 4]}
+                            </Badge>
+                          </button>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </td>
+
+                      <td className="px-4 py-3">
+                        {a.fileUrl ? (
+                          <Link
+                            href={a.fileUrl}
+                            target="_blank"
+                            className="text-primary underline underline-offset-4"
+                          >
+                            Open CV
+                          </Link>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </td>
+                      <td className="px-2 py-2 text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => router.push(`/dashboard/accounts/${a.id}`)}>
+                              <Eye className="mr-2 h-4 w-4" /> Chi tiết
+                            </DropdownMenuItem>
+
+                            <DropdownMenuSeparator />
+
+                            {canSchedule(a.status)
+                              ? (
+                                // Enabled
+                                <DropdownMenuItem onClick={() => openSchedule(a)}>
+                                  <CalendarPlus className="mr-2 h-4 w-4" /> Lên lịch phỏng vấn
+                                </DropdownMenuItem>
+                              )
+                              : (
+                                HIDE_UNSCHEDULABLE_SCHEDULE
+                                  ? null
+                                  : (
+                                    // Gray out (disabled)
+                                    <DropdownMenuItem
+                                      disabled
+                                      aria-disabled="true"
+                                      className="opacity-50 pointer-events-none select-none"
+                                      // no onClick when disabled
+                                      title="Không thể lên lịch cho trạng thái hiện tại"
+                                    >
+                                      <CalendarPlus className="mr-2 h-4 w-4" /> Lên lịch phỏng vấn
+                                    </DropdownMenuItem>
+                                  )
+                              )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination footer */}
+          {!loading && filtered.length > 0 && (
+            <div className="flex flex-col gap-2 border-t p-3 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
+              <span>
+                Trang {safePage} trên {totalPages} • Hiển thị {paged.length} / {filtered.length} • {candidates.length} tổng
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={safePage <= 1}
+                >
+                  Trước
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={safePage >= totalPages}
+                >
+                  Sau
+                </Button>
+              </div>
+            </div>
           )}
         </div>
-
-        <div className="space-y-2">
-          <Label>Loại phỏng vấn <span className="text-red-500">*</span></Label>
-          <Select
-            value={form.interviewTypeId ?? ""}
-            onValueChange={(v) => setForm((s) => ({ ...s, interviewTypeId: v }))}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Chọn loại phỏng vấn" />
-            </SelectTrigger>
-            <SelectContent>
-              {interviewTypes.map((t) => (
-                <SelectItem key={t.id} value={t.id}>
-                  {t.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {errors.interviewTypeId && (
-            <p className="text-xs text-red-500">{errors.interviewTypeId}</p>
-          )}
-        </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="space-y-2">
-          <Label>Ngày <span className="text-red-500">*</span></Label>
-          <Input type="date" value={datePart} onChange={(e) => setDatePart(e.target.value)} />
-        </div>
-        <div className="space-y-2">
-          <Label>Thời gian <span className="text-red-500">*</span></Label>
-          <Select value={timePart} onValueChange={(v) => setTimePart(v)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Chọn giờ" />
-            </SelectTrigger>
-            <SelectContent>
-              {timeSlots.map((t) => (
-                <SelectItem key={t} value={t}>
-                  {t}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label>Thời lượng (phút)</Label>
-          <Select
-            value={duration === "" ? "" : String(duration)}
-            onValueChange={(v) => setDuration(Number(v))}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Thời lượng" />
-            </SelectTrigger>
-            <SelectContent>
-              {durationOptions.map((d) => (
-                <SelectItem key={d} value={String(d)}>
-                  {d} phút
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      {errors.startTime && <p className="text-xs text-red-500">{errors.startTime}</p>}
+      {/* Modal V1 (giữ nguyên behavior với stageId) */}
+      <ScheduleModal
+        open={open}
+        onOpenChange={setOpen}
+        candidate={activeCandidate}
+        onScheduled={refetchCandidates}
+      />
 
-      {/* Notes */}
-      <div className="space-y-2">
-        <Label>Ghi chú</Label>
-        <Textarea
-          rows={3}
-          value={form.notes ?? ""}
-          onChange={(e) => setForm((s) => ({ ...s, notes: e.target.value }))}
-          placeholder="Thêm ghi chú cho cuộc phỏng vấn..."
-        />
-      </div>
+      {/* Modal V2 (payload: interviewStageId) */}
+      {/* <ScheduleModal2 open={openV2} onOpenChange={setOpenV2} candidate={activeCandidateV2} /> */}
 
-      {/* Actions */}
-      <div className="mt-4 flex justify-end gap-3">
-        <Button variant="outline" onClick={() => router.back()}>
-          Hủy
-        </Button>
-        <Button onClick={handleSubmit} disabled={busy} className="bg-blue-600 hover:bg-blue-700">
-          {busy ? "Đang lưu..." : "Tạo"}
-        </Button>
-      </div>
+      <HandleUpdateStatusCandidate
+        open={openUpdateStatus}
+        onOpenChange={setOpenUpdateStatus}
+        candidateId={activeStatusCandidate?.id ?? ""}
+        initialStatus={
+          (activeStatusCandidate?.status as 0 | 1 | 2 | 3 | 4 | undefined) ?? 0
+        }
+        onSuccess={(updated) => {
+          // update list without refetch
+          setCandidates(prev =>
+            prev.map(c =>
+              c.id === (activeStatusCandidate?.id ?? updated.id ?? "")
+                ? { ...c, status: updated.status as Candidate["status"] }
+                : c
+            )
+          );
+        }}
+      />
     </div>
   );
 }

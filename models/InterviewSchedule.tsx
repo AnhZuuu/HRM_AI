@@ -1,22 +1,14 @@
 interface InterviewSchedule {
-  id: string;                        
-  cvApplicantId: string;             
+  id: string;
+  cvApplicantId: string;
   cvApplicant: CVApplicant | null;
-
-  startTime: string;                
-  endTime: string | null;          
-
-  createdBy: string | null;
-
-  status: string | null;
-  round: number | null;               
-
-  interviewTypeId: string;          
-  interviewType: string | null;
-//   interviewType: InterviewTypeDictionary | null;
-
+  startTime: string;        
+  endTime: string | null;  
+  status?: string | number;
+  round: number | null;
+  interviewTypeId: string;
+  interviewTypeName?: string | null;
   notes: string | null;
-
-//   interviewers: Interviewer[];      
-  interviewers: string;
-}
+  outcome?: InterviewOutcome[] | string;
+  interviewers : string;
+};

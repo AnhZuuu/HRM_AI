@@ -11,6 +11,12 @@ import { useToast } from "@/hooks/use-toast";
 import { Mail, Phone, MapPin, ExternalLink, FileText, ArrowLeft, CheckCircle2, XCircle, Clock, Star } from "lucide-react";
 import { authFetch } from "@/app/utils/authFetch";
 import API from "@/api/api";
+import { formatISODate } from "@/app/utils/helper";
+import HandleUpdateCandidate from "@/components/candidates/handleUpdateCandidate";
+import HandleUpdateStatusCandidate from "@/components/candidates/HandleUpdateStatusCandidate";
+import { InterviewTracker } from "@/components/candidates/tracking/CvTracking";
+
+
 
 // ---------- Types ----------
 type ApiEnvelope<T> = {
@@ -33,8 +39,9 @@ type CvApplicant = {
   fullName: string;
   email: string;
   point: string; // "36/100"
-  status: 0 | 1 | 2 | 3; // 0 Pending, 1 Reviewed, 2 Rejected, 3 Accepted
+  status: 0 | 1 | 2 | 3 | 4; // 0 Pending, 1 Rejected, 2 Accepted, 3 Failed, 4 Onboarded
   campaignPositionId?: string | null;
+  campaignPositionDescription?: string | null;
   fileUrl?: string | null;
   fileAlt?: string | null;
   cvApplicantDetailModels?: CvApplicantDetail[];
@@ -44,21 +51,24 @@ type CvApplicant = {
 // ---------- Helpers ----------
 const STATUS_LABEL: Record<CvApplicant["status"], string> = {
   0: "Pending",
-  1: "Reviewed",
-  2: "Rejected",
-  3: "Accepted",
+  1: "Rejected",
+  2: "Accepted",
+  3: "Failed",
+  4: "Onboarded"
 };
 
 const statusBadgeClass = (s: CvApplicant["status"]) => {
   switch (s) {
-    case 3:
-      return "bg-green-100 text-green-800";
-    case 1:
-      return "bg-purple-100 text-purple-800";
-    case 0:
+    case 4:
       return "bg-blue-100 text-blue-800";
     case 2:
+      return "bg-green-100 text-green-800";
+    case 1:
       return "bg-red-100 text-red-800";
+    case 0:
+      return "bg-yellow-100 text-blue-800";
+    case 3:
+      return "bg-red-300 text-red-800";
     default:
       return "bg-gray-100 text-gray-800";
   }
@@ -105,15 +115,7 @@ function field(rows: CvApplicantDetail[], key: string) {
   return rows.find((r) => r.key === key)?.value ?? "";
 }
 
-function formatISODate(iso?: string) {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
-}
+
 
 // ---------- Page ----------
 export default function CvApplicantDetailPage() {
@@ -124,6 +126,21 @@ export default function CvApplicantDetailPage() {
   const [item, setItem] = useState<CvApplicant | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const [openUpdate, setOpenUpdate] = useState(false);
+  const [openUpdateStatus, setOpenUpdateStatus] = useState(false);
+
+  function handleUpdatedCandidate(updated: any) {
+    // Merge returned fields back into the displayed item (no full refetch needed)
+    setItem((prev) => (prev ? { ...prev, ...updated } : prev));
+  }
+  function handleStatusUpdated(updated: { status: 0 | 1 | 2 | 3 | 4 }) {
+    setItem((prev) => (prev ? { ...prev, status: updated.status } : prev));
+    toast({
+      title: "Cập nhật trạng thái thành công",
+      description: `Trạng thái mới: ${STATUS_LABEL[updated.status]}`,
+    });
+  }
+
 
   useEffect(() => {
     let cancelled = false;
@@ -159,18 +176,19 @@ export default function CvApplicantDetailPage() {
   const sections = useMemo(() => groupDetails(item?.cvApplicantDetailModels), [item?.cvApplicantDetailModels]);
   const skills = useMemo(() => splitSkillValues(sections.skill), [sections.skill]);
 
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center gap-3">
         <Button variant="outline" onClick={() => router.back()} className="gap-2">
           <ArrowLeft className="h-4 w-4" />
-          Back
+          Quay lại
         </Button>
-        <h1 className="text-2xl font-semibold">Candidate Detail</h1>
+        <h1 className="text-2xl font-semibold">Chi tiết ứng viên</h1>
       </div>
 
       {/* Loading / Error */}
-      {loading && <div className="text-sm text-gray-500 p-4">Loading profile…</div>}
+      {loading && <div className="text-sm text-gray-500 p-4">Đang tải hồ sơ…</div>}
       {!loading && err && (
         <div className="text-sm text-red-600 p-4">
           {err}
@@ -192,22 +210,35 @@ export default function CvApplicantDetailPage() {
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="text-xl font-bold">{item.fullName || "—"}</h2>
-                      <Badge className={statusBadgeClass(item.status)}>{STATUS_LABEL[item.status]}</Badge>
+                      <button
+                        type="button"
+                        onClick={() => setOpenUpdateStatus(true)}
+                        className="focus:outline-none"
+                        title="Cập nhật trạng thái"
+                      >
+                        <Badge className={`${statusBadgeClass(item.status)} cursor-pointer select-none`}>
+                          {STATUS_LABEL[item.status]}
+                        </Badge>
+                      </button>
                     </div>
                     <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-gray-600">
                       <span className="inline-flex items-center gap-1">
-                        <Star className="h-4 w-4" /> {item.point || "—"}
+                        Điểm: {item.point || "—"}
                       </span>
-                      <Separator orientation="vertical" className="h-4" />
+
+
+                      {/* <Separator orientation="vertical" className="h-4" />
                       <span className="inline-flex items-center gap-1">
-                        <FileText className="h-4 w-4" /> Created {formatISODate(item.creationDate)}
-                      </span>
+                        <FileText className="h-4 w-4" /> Tạo {formatISODate(item.creationDate)}
+                      </span> */}
+
+
                       <Separator orientation="vertical" className="h-4" />
                       <span className="inline-flex items-center gap-1">
                         <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-xs">
-                          {shortId(item.campaignPositionId)}
+                          {item.campaignPositionDescription}
                         </span>
-                        <span className="text-gray-400 text-xs">(position)</span>
+                        <span className="text-gray-400 text-xs">(Vị trí)</span>
                       </span>
                     </div>
                   </div>
@@ -218,13 +249,19 @@ export default function CvApplicantDetailPage() {
                     <Button asChild className="gap-2">
                       <a href={item.fileUrl} target="_blank" rel="noopener noreferrer">
                         <ExternalLink className="h-4 w-4" />
-                        Open CV File
+                        Mở CV
                       </a>
                     </Button>
                   )}
-                  <Button variant="outline" className="gap-2" onClick={() => navigator.clipboard.writeText(item.id)}>
-                    Copy ID
+                  <Button className="gap-2" onClick={() => setOpenUpdate(true)}>
+                    Cập nhật thông tin
                   </Button>
+                  <Button
+                        onClick={() => setOpenUpdateStatus(true)}
+                        className="gap-2"
+                      >
+                        Cập nhật trạng thái
+                      </Button>
                 </div>
               </div>
 
@@ -250,11 +287,17 @@ export default function CvApplicantDetailPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left column */}
             <div className="space-y-6 lg:col-span-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Theo dõi phỏng vấn</CardTitle>
+                </CardHeader>
+                <CardContent><InterviewTracker cvApplicantId={item.id}/></CardContent>
+              </Card>
               {/* Objective */}
               {(sections.objective.length > 0 || field(sections.objective, "objective")) && (
                 <Card>
                   <CardHeader>
-                    <CardTitle>Objective</CardTitle>
+                    <CardTitle>Mục tiêu</CardTitle>
                   </CardHeader>
                   <CardContent className="prose prose-sm max-w-none">
                     <p className="whitespace-pre-wrap">
@@ -267,11 +310,11 @@ export default function CvApplicantDetailPage() {
               {/* Experience */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Experience</CardTitle>
+                  <CardTitle>Kinh nghiệm</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {sections.experience.length === 0 ? (
-                    <div className="text-sm text-gray-500">No experience listed.</div>
+                    <div className="text-sm text-gray-500">Không có kinh nghiệm nào được liệt kê.</div>
                   ) : (
                     <ul className="space-y-5">
                       {/* Group experience pairs by groupIndex (company/position) */}
@@ -306,11 +349,11 @@ export default function CvApplicantDetailPage() {
               {/* Education */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Education</CardTitle>
+                  <CardTitle>Học vấn</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {sections.education.length === 0 ? (
-                    <div className="text-sm text-gray-500">No education listed.</div>
+                    <div className="text-sm text-gray-500">Không có học vấn nào được liệt kê.</div>
                   ) : (
                     <>
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
@@ -335,23 +378,23 @@ export default function CvApplicantDetailPage() {
               {/* Personal Info */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Personal Info</CardTitle>
+                  <CardTitle>Thông tin cá nhân</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
-                  <Row label="Full name" value={field(sections.personal_info, "full_name") || item.fullName || "—"} />
-                  <Row label="Date of birth" value={field(sections.personal_info, "dob") || "—"} />
-                  <Row label="Gender" value={field(sections.personal_info, "gender") || "—"} />
+                  <Row label="Họ và tên" value={field(sections.personal_info, "full_name") || item.fullName || "—"} />
+                  <Row label="Ngày sinh" value={field(sections.personal_info, "dob") || "—"} />
+                  <Row label="Giới tính" value={field(sections.personal_info, "gender") || "—"} />
                 </CardContent>
               </Card>
 
               {/* Skills */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Skills</CardTitle>
+                  <CardTitle>Kỹ năng</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {skills.length === 0 ? (
-                    <div className="text-sm text-gray-500">No skills listed.</div>
+                    <div className="text-sm text-gray-500">Không có kỹ năng nào được liệt kê.</div>
                   ) : (
                     <div className="flex flex-wrap gap-2">
                       {skills.map((s) => (
@@ -395,17 +438,41 @@ export default function CvApplicantDetailPage() {
               {/* Status Legend */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Status Legend</CardTitle>
+                  <CardTitle>Trạng thái</CardTitle>
                 </CardHeader>
                 <CardContent className="grid grid-cols-2 gap-2 text-sm">
-                  <LegendRow icon={<Clock className="h-4 w-4" />} label="Pending" cls="bg-blue-100 text-blue-800" />
-                  <LegendRow icon={<CheckCircle2 className="h-4 w-4" />} label="Accepted" cls="bg-green-100 text-green-800" />
-                  <LegendRow icon={<Clock className="h-4 w-4" />} label="Reviewed" cls="bg-purple-100 text-purple-800" />
-                  <LegendRow icon={<XCircle className="h-4 w-4" />} label="Rejected" cls="bg-red-100 text-red-800" />
+                  <LegendRow icon={<Clock className="h-4 w-4" />} label="Đang chờ" cls="bg-blue-100 text-blue-800" />
+                  <LegendRow icon={<CheckCircle2 className="h-4 w-4" />} label="Đã chấp nhận" cls="bg-green-100 text-green-800" />
+                  <LegendRow icon={<Clock className="h-4 w-4" />} label="Đã xem" cls="bg-purple-100 text-purple-800" />
+                  <LegendRow icon={<XCircle className="h-4 w-4" />} label="Bị từ chối" cls="bg-red-100 text-red-800" />
                 </CardContent>
               </Card>
             </div>
           </div>
+          <HandleUpdateCandidate
+            open={openUpdate}
+            onOpenChange={setOpenUpdate}
+            candidateId={params.id}
+            initial={{
+              fileUrl: item.fileUrl ?? "",
+              fileAlt: item.fileAlt ?? "",
+              fullName: item.fullName ?? "",
+              email: item.email ?? "",
+              point: item.point ?? "",
+              // Convert your current status mapping to the update mapping if needed.
+              // If your backend already uses the new mapping (0 Pending, 1 Rejected, 2 Accepted, 3 Failed, 4 Onboarded),
+              // just pass item.status directly (cast).
+              status: (item.status as 0 | 1 | 2 | 3 | 4) ?? 0,
+            }}
+            onSuccess={handleUpdatedCandidate}
+          />
+          <HandleUpdateStatusCandidate
+            open={openUpdateStatus}
+            onOpenChange={setOpenUpdateStatus}
+            candidateId={params.id}
+            initialStatus={item.status}
+            onSuccess={handleStatusUpdated}
+          />
         </>
       )}
     </div>
