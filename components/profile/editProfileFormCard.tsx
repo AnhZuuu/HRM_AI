@@ -149,7 +149,7 @@ export function ProfileForm({
             <FormError msg={form.formState.errors.dateOfBirth?.message} />
           </div>
 
-          {showDepartment && (
+          {/* {showDepartment && (
             <div className="space-y-1">
               <Label>Phòng ban</Label>
               <Select
@@ -172,7 +172,7 @@ export function ProfileForm({
               </Select>
               <FormError msg={form.formState.errors.departmentId?.message} />
             </div>
-          )}
+          )} */}
 
           {showRole && (
             <div className="space-y-1 md:col-span-2">

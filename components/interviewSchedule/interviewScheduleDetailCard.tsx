@@ -7,7 +7,7 @@ import { authFetch } from "@/app/utils/authFetch";
 import { toast } from "react-toastify";
 import API from "@/api/api";
 import { FancyTextarea } from "./ui/fancyTextarea";
-import { ArrowLeft, FileText } from "lucide-react";
+import { ArrowLeft, Copy, FileText } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback } from "../ui/avatar";
 import { formatDate } from "@/app/utils/helper";
@@ -127,8 +127,28 @@ export default function InterviewScheduleDetail({ interviewScheduleId }: { inter
             <div className="mr-6 ml-6 mb-4 h-px bg-border" />
 
               <CardContent className="space-y-2 text-sm mb-2">
-                <a className="text-muted-foreground">Email: </a>
-                <a className="font-medium">{applicant?.email || "—"}</a>
+                {/* <a className="text-muted-foreground">Email: </a>
+                <a className="font-medium">{applicant?.email || "—"}</a> */}
+                <div className="flex items-start gap-2">
+                  <span className="text-slate-600 shrink-0">Email:</span>
+                  <span
+                    className="min-w-0 flex-1 truncate"
+                    title={applicant?.email || "—"}              
+                  >
+                    {applicant?.email || "—"}
+                  </span>
+              
+                  {applicant?.email && (
+                    <button
+                      onClick={() => navigator.clipboard.writeText(applicant?.email)}
+                      className="ml-1 rounded hover:bg-slate-100"
+                      aria-label="Copy email"
+                      title="Copy email"
+                    >
+                      <Copy className="h-3 w-3" />
+                    </button>
+                  )}
+              </div>
                 <a
                   className="flex w-full items-center gap-2 text-left text-sm text-primary underline-offset-4 hover:underline"
                   href={applicant?.fileUrl}

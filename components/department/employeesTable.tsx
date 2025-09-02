@@ -17,6 +17,7 @@ import { Plus } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import AddEmployeesDialog from "./addEmployeesDialog";
+import { fmtDate } from "@/app/utils/helper";
 
 /* If you already export AccountRole elsewhere, import it instead of re-declaring.
    This interface matches your backend screenshots. */
@@ -47,14 +48,14 @@ const ROLE_NAME_BY_ID: Record<number, string> = {
 function roleBadgeClass(name: string) {
   switch (name) {
     case "Admin":
-      return "bg-red-100 text-red-700";
+      return "bg-indigo-100 text-indigo-700";
     case "Department Manager":
-      return "bg-violet-100 text-violet-700";
+      return "bg-amber-100 text-amber-700";
     case "HR":
       return "bg-indigo-100 text-indigo-700";
     case "Employee":
     default:
-      return "bg-slate-100 text-slate-700";
+      return "bg-sky-100 text-sky-700";
   }
 }
 
@@ -145,7 +146,8 @@ export default function EmployeesTable({
                     </TableCell>
 
                     <TableCell className="align-top">
-                      {e.creationDate ? new Date(e.creationDate).toLocaleString("vi-VN") : "—"}
+                      {/* {e.creationDate ? new Date(e.creationDate).toLocaleString("vi-VN") : "—"} */}
+                      {fmtDate(e.creationDate) ??  "—"}
                     </TableCell>
                   </TableRow>
                 );

@@ -245,7 +245,7 @@ export default function CreateAccountFormCard({
               )}
             />
 
-              <FormField name="departmentId" control={form.control}
+              {/* <FormField name="departmentId" control={form.control}
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Phòng ban (tùy chọn)</FormLabel>
@@ -269,7 +269,7 @@ export default function CreateAccountFormCard({
                   <FormMessage />
                 </FormItem>
               )}
-            />
+            /> */}
 
             <Separator />
 

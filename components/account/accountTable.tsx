@@ -36,14 +36,10 @@ import { useEffect, useState } from "react";
 import ConfirmBlockDialog from "./handleBlockAccount";
 import API from "@/api/api";
 import { isAdmin } from "@/lib/auth";
+import { fmtDate } from "@/app/utils/helper";
 
 interface AccountTableProps {
   accounts: Account[];
-}
-
-function formatDate(date: string | null) {
-  if (!date) return "—";
-  return new Date(date).toLocaleDateString();
 }
 
 function statusBadgeClass(deleted: boolean) {
@@ -131,7 +127,7 @@ export function AccountTable({ accounts }: AccountTableProps) {
                   {a.isDeleted ? "Đã khóa" : "Hoạt động"}
                 </Badge>
               </TableCell>
-              <TableCell>{formatDate(a.creationDate)}</TableCell>
+              <TableCell>{fmtDate(a.creationDate)}</TableCell>
               <TableCell className="text-right">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
