@@ -10,7 +10,7 @@ import { FancyTextarea } from "./ui/fancyTextarea";
 import { ArrowLeft, Copy, FileText, TypeOutline, User, UserCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback } from "../ui/avatar";
-import { formatDate } from "@/app/utils/helper";
+import { fmtDate, formatDate } from "@/app/utils/helper";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import OverviewPanel from "./interviewScheduleDetail/sections/overviewPanel";
 import PanelDetails from "./interviewScheduleDetail/panels/panelDetails";
@@ -21,6 +21,7 @@ import { isHR, isHRorDM } from "@/lib/auth";
 import { Candidate, Department } from "@/components/interviewSchedule/ui/ScheduleModal";
 import { ScheduleModal } from "./ui/ScheduleModal";
 import GlobalLoading from "@/app/loading";
+import { useSystemConfig } from "../systemConfig/configProvider";
 
 function durationMin(start?: string, end?: string | null) {
   if (!start || !end) return null;
@@ -100,10 +101,31 @@ export default function InterviewScheduleDetail({ interviewScheduleId }: { inter
     }
   };
 
+  // const isBeforeInterview = useMemo(() => {
+  //   if (!scheduleData?.startTime) return false;
+  //   return new Date(scheduleData.startTime) > new Date();
+  // }, [scheduleData]);
+
+  const { INTERVIEW_FEEDBACK_EARLY_MINUTES, ALLOW_PRE_INTERVIEW_FEEDBACK, USE_SERVER_TIME } =
+    useSystemConfig(["INTERVIEW_FEEDBACK_EARLY_MINUTES", "ALLOW_PRE_INTERVIEW_FEEDBACK", "USE_SERVER_TIME"]);
+
+  const [nowIso, setNowIso] = useState<string | null>(null);
+  useEffect(() => {
+    if (USE_SERVER_TIME) {
+      setNowIso(new Date().toISOString());
+    } else {
+      setNowIso(new Date().toISOString());
+    }
+  }, [USE_SERVER_TIME]);
+
   const isBeforeInterview = useMemo(() => {
-    if (!scheduleData?.startTime) return false;
-    return new Date(scheduleData.startTime) > new Date();
-  }, [scheduleData]);
+    if (!scheduleData?.startTime || !nowIso) return false;
+    if (ALLOW_PRE_INTERVIEW_FEEDBACK) return false;
+    const start = new Date(scheduleData.startTime).getTime();
+    const now = new Date(nowIso).getTime();
+    return now < (start - INTERVIEW_FEEDBACK_EARLY_MINUTES * 60_000);
+  }, [scheduleData, nowIso, INTERVIEW_FEEDBACK_EARLY_MINUTES, ALLOW_PRE_INTERVIEW_FEEDBACK]);
+
 
   const handleCreateOutcome = async () => {
     setSubmitting(true);
@@ -251,7 +273,7 @@ export default function InterviewScheduleDetail({ interviewScheduleId }: { inter
                       <CardContent className="space-y-4">
                         {outcome ? (
                           <div className="space-y-2">
-                            <div className="text-sm text-muted-foreground">Gửi lúc: {formatDate(outcome?.creationDate ?? undefined)}</div>
+                            <div className="text-sm text-muted-foreground">Gửi ngày: {fmtDate(outcome?.creationDate ?? undefined)}</div>
 
                             <div className="rounded-xl border bg-muted/40 p-3 text-sm whitespace-pre-wrap">{outcome.feedback}</div>
 
