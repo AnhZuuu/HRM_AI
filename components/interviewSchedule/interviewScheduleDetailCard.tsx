@@ -207,6 +207,7 @@ export default function InterviewScheduleDetail({ interviewScheduleId }: { inter
               <a
                 className="flex w-full items-center gap-2 text-left text-sm text-primary underline-offset-4 hover:underline"
                 href={applicant?.fileUrl}
+                target="_blank"
               >
                 <FileText className="h-4 w-4" /> CV đính kèm
               </a>

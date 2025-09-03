@@ -92,10 +92,10 @@ export function InterviewTracker({ cvApplicantId }: Props) {
   }, [cvApplicantId]);
 
   if (loading)
-    return <p className="text-sm text-muted-foreground">Loading stages…</p>;
+    return <p className="text-sm text-muted-foreground">Đang tải...</p>;
   if (err) return <p className="text-sm text-destructive">{err}</p>;
   if (!stages.length)
-    return <p className="text-sm text-muted-foreground">No stages found</p>;
+    return <p className="text-sm text-muted-foreground">Không tìm thấy giai đoạn nào</p>;
 
   return (
     <div className="space-y-8">
@@ -141,9 +141,9 @@ export function InterviewTracker({ cvApplicantId }: Props) {
                   >
                     {stage.stageName}
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  {/* <p className="text-xs text-muted-foreground">
                     Vòng {stage.order}
-                  </p>
+                  </p> */}
                   {stage.description && (
                     <p className="text-xs mt-1 text-muted-foreground italic">
                       {stage.description}

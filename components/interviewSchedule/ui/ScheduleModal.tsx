@@ -58,7 +58,7 @@ type NextStageResponse = {
 
 type Interviewer = { id: string; fullName: string; title?: string };
 
-/* Payload actually returned by your /accounts?departmentId=... endpoint */
+
 type AccountDTO = {
   id: string;
   firstName?: string | null;
@@ -91,7 +91,7 @@ async function fetchNextStage(cvApplicantId: string): Promise<NextStageResponse 
     id: String(data.id),
     stageName: data.stageName ?? null,
     description: data.description ?? null,
-    totalTime : data.totalTime ?? null
+    totalTime: data.totalTime ?? null
   };
 }
 
@@ -140,17 +140,47 @@ async function postInterviewSchedule(payload: {
   return res.json();
 }
 
+// ===== helpers (local <-> Date conversions) =====
+function toDateFromLocalInput(s?: string | null): Date | null {
+  if (!s) return null;
+  // "YYYY-MM-DDTHH:mm" in local timezone
+  const [date, time] = s.split("T");
+  if (!date || !time) return null;
+  const [y, m, d] = date.split("-").map(Number);
+  const [hh, mm] = time.split(":").map(Number);
+  const dt = new Date(y, m - 1, d, hh, mm, 0, 0);
+  return isNaN(dt.getTime()) ? null : dt;
+}
+
+function toLocalInputFromDate(dt: Date | null): string {
+  if (!dt) return "";
+  // format to "YYYY-MM-DDTHH:mm" in local timezone
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const y = dt.getFullYear();
+  const m = pad(dt.getMonth() + 1);
+  const d = pad(dt.getDate());
+  const hh = pad(dt.getHours());
+  const mm = pad(dt.getMinutes());
+  return `${y}-${m}-${d}T${hh}:${mm}`;
+}
+
+function addMinutesLocal(dt: Date, minutes: number): Date {
+  const copy = new Date(dt.getTime());
+  copy.setMinutes(copy.getMinutes() + minutes);
+  return copy;
+}
+
 /* ================= Component ================= */
 export function ScheduleModal({
   open,
   onOpenChange,
   candidate,
-   onScheduled,   
+  onScheduled,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   candidate: Candidate | null;
-   onScheduled?: () => void;
+  onScheduled?: () => void;
 }) {
   const [loading, setLoading] = useState(false);
 
@@ -170,8 +200,47 @@ export function ScheduleModal({
   // UI errors (simple inline hints)
   const [errors, setErrors] = useState<{ interviewStageId?: string; start?: string; end?: string; interviewerIds?: string }>({});
 
+  // new: duration in minutes (totalTime). Default 60 = 1h
+  const [durationMinutes, setDurationMinutes] = useState<number>(60);
+
+  // new: whether end auto-follows start + duration
+  const [isEndLinked, setIsEndLinked] = useState<boolean>(true);
+
   // Resolve departmentId for UI checks too
   const deptId = useMemo(() => getCandidateDepartmentId(candidate), [candidate]);
+
+  // When start or duration changes and "linked", recompute end
+  useEffect(() => {
+    if (!isEndLinked) return;
+    const s = toDateFromLocalInput(start);
+    if (!s) return;
+    const e = addMinutesLocal(s, durationMinutes);
+    setEnd(toLocalInputFromDate(e));
+  }, [start, durationMinutes, isEndLinked]);
+
+  // Handlers
+  function handleChangeStart(next: string) {
+    setStart(next);
+    // end will update via useEffect if linked
+  }
+
+  function handleChangeEnd(next: string) {
+    // User is taking control of end time => unlink
+    setIsEndLinked(false);
+    setEnd(next);
+  }
+
+  function handleChangeDuration(nextMin: number) {
+    setDurationMinutes(nextMin);
+    // if linked, end will update via useEffect
+  }
+
+  // Optional: relink end to follow start+duration (e.g., a small "link" button)
+  function relinkEnd() {
+    setIsEndLinked(true);
+  }
+
+  // ====== UI bits to add next to your inputs ======
 
   // Reset and fetch when opened
   useEffect(() => {
@@ -221,42 +290,46 @@ export function ScheduleModal({
     return Object.keys(e).length === 0;
   }
 
- async function handleSave() {
-  if (!candidate) return;
-  if (!validate()) return;
-
-  setLoading(true);
-  try {
-    const payload = {
-      cvApplicantId: candidate.cvApplicantId,
-      interviewStageId,
-      startTime: new Date(start).toISOString(),
-      endTime: new Date(end).toISOString(),
-      interviewerIds: selectedInterviewers,
-      notes: notes?.trim() || undefined,
-    };
-
-    // 👇 See exactly what you're about to POST
-    console.log("[ScheduleModal] POST /interview/schedule payload:", payload, {
-      startLocal: start,
-      endLocal: end,
-    });
-
-    const result = await postInterviewSchedule(payload);
-     onScheduled?.();
-
-
-    // 👇 See parsed response (if any)
-    console.log("[ScheduleModal] POST result:", result);
-
-    onOpenChange(false);
-  } catch (e: any) {
-    console.error("[ScheduleModal] POST error:", e);
-    toast.error("Tạo lịch thất bại");
-  } finally {
-    setLoading(false);
+  function addHours(date: Date, h: number) {
+    return new Date(date.getTime() + h * 60 * 60 * 1000);
   }
-}
+
+  async function handleSave() {
+    if (!candidate) return;
+    if (!validate()) return;
+
+    setLoading(true);
+    try {
+      const payload = {
+        cvApplicantId: candidate.cvApplicantId,
+        interviewStageId,
+        startTime: addHours(new Date(start), 7).toISOString(),
+        endTime: addHours(new Date(end), 7).toISOString(),
+        interviewerIds: selectedInterviewers,
+        notes: notes?.trim() || undefined,
+      };
+
+      // 👇 See exactly what you're about to POST
+      console.log("[ScheduleModal] POST /interview/schedule payload:", payload, {
+        startLocal: start,
+        endLocal: end,
+      });
+
+      const result = await postInterviewSchedule(payload);
+      onScheduled?.();
+
+
+      // 👇 See parsed response (if any)
+      console.log("[ScheduleModal] POST result:", result);
+
+      onOpenChange(false);
+    } catch (e: any) {
+      console.error("[ScheduleModal] POST error:", e);
+      toast.error("Tạo lịch thất bại");
+    } finally {
+      setLoading(false);
+    }
+  }
 
 
   return (
@@ -306,25 +379,25 @@ export function ScheduleModal({
           </div>
 
           {/* Time range */}
-          <div className="grid grid-cols-4 items-start gap-3">
+          {/* <div className="grid grid-cols-4 items-start gap-3">
             <label className="col-span-1 text-sm text-muted-foreground">
               Bắt đầu <span className="text-red-500">*</span>
             </label>
             <div className="col-span-3 space-y-1">
-              <Input type="datetime-local" 
-              min={todayStartVNForDatetimeLocal()} 
-              value={start} 
-              onChange={(e) => setStart(e.target.value)} 
-              disabled={loading} />
+              <Input type="datetime-local"
+                min={todayStartVNForDatetimeLocal()}
+                value={start}
+                onChange={(e) => setStart(e.target.value)}
+                disabled={loading} />
               {errors.start && (
                 <p className="flex items-center gap-1 text-xs text-red-600">
                   <AlertCircle className="h-3 w-3" /> {errors.start}
                 </p>
               )}
             </div>
-          </div>
+          </div> */}
 
-          <div className="grid grid-cols-4 items-start gap-3">
+          {/* <div className="grid grid-cols-4 items-start gap-3">
             <label className="col-span-1 text-sm text-muted-foreground">
               Kết thúc <span className="text-red-500">*</span>
             </label>
@@ -342,6 +415,83 @@ export function ScheduleModal({
                 </p>
               )}
               <p className="text-xs text-muted-foreground">Lưu ý: thời gian được lưu dưới dạng UTC (chuyển đổi tự động từ giờ địa phương).</p>
+            </div>
+          </div> */}
+          {/* Time range */}
+          <div className="grid grid-cols-4 items-start gap-3">
+            <label className="col-span-1 text-sm text-muted-foreground">
+              Bắt đầu <span className="text-red-500">*</span>
+            </label>
+            <div className="col-span-3 space-y-1">
+              <Input
+                type="datetime-local"
+                min={todayStartVNForDatetimeLocal()}
+                value={start}
+                onChange={(e) => handleChangeStart(e.target.value)}
+                disabled={loading}
+              />
+              {errors.start && (
+                <p className="flex items-center gap-1 text-xs text-red-600">
+                  <AlertCircle className="h-3 w-3" /> {errors.start}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-4 items-start gap-3">
+            <label className="col-span-1 text-sm text-muted-foreground">
+              Thời lượng
+            </label>
+            <div className="col-span-3 flex items-center gap-2">
+              {/* Example: simple number input in minutes */}
+              <Input
+                type="number"
+                min={15}
+                step={15}
+                value={durationMinutes}
+                onChange={(e) => handleChangeDuration(Math.max(1, parseInt(e.target.value || "0", 10)))}
+                disabled={loading}
+                className="w-32"
+              />
+              <span className="text-sm text-muted-foreground">phút</span>
+
+              {/* Toggle link behavior */}
+              {/* <Button
+                type="button"
+                variant={isEndLinked ? "secondary" : "outline"}
+                onClick={() => setIsEndLinked((v) => !v)}
+                disabled={loading}
+              >
+                {isEndLinked ? "Đang tự động tính Kết thúc" : "Không tự động"}
+              </Button>
+              {!isEndLinked && (
+                <Button type="button" variant="ghost" onClick={relinkEnd} disabled={loading}>
+                  Gắn lại tự động
+                </Button>
+              )} */}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-4 items-start gap-3">
+            <label className="col-span-1 text-sm text-muted-foreground">
+              Kết thúc <span className="text-red-500">*</span>
+            </label>
+            <div className="col-span-3 space-y-1">
+              <Input
+                type="datetime-local"
+                value={end}
+                onChange={(e) => handleChangeEnd(e.target.value)}
+                min={start || todayStartVNForDatetimeLocal()}
+                disabled={loading}
+              />
+              {errors.end && (
+                <p className="flex items-center gap-1 text-xs text-red-600">
+                  <AlertCircle className="h-3 w-3" /> {errors.end}
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Lưu ý: thời gian được lưu dưới dạng UTC (chuyển đổi tự động từ giờ địa phương).
+              </p>
             </div>
           </div>
 

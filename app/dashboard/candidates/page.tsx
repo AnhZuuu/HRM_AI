@@ -178,8 +178,7 @@ export default function CandidatesPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Trang ứng viên</h1>
-          <p className="text-gray-600 mt-1">Quản lý ứng viên của bạn</p>
+          <h1 className="text-3xl font-bold text-gray-900">Quản lý ứng viên của bạn</h1>
         </div>
       </div>
 
@@ -221,11 +220,10 @@ export default function CandidatesPage() {
       {/* Candidates Table */}
       <Card>
         <CardHeader>
-          <CardTitle>
-            Tất cả ứng viên{" "}
+          <CardTitle className="flex justify-end ">
             {!loading && !error ? (
-              <span className="text-gray-500">
-               Đang hiển thị ({paged.length} trên {filtered.length})
+              <span className="text-gray-500 text-sm ">
+               Đang hiển thị {paged.length} trên {filtered.length}
               </span>
             ) : null}
           </CardTitle>
