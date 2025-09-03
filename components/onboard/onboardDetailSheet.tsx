@@ -3,7 +3,7 @@
 import API from "@/api/api";
 import { authFetch } from "@/app/utils/authFetch";
 import { OnboardRequestStatus, SalaryTpe, statusColor } from "@/app/utils/enum";
-import { fmtDate, fmtVnd } from "@/app/utils/helper";
+import { fmtDate, fmtVnd, toDateInput, toIsoFromDateInput } from "@/app/utils/helper";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +14,6 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { useToast } from "@/hooks/use-toast";
 import { isHR } from "@/lib/auth";
 import {
   ClipboardList,
@@ -22,7 +21,10 @@ import {
   Eye,
   PencilLine,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "react-toastify";
+import { Input } from "../ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 
 type ApiResponse<T> = {
   code: number;
@@ -65,7 +67,6 @@ export default function OnboardDetailSheet({
   row: Onboard;
   onStatusChanged?: () => void;
 }) {
-  const { toast } = useToast();
   const applicant = row.cvApplicantModel;
   const statusInfo = coerceStatusLabel(row.status);
   const salInfo = coerceSalaryLabel(row.salaryType);
@@ -79,6 +80,13 @@ export default function OnboardDetailSheet({
   const [outcomeError, setOutcomeError] = useState<string | null>(null);
   const [loadingOutcomes, setLoadingOutcomes] = useState(false);
   const isPending = statusInfo.key === 0;
+  const [editing, setEditing] = useState(false);
+  const [savingOffer, setSavingOffer] = useState(false);
+  const [offerSalary, setOfferSalary] = useState<string>(String(row.proposedSalary ?? ""));
+  const [offerSalaryType, setOfferSalaryType] = useState<string>(
+    String(typeof row.salaryType === "number" ? row.salaryType : salInfo.key ?? 0)
+  );
+  const [offerStartDate, setOfferStartDate] = useState<string>(toDateInput(row.proposedStartDate));
 
   async function fetchOutcomes() {
     setLoadingOutcomes(true);
@@ -107,6 +115,67 @@ export default function OnboardDetailSheet({
     }
   }, []);
 
+  const salaryTypeOptions = useMemo(
+    () =>
+      Object.entries(SalaryTpe)
+        .filter(([k]) => !Number.isNaN(Number(k)))
+        .map(([k, v]) => ({ value: k, label: String(v) })),
+    []
+  );
+
+   function openEdit() {
+    setOfferSalary(String(row.proposedSalary ?? ""));
+    setOfferSalaryType(String(typeof row.salaryType === "number" ? row.salaryType : salInfo.key ?? 0));
+    setOfferStartDate(toDateInput(row.proposedStartDate));
+    setEditing(true);
+  }
+
+  async function saveOffer() {
+    const salaryNum = Number(offerSalary);
+    if (!Number.isFinite(salaryNum) || salaryNum < 0) {
+      toast.error("Mức lương phải là số không âm.");
+      return;
+    }
+    if (!offerSalaryType || Number.isNaN(Number(offerSalaryType))) {
+      toast.error("Vui lòng chọn loại lương.");
+      return;
+    }
+    if (!offerStartDate) {
+      toast.error("Vui lòng chọn ngày bắt đầu.");
+      return;
+    }
+
+    setSavingOffer(true);
+    try {
+      const body = {
+        proposedSalary: salaryNum,
+        salaryType: Number(offerSalaryType),
+        proposedStartDate: offerStartDate,
+        status: row.status, 
+      };
+
+      const res = await authFetch(`${API.ONBOARD.BASE}/${row.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const txt = await res.text().catch(() => "");
+        throw new Error(txt || `HTTP ${res.status}`);
+      }
+
+      toast.success("Thông tin offer đã được lưu.");
+    
+      setEditing(false);
+      onStatusChanged?.();
+    } catch (e: any) {
+      toast.error(e?.message || "Không thể lưu thay đổi.");
+    } finally {
+      setSavingOffer(false);
+    }
+  }
+
   async function updateStatus(
     id: string,
     onboardRequestStatus: number,
@@ -126,11 +195,7 @@ export default function OnboardDetailSheet({
 
     if (!res.ok) {
       const txt = await res.text().catch(() => "");
-      toast({
-        variant: "destructive",
-        title: "Request failed",
-        description: txt || `HTTP ${res.status}`,
-      });
+      toast.error(txt || `HTTP ${res.status}`);
       throw new Error(txt || `HTTP ${res.status}`);
     }
     return res;
@@ -141,17 +206,10 @@ export default function OnboardDetailSheet({
     setError(null);
     try {
       await updateStatus(row.id, 1);
-      toast({
-        title: "Success",
-        description: "Onboard đã được xác nhận và gửi mail đến ứng viên.",
-      });
+      toast.success("Onboard đã được xác nhận và gửi mail đến ứng viên");
       onStatusChanged?.();
     } catch (e: any) {
-      toast({
-        variant: "destructive",
-        title: "Approve failed",
-        description: e?.message || "Xác nhận thất bại",
-      });
+      toast.error(e?.message || "Xác nhận thất bại");
     } finally {
       setSubmitting(null);
     }
@@ -162,17 +220,10 @@ export default function OnboardDetailSheet({
     setError(null);
     try {
       await updateStatus(row.id, 2);
-      toast({
-        title: "Success",
-        description: "Onboard đã được từ chối.",
-      });
+      toast.success("Onboard đã được từ chối.");
       onStatusChanged?.();
     } catch (e: any) {
-      toast({
-        variant: "destructive",
-        title: "Reject failed",
-        description: e?.message || "Từ chối thất bại.",
-      });
+      toast.error(e?.message || "Từ chối thất bại.");
     } finally {
       setSubmitting(null);
     }
@@ -196,10 +247,19 @@ export default function OnboardDetailSheet({
         <div className="px-6 pb-6">
           <div className="space-y-6 h-[calc(100dvh-140px)] overflow-y-auto">
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-base">Thông tin offer</CardTitle>
+                 {isPending && isHR() && !editing && (
+                  <div >
+                    <Button size="sm" onClick={openEdit}>
+                    <PencilLine className="h-4 w-4 mr-2" />
+                    Chỉnh sửa
+                  </Button>
+                  </div>
+                  
+                )}
               </CardHeader>
-              <CardContent className="grid grid-cols-2 gap-3 text-sm">
+              {/* <CardContent className="grid grid-cols-2 gap-3 text-sm">
                 <div className="text-slate-500">Tên ứng viên</div>
                 <div className="font-medium">{applicant?.fullName ?? "—"}</div>
 
@@ -228,7 +288,105 @@ export default function OnboardDetailSheet({
                     {statusInfo.label}
                   </Badge>
                 </div>
-              </CardContent>
+              </CardContent> */}
+              {!editing ? (
+                <CardContent className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="text-slate-500">Tên ứng viên</div>
+                  <div className="font-medium">{applicant?.fullName ?? "—"}</div>
+
+                  <div className="text-slate-500">Email</div>
+                  <div>{applicant?.email ?? "—"}</div>
+
+                  <div className="text-slate-500">Mức lương đề xuất</div>
+                  <div className="flex items-center gap-2">
+                    {fmtVnd(row.proposedSalary)} - {salInfo.label}
+                  </div>
+
+                  <div className="text-slate-500">Ngày bắt đầu đi làm</div>
+                  <div className="flex items-center gap-2">{fmtDate(row.proposedStartDate)}</div>
+
+                  <div className="text-slate-500">Trạng thái</div>
+                  <div>
+                    <Badge
+                      className={`border ${
+                        statusInfo.key != null
+                          ? statusColor[statusInfo.key]
+                          : "bg-slate-100 text-slate-700 border-slate-200"
+                      } font-normal`}
+                    >
+                      {statusInfo.label}
+                    </Badge>
+                  </div>
+                </CardContent>
+              ) : (
+                <CardContent className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="text-slate-500">Tên ứng viên</div>
+                  <div className="font-medium">{applicant?.fullName ?? "—"}</div>
+
+                  <div className="text-slate-500">Email</div>
+                  <div>{applicant?.email ?? "—"}</div>
+
+                  <div className="text-slate-500">Mức lương đề xuất</div>
+                  <div>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={offerSalary}
+                      onChange={(e) => setOfferSalary(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="text-slate-500">Loại lương</div>
+                  <div>
+                    <Select value={offerSalaryType} onValueChange={setOfferSalaryType}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Chọn loại lương" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {salaryTypeOptions.map((o) => (
+                          <SelectItem key={o.value} value={o.value}>
+                            {o.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="text-slate-500">Ngày bắt đầu đi làm</div>
+                  <div>
+                    <Input
+                      type="date"
+                      value={offerStartDate}
+                      onChange={(e) => setOfferStartDate(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="text-slate-500">Trạng thái</div>
+                  <div>
+                    <Badge
+                      className={`border ${
+                        statusInfo.key != null
+                          ? statusColor[statusInfo.key]
+                          : "bg-slate-100 text-slate-700 border-slate-200"
+                      } font-normal`}
+                    >
+                      {statusInfo.label}
+                    </Badge>
+                  </div>
+                </CardContent>
+              )}
+               
+                {editing && (
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <Button size="sm" onClick={saveOffer} disabled={savingOffer}>
+                      {savingOffer ? "Đang lưu..." : "Lưu thay đổi"}
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setEditing(false)} disabled={savingOffer}>
+                      Hủy
+                    </Button>
+                  </div>
+                )}
+
             </Card>
 
             <Card>
@@ -299,17 +457,20 @@ export default function OnboardDetailSheet({
                           ? coerceStatusLabel(Number(h.oldStatus))
                           : { key: null, label: "—" };
                       return (
-                        <div
-                          key={idx}
-                          className="grid grid-cols-[120px_1fr] gap-3 text-sm"
-                        >
-                          <div className="text-slate-500">
-                            Trạng thái trước: {old.label}
+                        <div key={idx} className="grid grid-cols-2 gap-3">
+                          <div className="text-slate-500">Trạng thái trước: </div>
+                          <div>
+                            <Badge
+                              className={`border ${
+                                h.oldStatus != null
+                                  ? statusColor[Number(h.oldStatus)]
+                                  : "bg-slate-100 text-slate-700 border-slate-200"
+                              } font-normal`}
+                            >
+                              {old.label}
+                            </Badge>
                           </div>
                           <div>
-                            <div className="font-medium">
-                              Thay đổi bởi {h.changedByUser ?? "—"}
-                            </div>
                             {h.note ? (
                               <div className="text-slate-600">{h.note}</div>
                             ) : null}
