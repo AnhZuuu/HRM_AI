@@ -81,7 +81,7 @@ export default function ChartCandidatesbyDepartment() {
                 fill="#3B82F6"
                 name="Tổng số ứng viên"
               />
-              <Bar dataKey="hired" fill="#10B981" name="Hired" />
+              <Bar dataKey="hired" fill="#10B981" name="Đã tuyển" />
             </BarChart>
           </ResponsiveContainer>
           {loadingDept && (

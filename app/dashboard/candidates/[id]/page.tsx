@@ -436,7 +436,7 @@ export default function CvApplicantDetailPage() {
               )}
 
               {/* Status Legend */}
-              <Card>
+              {/* <Card>
                 <CardHeader>
                   <CardTitle>Trạng thái</CardTitle>
                 </CardHeader>
@@ -446,7 +446,7 @@ export default function CvApplicantDetailPage() {
                   <LegendRow icon={<Clock className="h-4 w-4" />} label="Đã xem" cls="bg-purple-100 text-purple-800" />
                   <LegendRow icon={<XCircle className="h-4 w-4" />} label="Bị từ chối" cls="bg-red-100 text-red-800" />
                 </CardContent>
-              </Card>
+              </Card> */}
             </div>
           </div>
           <HandleUpdateCandidate

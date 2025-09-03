@@ -19,6 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 
 import { authFetch } from "@/app/utils/authFetch";
 import API from "@/api/api";
+import { isHR } from "@/lib/auth";
 
 // import AddCampaignPositionDialog from "./handleAddCampaignPosition";
 // import UpdateCampaignPositionDialog from "./handleUpdateCampaignPosition";
@@ -156,10 +157,10 @@ export default function CampaignPositionPage() {
           <Plus className="w-4 h-4 mr-2" />
           Thêm vị trí
         </Button> */}
-        <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => notReady()}>
+        {/* <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => notReady()}>
           <Plus className="w-4 h-4 mr-2" />
           Thêm vị trí
-        </Button>
+        </Button> */}
       </div>
 
       <Card>
@@ -260,31 +261,34 @@ export default function CampaignPositionPage() {
                               <Eye className="mr-2 h-4 w-4" />
                               Chi tiết
                             </DropdownMenuItem>
+                            {isHR() && (
+                            <>                            
+                              <DropdownMenuItem
+                                // onClick={() => {
+                                //   setEditing(pos);
+                                //   setIsEditOpen(true);
+                                // }}
+                                onClick={() => notReady()}
+                              >
+                                <Edit className="mr-2 h-4 w-4" />
+                                Sửa
+                              </DropdownMenuItem>
 
-                            <DropdownMenuItem
-                              // onClick={() => {
-                              //   setEditing(pos);
-                              //   setIsEditOpen(true);
-                              // }}
-                              onClick={() => notReady()}
-                            >
-                              <Edit className="mr-2 h-4 w-4" />
-                              Sửa
-                            </DropdownMenuItem>
+                              <DropdownMenuSeparator />
 
-                            <DropdownMenuSeparator />
-
-                            <DropdownMenuItem
-                              className="text-red-600"
-                              // onClick={() => {
-                              //   setDeleting(pos);
-                              //   setIsDeleteOpen(true);
-                              // }}
-                              onClick={() => notReady()}
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Xóa
-                            </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="text-red-600"
+                                // onClick={() => {
+                                //   setDeleting(pos);
+                                //   setIsDeleteOpen(true);
+                                // }}
+                                onClick={() => notReady()}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Xóa
+                              </DropdownMenuItem>
+                            </>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
