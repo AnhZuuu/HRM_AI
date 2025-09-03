@@ -226,7 +226,7 @@ export default async function CampaignDetailPage({
             {status} – {message}
           </div>
 
-          {!showAddPosition && isHR() && (
+          { !showAddPosition && (   // only HR sees the button
             <AddPositionDialog campaignId={campaign.id} />
           )}
         </div>

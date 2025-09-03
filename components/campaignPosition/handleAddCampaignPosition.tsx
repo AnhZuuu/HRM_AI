@@ -15,6 +15,7 @@ import { Plus } from "lucide-react";
 import { authFetch } from "@/app/utils/authFetch";
 import FlexibleFieldsForm from "./flexible-fields-form";
 import API from "@/api/api";
+import { isHR } from "@/lib/auth";
 
 type DepartmentOption = { id: string; name: string };
 // NEW: interview process option type
@@ -103,7 +104,7 @@ export default function AddPositionDialog({
     setProcLoading(true);
     setProcError(null);
     try {
-     
+
       const url = `${API.DEPARTMENT.BASE}/${deptId}`;
 
       const res = await authFetch(url);
@@ -213,10 +214,13 @@ export default function AddPositionDialog({
       }}
     >
       <DialogTrigger asChild>
-        <Button className="bg-blue-600 hover:bg-blue-700" type="button">
-          <Plus className="w-4 h-4 mr-2" />
-          Thêm vị trí tuyển dụng
-        </Button>
+        {isHR() && (
+          <Button className="bg-blue-600 hover:bg-blue-700" type="button">
+            <Plus className="w-4 h-4 mr-2" />
+            Thêm vị trí tuyển dụng
+          </Button>
+        )}
+
       </DialogTrigger>
 
       <DialogContent className="sm:max-w-[720px] max-h-[85vh] overflow-y-auto">
@@ -302,12 +306,12 @@ export default function AddPositionDialog({
                         !form.departmentId
                           ? "Chọn phòng ban trước"
                           : procLoading
-                          ? "Đang tải quy trình…"
-                          : procError
-                          ? procError
-                          : processes.length === 0
-                          ? "Không có quy trình phỏng vấn"
-                          : "Chọn quy trình phỏng vấn"
+                            ? "Đang tải quy trình…"
+                            : procError
+                              ? procError
+                              : processes.length === 0
+                                ? "Không có quy trình phỏng vấn"
+                                : "Chọn quy trình phỏng vấn"
                       }
                     />
                   </SelectTrigger>
