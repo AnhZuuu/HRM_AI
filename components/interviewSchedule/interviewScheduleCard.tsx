@@ -432,17 +432,7 @@ export default function InterviewSchedulesTable({
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
 
-                          {isHR() && (
-                           {/* <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() =>
-                                router.push(`/dashboard/schedules/${it.id}/edit`)
-                              }
-                            >
-                              Chỉnh lịch
-                            </Button> */}
-                          )}                          
+                                                 
                           <Button
                             variant="outline"
                             size="sm"
