@@ -121,10 +121,10 @@ export function InterviewTracker({ cvApplicantId }: Props) {
                   className={cn(
                     "flex items-center justify-center w-12 h-12 rounded-full border-2 mb-2",
                     isCompleted
-                      ? "bg-primary border-primary text-primary-foreground"
+                      ? "bg-green-300 border-primary text-primary-foreground"
                       : isFailed
                       ? "bg-destructive border-destructive text-destructive-foreground"
-                      : "bg-accent border-accent text-accent-foreground"
+                      : "bg-[#FDF7D7] border-accent text-accent-foreground"
                   )}
                 >
                   <Icon className="w-5 h-5" />

@@ -301,7 +301,7 @@ export default function CandidatesPage() {
                               Xem chi tiết
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem
+                            {/* <DropdownMenuItem
                               onClick={() =>
                                 navigator.clipboard
                                   .writeText(c.id)
@@ -309,7 +309,7 @@ export default function CandidatesPage() {
                               }
                             >
                               Copy ID
-                            </DropdownMenuItem>
+                            </DropdownMenuItem> */}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
