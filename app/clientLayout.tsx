@@ -108,7 +108,8 @@ const NAVIGATION: NavItem[] = [
   { name: "Phòng ban", href: "/dashboard/departments", icon: Building2Icon, allow: [Role.HR, Role.Admin] },
   { name: "Lịch", href: "/dashboard/schedules", icon: CalendarRange },
   { name: "Loại phỏng vấn", href: "/dashboard/interviewTypes", icon: Shapes, allow: [Role.HR, Role.Admin] },
-  { name: "Onboard", href: "/dashboard/onboards", icon: ReceiptText, allow: [Role.HR, Role.DeparmentManager] },
+  { name: "Onboard", href: "/dashboard/onboards", icon: ReceiptText, allow: [Role.HR, Role.DeparmentManager, Role.Admin] },
+  { name: "Cấu hình hệ thống", href: "/dashboard/systemConfig", icon: ReceiptText, allow: [Role.Admin] },
 ];
 
 /* ===== Layout (top navbar removed) ===== */
@@ -124,7 +125,13 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       localStorage.removeItem("accessToken");
       localStorage.removeItem("refreshToken");
       localStorage.removeItem("user");
-      localStorage.clear();
+      localStorage.removeItem("refreshTokenExpires");
+      localStorage.removeItem("email");
+      localStorage.removeItem("name");
+      localStorage.removeItem("departmentId");
+      localStorage.removeItem("roles");
+      localStorage.removeItem("roleIds");
+      // localStorage.clear();
       toast.success("Đăng xuất thành công!");
     } catch {
       toast.error("Không thể đăng xuất. Vui lòng thử lại.");
@@ -298,10 +305,10 @@ function SidebarContent({
                     <span>Hồ sơ</span>
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem>
+                {/* <DropdownMenuItem>
                   <Settings className="mr-2 h-4 w-4" />
                   <span>System Config</span>
-                </DropdownMenuItem>
+                </DropdownMenuItem> */}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <button
