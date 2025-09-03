@@ -367,7 +367,7 @@ export default function InterviewSchedulesTable({
                 <TableHead>Bắt đầu</TableHead>
                 <TableHead>Thời gian</TableHead>
                 <TableHead>Trạng thái</TableHead>
-                <TableHead>Người phỏng vấn</TableHead>
+                {/* <TableHead>Người phỏng vấn</TableHead> */}
                 <TableHead className="text-right">Thao tác</TableHead>
               </TableRow>
             </TableHeader>
@@ -422,27 +422,16 @@ export default function InterviewSchedulesTable({
                         <StatusBadge status={it.status} />
                       </TableCell>
 
-                      <TableCell className="text-sm">
+                      {/* <TableCell className="text-sm">
                         <div className="flex items-center gap-1">
                           <User className="w-4 h-4 text-gray-500" />
                           <span className="truncate">{ivNames}</span>
                         </div>
-                      </TableCell>
+                      </TableCell> */}
 
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-
-                          {isHR() && (
-                           {/* <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() =>
-                                router.push(`/dashboard/schedules/${it.id}/edit`)
-                              }
-                            >
-                              Chỉnh lịch
-                            </Button> */}
-                          )}                          
+                       
                           <Button
                             variant="outline"
                             size="sm"
