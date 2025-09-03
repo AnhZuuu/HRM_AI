@@ -4,7 +4,10 @@
 //old
 // const API_BASE_URL = "https://hrm-ai-dwf8gxeqfvfgdvdy.malaysiawest-01.azurewebsites.net/api/v1";
 //new
-const API_BASE_URL = "https://hrm-ai-sep490-escte3g9f3dnfvgh.malaysiawest-01.azurewebsites.net/api/v1";
+// const API_BASE_URL = "https://hrm-ai-sep490-escte3g9f3dnfvgh.malaysiawest-01.azurewebsites.net/api/v1";
+
+//current
+const API_BASE_URL= "https://hrmaisep490v2.azurewebsites.net/api/v1"
 
 export const API = {
   BASE_URL: API_BASE_URL,
