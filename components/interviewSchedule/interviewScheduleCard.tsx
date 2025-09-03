@@ -363,7 +363,7 @@ export default function InterviewSchedulesTable({
               <TableRow>
                 <TableHead>Ứng viên</TableHead>
                 <TableHead>Phòng ban</TableHead>
-                <TableHead>Vòng / Loại</TableHead>
+                <TableHead>Vòng</TableHead>
                 <TableHead>Bắt đầu</TableHead>
                 <TableHead>Thời gian</TableHead>
                 <TableHead>Trạng thái</TableHead>
@@ -403,7 +403,7 @@ export default function InterviewSchedulesTable({
                       <TableCell>{dept}</TableCell>
 
                       <TableCell>
-                        <div className="text-sm">Vòng {it.stageName ?? "—"}</div>
+                        <div className="text-sm">{it.stageName ?? "—"}</div>
                         <div className="text-xs text-gray-600">{typeName}</div>
                       </TableCell>
 

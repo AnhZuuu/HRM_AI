@@ -27,6 +27,8 @@ import { toast } from "react-toastify";
 import { authFetch } from "@/app/utils/authFetch";
 import API from "@/api/api";
 
+
+export const revalidate = 0; 
 /**
  * BACKEND TYPES (from your API)
  */
@@ -197,6 +199,7 @@ export default function InterviewProcessTable({
     setSavingAdd(true);
     try {
       const res = await authFetch(API.INTERVIEW.PROCESS, {
+        cache: "no-store",
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -232,7 +235,7 @@ export default function InterviewProcessTable({
       setNewDesc("");
 
       // If you want to be perfectly in sync with server list:
-      // router.refresh();
+      router.refresh();
     } catch (e: any) {
       toast.error(e?.message || "Không thể tạo quy trình.");
     } finally {
@@ -270,6 +273,7 @@ export default function InterviewProcessTable({
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
+          cache: "no-store" 
         }
       );
 
