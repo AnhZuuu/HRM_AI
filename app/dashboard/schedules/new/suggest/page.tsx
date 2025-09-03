@@ -1,309 +1,208 @@
 "use client";
 
-import type React from "react";
-
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  CheckCircle2,
-  Users,
-  Calendar,
   Briefcase,
-  ChevronDown,
-  ChevronUp,
-  User as UserIcon,
-  Hash,
-  ListChecks,
+  Calendar as CalendarIcon,
+  CheckCircle2,
   Loader2,
   AlertCircle,
+  X,
 } from "lucide-react";
 import API from "@/api/api";
 import { authFetch } from "@/app/utils/authFetch";
+import SuggestSchedulesPage from "./result/page";
+// import SuggestSchedulesPage from "@/components/scheduling/SuggestSchedulesPage";
 
-type CampaignPositionDetailModel = {
-  campaignPositionId: string;
-  type: string | null;
-  key: string | null;
-  value: string | null;
-  groupIndex: number | null;
-  id: string;
-  creationDate: string | null;
-  createdById: string | null;
-  modificationDate: string | null;
-  modifiedById: string | null;
-  deletionDate: string | null;
-  deletedById: string | null;
-  isDeleted: boolean;
-};
-
+/* Types */
 interface CampaignPosition {
+  id: string;
   departmentId: string;
   campaignId: string;
   departmentName: string;
   campaignName: string;
+  description: string;
   createdByName: string | null;
   totalSlot: number;
   totalSlotOnBoard: number | null;
-  description: string;
-  campaignPositionDetailModels?: CampaignPositionDetailModel[] | null;
-  id: string;
+}
+
+/* Helper: Date -> ISO midnight UTC */
+function toISOStartOfDayUTC(d: Date): string {
+  return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())).toISOString();
 }
 
 export default function CampaignPositionsPage() {
+  const router = useRouter();
+
   const [selectedPosition, setSelectedPosition] = useState<string | null>(null);
   const [campaignPositions, setCampaignPositions] = useState<CampaignPosition[]>([]);
-  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // date picking
+  const [selectedDates, setSelectedDates] = useState<string[]>([]);
+  const [inputDate, setInputDate] = useState("");
 
   useEffect(() => {
     let cancelled = false;
-
     async function fetchPositions() {
       setLoading(true);
-      setErrorMsg(null);
       try {
         const res = await authFetch(API.CAMPAIGN.POSITION);
-
-        let json: any = null;
-        try {
-          json = await res.json();
-        } catch {
-          throw new Error("Phản hồi không hợp lệ từ máy chủ.");
-        }
-
+        const json = await res.json().catch(() => ({}));
         const items: CampaignPosition[] = json?.data?.data ?? [];
-        if (!cancelled) {
-          setCampaignPositions(items);
-        }
+        if (!cancelled) setCampaignPositions(items);
       } catch (err: any) {
-        if (!cancelled) {
-          setErrorMsg(err?.message || "Không thể tải dữ liệu. Vui lòng thử lại.");
-        }
+        if (!cancelled) setErrorMsg(err?.message || "Không thể tải dữ liệu.");
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
-
     fetchPositions();
     return () => {
       cancelled = true;
     };
   }, []);
 
-  const handleSelectPosition = (positionId: string) => {
-    setSelectedPosition(positionId);
-  };
-
-  const toggleExpanded = (positionId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setExpandedCards((prev) => {
-      const next = new Set(prev);
-      if (next.has(positionId)) next.delete(positionId);
-      else next.add(positionId);
-      return next;
-    });
-  };
-
-  const handleNextAction = () => {
-    if (selectedPosition) {
-      const picked = campaignPositions.find((p) => p.id === selectedPosition);
-      console.log("Selected position:", picked);
-      alert(`Đã chọn vị trí: ${picked?.description ?? "—"}`);
+  const handleAddDate = () => {
+    if (inputDate && !selectedDates.includes(inputDate)) {
+      setSelectedDates([...selectedDates, inputDate]);
     }
+    setInputDate("");
+  };
+
+  const handleRemoveDate = (date: string) => {
+    setSelectedDates(selectedDates.filter((d) => d !== date));
+  };
+
+  const dateTimes: string[] = useMemo(() => {
+    return selectedDates.map((ds) => {
+      const [y, m, d] = ds.split("-").map(Number);
+      return toISOStartOfDayUTC(new Date(y, m - 1, d));
+    });
+  }, [selectedDates]);
+
+  const handleConfirm = () => {
+    if (!selectedPosition || dateTimes.length === 0) return;
+
+    const params = new URLSearchParams();
+    params.set("positionId", selectedPosition);
+    dateTimes.forEach((dt) => params.append("dateTimes", dt));
+
+    router.push(`/dashboard/schedules/new/suggest/result?${params.toString()}`);
   };
 
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-4xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Chọn Vị Trí Ứng Tuyển</h1>
-          <p className="text-muted-foreground">
-            Vui lòng chọn một vị trí để tiếp tục thực hiện các hành động khác
-          </p>
-        </div>
+        <h1 className="text-3xl font-bold mb-4">Chọn Vị Trí Ứng Tuyển</h1>
 
-        {/* Loading */}
         {loading && (
           <div className="flex items-center gap-2 text-muted-foreground mb-6">
             <Loader2 className="h-4 w-4 animate-spin" />
-            <span>Đang tải dữ liệu vị trí ứng tuyển…</span>
+            <span>Đang tải dữ liệu vị trí…</span>
           </div>
         )}
-
-        {/* Error */}
-        {!loading && errorMsg && (
+        {errorMsg && (
           <div className="flex items-center gap-2 text-destructive mb-6">
             <AlertCircle className="h-5 w-5" />
             <span>{errorMsg}</span>
           </div>
         )}
 
-        {/* Empty */}
-        {!loading && !errorMsg && campaignPositions.length === 0 && (
-          <Card className="mb-6">
-            <CardContent className="py-8 text-center text-muted-foreground">
-              Không có vị trí ứng tuyển nào tìm thấy.
-            </CardContent>
-          </Card>
-        )}
-
-        {/* List */}
+        {/* Positions list */}
         <div className="grid gap-4 mb-6">
           {!loading &&
-            !errorMsg &&
-            campaignPositions.map((position) => {
-              const isExpanded = expandedCards.has(position.id);
-
-              return (
-                <Card
-                  key={position.id}
-                  className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
-                    selectedPosition === position.id
-                      ? "ring-2 ring-primary border-primary bg-primary/5"
-                      : "hover:border-primary/50"
-                  }`}
-                  onClick={() => handleSelectPosition(position.id)}
-                >
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <CardTitle className="text-lg flex items-center gap-2">
-                          <Briefcase className="h-5 w-5 text-primary" />
-                          Vị trí ứng tuyển: {position.description}
-                        </CardTitle>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {selectedPosition === position.id && (
-                          <CheckCircle2 className="h-6 w-6 text-primary flex-shrink-0" />
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => toggleExpanded(position.id, e)}
-                          className="h-8 w-8 p-0"
-                          aria-label={isExpanded ? "Thu gọn" : "Mở rộng"}
-                        >
-                          {isExpanded ? (
-                            <ChevronUp className="h-4 w-4" />
-                          ) : (
-                            <ChevronDown className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Users className="h-4 w-4" />
-                      <span>Phòng ban: {position.departmentName}</span>
-                    </div>
-
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Calendar className="h-4 w-4" />
-                      <span>Đợt tuyển dụng: {position.campaignName}</span>
-                    </div>
-
-                    {isExpanded && (
-                      <div className="pt-3 border-t border-border space-y-3">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <Hash className="h-4 w-4" />
-                            <span>ID Phòng ban: {position.departmentId}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <Hash className="h-4 w-4" />
-                            <span>ID Chiến dịch: {position.campaignId}</span>
-                          </div>
-                          {position.createdByName && (
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                              <UserIcon className="h-4 w-4" />
-                              <span>Tạo bởi: {position.createdByName}</span>
-                            </div>
-                          )}
-                          {position.totalSlotOnBoard !== null && (
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                              <Users className="h-4 w-4" />
-                              <span>Đã tuyển: {position.totalSlotOnBoard}</span>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Details list */}
-                        <div className="mt-2">
-                          <div className="flex items-center gap-2 mb-2">
-                            <ListChecks className="h-4 w-4 text-primary" />
-                            <span className="text-sm font-medium">Tiêu chí vị trí</span>
-                          </div>
-
-                          {position.campaignPositionDetailModels &&
-                          position.campaignPositionDetailModels.length > 0 ? (
-                            <div className="rounded-lg border border-border">
-                              <div className="grid grid-cols-12 text-xs uppercase text-muted-foreground px-3 py-2">
-                                <div className="col-span-3">Loại</div>
-                                <div className="col-span-4">Tiêu chí</div>
-                                <div className="col-span-4">Giá trị</div>
-                                <div className="col-span-1 text-right">Nhóm</div>
-                              </div>
-                              <div className="divide-y">
-                                {position.campaignPositionDetailModels.map((d) => (
-                                  <div
-                                    key={d.id}
-                                    className="grid grid-cols-12 px-3 py-2 text-sm"
-                                  >
-                                    <div className="col-span-3 truncate">
-                                      {d.type ?? "—"}
-                                    </div>
-                                    <div className="col-span-4 truncate">
-                                      {d.key ?? "—"}
-                                    </div>
-                                    <div className="col-span-4 truncate">
-                                      {d.value ?? "—"}
-                                    </div>
-                                    <div className="col-span-1 text-right">
-                                      {d.groupIndex ?? "—"}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          ) : (
-                            <p className="text-sm text-muted-foreground">
-                              Chưa có tiêu chí cho vị trí này.
-                            </p>
-                          )}
-                        </div>
-                      </div>
+            campaignPositions.map((pos) => (
+              <Card
+                key={pos.id}
+                className={`cursor-pointer ${
+                  selectedPosition === pos.id ? "ring-2 ring-primary" : ""
+                }`}
+                onClick={() => setSelectedPosition(pos.id)}
+              >
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2">
+                    <Briefcase className="h-5 w-5 text-primary" />
+                    {pos.description}
+                    {selectedPosition === pos.id && (
+                      <CheckCircle2 className="h-5 w-5 text-primary ml-2" />
                     )}
-
-                    <div className="flex items-center justify-between pt-2">
-                      <Badge variant="secondary" className="text-xs">
-                        Số lượng: {position.totalSlot} vị trí
-                      </Badge>
-                      {selectedPosition === position.id && (
-                        <Badge variant="default" className="text-xs">
-                          Đã chọn
-                        </Badge>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">
+                    Phòng ban: {pos.departmentName} | Chiến dịch: {pos.campaignName}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
         </div>
 
-        <div className="flex justify-end">
+        {/* Date selection */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CalendarIcon className="h-5 w-5 text-primary" />
+              Chọn ngày phỏng vấn
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={inputDate}
+                onChange={(e) => setInputDate(e.target.value)}
+                className="border rounded px-2 py-1"
+              />
+              <Button type="button" onClick={handleAddDate}>
+                Thêm
+              </Button>
+            </div>
+            {selectedDates.length > 0 && (
+              <ul className="mt-3 space-y-1">
+                {selectedDates.map((d) => (
+                  <li key={d} className="flex items-center gap-2 text-sm">
+                    <Badge>{d}</Badge>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => handleRemoveDate(d)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Confirm button */}
+        {/* <div className="flex justify-end mb-8">
           <Button
-            onClick={handleNextAction}
-            disabled={!selectedPosition}
+            onClick={handleConfirm}
+            disabled={!selectedPosition || dateTimes.length === 0}
             size="lg"
             className="min-w-32"
           >
-            Tiếp tục
+            Xác Nhận
           </Button>
-        </div>
+        </div> */}
+
+        {/* Inline preview of suggested schedules if you want */}
+        {selectedPosition && dateTimes.length > 0 && (
+          <div className="mt-8">
+            <h2 className="text-xl font-semibold mb-3">Đề xuất lịch phỏng vấn</h2>
+            <SuggestSchedulesPage positionId={selectedPosition} dateTimes={dateTimes} />
+          </div>
+        )}
       </div>
     </div>
   );

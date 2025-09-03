@@ -1,6 +1,6 @@
 
 
-//const API_BASE_URL = "http://localhost:7064/api/v1";
+// const API_BASE_URL = "https://localhost:7064/api/v1";
 //old
 // const API_BASE_URL = "https://hrm-ai-dwf8gxeqfvfgdvdy.malaysiawest-01.azurewebsites.net/api/v1";
 //new
@@ -36,6 +36,7 @@ export const API = {
   DEPARTMENT: { BASE: `${API_BASE_URL}/departments` 
   },
   CV : {
+    BASE: `${API_BASE_URL}/cv`,
     PARSE: `${API_BASE_URL}/cv/parse`,
     APPLICANT: `${API_BASE_URL}/cvApplicants`
   },
