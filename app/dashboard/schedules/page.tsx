@@ -14,7 +14,7 @@ import { Plus } from "lucide-react";
 import API from "@/api/api";
 import { authFetch } from "@/app/utils/authFetch";
 import { useDecodedToken } from "@/components/auth/useDecodedToken";
-import { isHRorDMorAdmin } from "@/lib/auth";
+import { isDepartmentManager, isHRorAdmin, isHRorDMorAdmin } from "@/lib/auth";
 
 // ---- API shapes ----
 type ApiItem = {
@@ -23,7 +23,7 @@ type ApiItem = {
   startTime: string;
   endTime?: string | null;
   status: number;                    // 0 Pending, 1 Canceled, 2 Pass, 3 Fail
-  round: number | null;
+  stageName: string | null;
   interviewTypeId: string;
   interviewTypeName?: string | null;
   notes?: string | null;
@@ -91,7 +91,7 @@ const mapItem = (x: ApiItem): RowType => ({
   endTime: x.endTime ?? null,
   createdBy: x.createdById ?? null,
   status: statusToString(x.status),
-  round: x.round ?? null,
+  stageName: x.stageName ?? null,
   interviewTypeId: x.interviewTypeId,
   interviewType: null,
   interviewTypeName: x.interviewTypeName ?? null,
@@ -108,6 +108,7 @@ const mapItem = (x: ApiItem): RowType => ({
 
 });
 
+
 export default function InterviewSchedulesPage() {
   // Full dataset (for stats + Today table)
   const [items, setItems] = useState<RowType[]>([]);
@@ -122,10 +123,14 @@ export default function InterviewSchedulesPage() {
   const [totalPages, setTotalPages] = useState(1);
   const {claims, expired} = useDecodedToken();
   const accountId =  claims?.accountId ?? "";
-  const isAccountIdReady = useMemo(() => isHRorDMorAdmin(), [claims]); 
+  const isAccountIdReady = useMemo(() => isHRorAdmin(), [claims]); 
+  const isDM = useMemo(() => isDepartmentManager(), [claims]);
 
 const getSchedulesUrl = () => {
   if (isAccountIdReady) return `${API.INTERVIEW.SCHEDULE}`;
+  if(isDM) return `${API.INTERVIEW.SCHEDULE}/${localStorage.getItem("departmentId")}/departments`;
+  // else if isDM thi chay API schedule/deparmentId/departments
+  //departmentId từ localStorage
   if (!accountId) return null; 
  
   return `${API.INTERVIEW.SCHEDULE}/${accountId}/accounts`;
@@ -174,7 +179,7 @@ const getSchedulesUrl = () => {
     };
     // If you want stats to be independent from the UI pageSize,
     // replace &pageSize=${pageSize} with a larger fixed number, e.g. 50 or 100.
-  }, [pageSize, accountId, isAccountIdReady, expired]);
+  }, [pageSize, accountId, isAccountIdReady, expired, isDM]);
 
   // -------- fetch: single page for All table --------
   useEffect(() => {
@@ -210,7 +215,7 @@ const getSchedulesUrl = () => {
       alive = false;
       controller.abort();
     };
-  }, [page, pageSize, accountId, isAccountIdReady, expired]);
+  }, [page, pageSize, accountId, isAccountIdReady, expired, isDM]);
 
   // -------- stats & splits (from full items) --------
   const toLocalYMD = (d: Date) => {
@@ -283,7 +288,7 @@ const getSchedulesUrl = () => {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Lịch phỏng vấn</h1>
           <p className="text-gray-600 mt-1">Danh sách lịch phỏng vấn của ứng viên</p>
-          <p className="text-gray-600 mt-1">AccountId: {accountId}</p>
+          {/* <p className="text-gray-600 mt-1">AccountId: {accountId}</p> */}
 
         </div>
         <Button asChild className="bg-blue-600 hover:bg-blue-700">

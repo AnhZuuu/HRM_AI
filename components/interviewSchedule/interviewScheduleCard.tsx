@@ -52,7 +52,7 @@ export type InterviewSchedule = {
   endTime: string | null;       // ISO | null
   createdBy: string | null;
   status: string | null;        // "Pending" | "Pass" | "Fail" | "Canceled"
-  round: number | null;
+  stageName: string | null;
   interviewTypeId: string;
   interviewType?: string | null;
   interviewTypeName?: string | null;
@@ -158,7 +158,7 @@ function normalizeStatus(s?: string | null) {
   if (!s) return { label: "—", tone: "outline" as const };
   const v = s.toLowerCase();
   if (["pending", "scheduled", "processing"].includes(v))
-    return { label: "Chờ phỏng vấn", tone: "default" as const };
+    return { label: "Pending", tone: "default" as const };
   if (["pass", "completed", "done", "interviewed"].includes(v))
     return { label: "Pass", tone: "success" as const };
   if (["fail"].includes(v))
@@ -203,7 +203,7 @@ export default function InterviewSchedulesTable({
   // Variant-specific filters
   const [range, setRange] = useState<RangeKey>("today"); // for "range"
   const [selectedDate, setSelectedDate] = useState<string>(""); // for "all" (YYYY-MM-DD)
-  const [roundFilter, setRoundFilter] = useState<string>("all");
+  // const [roundFilter, setRoundFilter] = useState<string>("all");
 
   // Pagination
   const [page, setPage] = useState<number>(1);
@@ -227,11 +227,11 @@ export default function InterviewSchedulesTable({
       return (it.status ?? "").toLowerCase() === statusFilter.toLowerCase();
     };
 
-    const byRound = (it: InterviewSchedule) => {
-      if (roundFilter === "all") return true;
-      return String(it.round ?? "") === roundFilter;
-    };
-
+    // const byRound = (it: InterviewSchedule) => {
+    //   if (roundFilter === "all") return true;
+    //   return String(it.stageName ?? "") === roundFilter;
+    // };
+    // console.log("Filtered by round:", roundFilter);
     // range vs date
     const { start, end } =
       variant === "range"
@@ -251,9 +251,9 @@ export default function InterviewSchedulesTable({
     };
 
     return (data ?? [])
-      .filter((it) => byText(it) && byStatus(it) && byTime(it) && byRound(it))
+      .filter((it) => byText(it) && byStatus(it) && byTime(it))
       .sort(sortByStartDesc);
-  }, [data, q, statusFilter, range, selectedDate, variant, roundFilter]);
+  }, [data, q, statusFilter, range, selectedDate, variant]);
 
   // Calculate paging values
   const total = filtered.length;
@@ -262,7 +262,7 @@ export default function InterviewSchedulesTable({
   // Clamp/reset page when dependencies change
   useEffect(() => {
     setPage(1);
-  }, [q, statusFilter, range, selectedDate, roundFilter, pageSize, variant]);
+  }, [q, statusFilter, range, selectedDate, pageSize, variant]);
 
   useEffect(() => {
     if (page > totalPages) {
@@ -305,27 +305,14 @@ export default function InterviewSchedulesTable({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tất cả trạng thái</SelectItem>
-                <SelectItem value="Pending">Chờ phỏng vấn</SelectItem>
+                <SelectItem value="Pending">Pending</SelectItem>
                 <SelectItem value="Pass">Pass</SelectItem>
                 <SelectItem value="Fail">Fail</SelectItem>
                 <SelectItem value="Canceled">Hủy</SelectItem>
               </SelectContent>
             </Select>
 
-            {/* round */}
-            <Select
-              value={roundFilter}
-              onValueChange={(v) => setRoundFilter(v)}
-            >
-              <SelectTrigger className="h-9 w-full sm:w-[160px]">
-                <SelectValue placeholder="Round" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả vòng</SelectItem>
-                <SelectItem value="1">Vòng 1</SelectItem>
-                <SelectItem value="2">Vòng 2</SelectItem>
-              </SelectContent>
-            </Select>
+            
 
             {/* variant-specific control */}
             {variant === "range" ? (
@@ -359,7 +346,7 @@ export default function InterviewSchedulesTable({
                 setStatusFilter("all");
                 setSelectedDate("");
                 setRange("today");
-                setRoundFilter("all");
+                // setRoundFilter("all");
                 setPage(1);
               }}
             >
@@ -415,7 +402,7 @@ export default function InterviewSchedulesTable({
                       <TableCell>{dept}</TableCell>
 
                       <TableCell>
-                        <div className="text-sm">Vòng {it.round ?? "—"}</div>
+                        <div className="text-sm">Vòng {it.stageName ?? "—"}</div>
                         <div className="text-xs text-gray-600">{typeName}</div>
                       </TableCell>
 
@@ -443,7 +430,7 @@ export default function InterviewSchedulesTable({
 
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button
+                          {/* <Button
                             variant="outline"
                             size="sm"
                             onClick={() =>
@@ -451,7 +438,7 @@ export default function InterviewSchedulesTable({
                             }
                           >
                             Chỉnh lịch
-                          </Button>
+                          </Button> */}
                           <Button
                             variant="outline"
                             size="sm"

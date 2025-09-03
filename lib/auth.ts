@@ -56,6 +56,7 @@ export const isAdmin = () => hasRoleId(Role.Admin);
 
 // Combined-role checks
 export const isHRorDM = () => hasAnyRole([Role.HR, Role.DeparmentManager]);
+export const isHRorAdmin = () => hasAnyRole([Role.HR, Role.Admin]);
 export const isHRorDMorAdmin = () =>
   hasAnyRole([Role.HR, Role.DeparmentManager, Role.Admin]);
 

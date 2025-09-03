@@ -274,7 +274,7 @@ export default function CampaignPositionPage() {
 
                             <DropdownMenuSeparator />
 
-                            <DropdownMenuItem
+                            {/* <DropdownMenuItem
                               className="text-red-600"
                               // onClick={() => {
                               //   setDeleting(pos);
@@ -284,7 +284,7 @@ export default function CampaignPositionPage() {
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
                               Xóa
-                            </DropdownMenuItem>
+                            </DropdownMenuItem> */}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
