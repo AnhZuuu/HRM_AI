@@ -19,7 +19,7 @@ import { Users, ChevronsUpDown, Loader2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { authFetch } from "@/app/utils/authFetch";
 import API from "@/api/api";
-import { today, todayStartVNForDatetimeLocal } from "@/app/utils/time";
+import { todayStartVNForDatetimeLocal } from "@/app/utils/time";
 import { toast } from "react-toastify";
 
 /* ================= Types ================= */
@@ -58,7 +58,6 @@ type NextStageResponse = {
 
 type Interviewer = { id: string; fullName: string; title?: string };
 
-
 type AccountDTO = {
   id: string;
   firstName?: string | null;
@@ -91,7 +90,7 @@ async function fetchNextStage(cvApplicantId: string): Promise<NextStageResponse 
     id: String(data.id),
     stageName: data.stageName ?? null,
     description: data.description ?? null,
-    totalTime: data.totalTime ?? null
+    totalTime: data.totalTime ?? null,
   };
 }
 
@@ -134,8 +133,14 @@ async function postInterviewSchedule(payload: {
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
-    const msg = await res.text();
-    throw new Error(msg || `Schedule failed: ${res.status}`);
+    let serverMessage: string | undefined;
+    try {
+      const json = await res.json();
+      serverMessage = json?.message;
+    } catch {
+      serverMessage = await res.text();
+    }
+    throw new Error(serverMessage || `Lên lịch thất bại: ${res.status}`);
   }
   return res.json();
 }
@@ -200,47 +205,46 @@ export function ScheduleModal({
   // UI errors (simple inline hints)
   const [errors, setErrors] = useState<{ interviewStageId?: string; start?: string; end?: string; interviewerIds?: string }>({});
 
-  // new: duration in minutes (totalTime). Default 60 = 1h
+  // duration in minutes (totalTime). Default 60 = 1h
   const [durationMinutes, setDurationMinutes] = useState<number>(60);
 
-  // new: whether end auto-follows start + duration
-  const [isEndLinked, setIsEndLinked] = useState<boolean>(true);
+  // whether end auto-follows start + duration; label stays “Đang tự động…”
+  const [isEndLinked] = useState<boolean>(true);
+
+  // manual end override — if user edits end, keep it until start/duration changes
+  const [manualEnd, setManualEnd] = useState<boolean>(false);
 
   // Resolve departmentId for UI checks too
   const deptId = useMemo(() => getCandidateDepartmentId(candidate), [candidate]);
 
-  // When start or duration changes and "linked", recompute end
+  // When start or duration changes and "linked", recompute end (unless user manually set it)
   useEffect(() => {
     if (!isEndLinked) return;
+    if (manualEnd) return;
     const s = toDateFromLocalInput(start);
     if (!s) return;
     const e = addMinutesLocal(s, durationMinutes);
     setEnd(toLocalInputFromDate(e));
-  }, [start, durationMinutes, isEndLinked]);
+  }, [start, durationMinutes, isEndLinked, manualEnd]);
 
   // Handlers
   function handleChangeStart(next: string) {
+    setManualEnd(false); // reset manual override when start changes
     setStart(next);
     // end will update via useEffect if linked
   }
 
   function handleChangeEnd(next: string) {
-    // User is taking control of end time => unlink
-    setIsEndLinked(false);
+    // Allow manual edits but keep the auto-calc label/state
+    setManualEnd(true);
     setEnd(next);
   }
 
   function handleChangeDuration(nextMin: number) {
+    setManualEnd(false); // reset manual override when duration changes
     setDurationMinutes(nextMin);
     // if linked, end will update via useEffect
   }
-
-  // Optional: relink end to follow start+duration (e.g., a small "link" button)
-  function relinkEnd() {
-    setIsEndLinked(true);
-  }
-
-  // ====== UI bits to add next to your inputs ======
 
   // Reset and fetch when opened
   useEffect(() => {
@@ -254,6 +258,7 @@ export function ScheduleModal({
     setEnd("");
     setNotes("");
     setErrors({});
+    setManualEnd(false);
 
     (async () => {
       try {
@@ -264,6 +269,12 @@ export function ScheduleModal({
         if (next?.id) {
           setinterviewStageId(next.id);
           setStageName(next.stageName || "Unnamed stage");
+          // Auto-adopt totalTime to duration if available
+          if (typeof next.totalTime === "number" && next.totalTime > 0) {
+            setDurationMinutes(next.totalTime);
+          } else {
+            setDurationMinutes(60);
+          }
         }
 
         // 2) interviewers by department (using computed deptId)
@@ -318,19 +329,17 @@ export function ScheduleModal({
       const result = await postInterviewSchedule(payload);
       onScheduled?.();
 
-
       // 👇 See parsed response (if any)
       console.log("[ScheduleModal] POST result:", result);
 
       onOpenChange(false);
     } catch (e: any) {
       console.error("[ScheduleModal] POST error:", e);
-      toast.error("Tạo lịch thất bại");
+      toast.error("Tạo lịch thất bại. Lý do: " + (e?.message || "Không xác định"));
     } finally {
       setLoading(false);
     }
   }
-
 
   return (
     <Dialog open={open} onOpenChange={(v) => !loading && onOpenChange(v)}>
@@ -368,7 +377,11 @@ export function ScheduleModal({
                 value={interviewStageId}
                 onChange={(e) => setinterviewStageId(e.target.value)}
               >
-                {interviewStageId ? <option value={interviewStageId}>{stageName || "Không có tên"}</option> : <option>Không có vòng tiếp theo</option>}
+                {interviewStageId ? (
+                  <option value={interviewStageId}>{stageName || "Không có tên"}</option>
+                ) : (
+                  <option>Không có vòng tiếp theo</option>
+                )}
               </select>
               {errors.interviewStageId && (
                 <p className="mt-1 flex items-center gap-1 text-xs text-red-600">
@@ -378,45 +391,6 @@ export function ScheduleModal({
             </div>
           </div>
 
-          {/* Time range */}
-          {/* <div className="grid grid-cols-4 items-start gap-3">
-            <label className="col-span-1 text-sm text-muted-foreground">
-              Bắt đầu <span className="text-red-500">*</span>
-            </label>
-            <div className="col-span-3 space-y-1">
-              <Input type="datetime-local"
-                min={todayStartVNForDatetimeLocal()}
-                value={start}
-                onChange={(e) => setStart(e.target.value)}
-                disabled={loading} />
-              {errors.start && (
-                <p className="flex items-center gap-1 text-xs text-red-600">
-                  <AlertCircle className="h-3 w-3" /> {errors.start}
-                </p>
-              )}
-            </div>
-          </div> */}
-
-          {/* <div className="grid grid-cols-4 items-start gap-3">
-            <label className="col-span-1 text-sm text-muted-foreground">
-              Kết thúc <span className="text-red-500">*</span>
-            </label>
-            <div className="col-span-3 space-y-1">
-              <Input
-                type="datetime-local"
-                value={end}
-                onChange={(e) => setEnd(e.target.value)}
-                min={start || todayStartVNForDatetimeLocal()}
-                disabled={loading}
-              />
-              {errors.end && (
-                <p className="flex items-center gap-1 text-xs text-red-600">
-                  <AlertCircle className="h-3 w-3" /> {errors.end}
-                </p>
-              )}
-              <p className="text-xs text-muted-foreground">Lưu ý: thời gian được lưu dưới dạng UTC (chuyển đổi tự động từ giờ địa phương).</p>
-            </div>
-          </div> */}
           {/* Time range */}
           <div className="grid grid-cols-4 items-start gap-3">
             <label className="col-span-1 text-sm text-muted-foreground">
@@ -439,11 +413,8 @@ export function ScheduleModal({
           </div>
 
           <div className="grid grid-cols-4 items-start gap-3">
-            <label className="col-span-1 text-sm text-muted-foreground">
-              Thời lượng
-            </label>
+            <label className="col-span-1 text-sm text-muted-foreground">Thời lượng</label>
             <div className="col-span-3 flex items-center gap-2">
-              {/* Example: simple number input in minutes */}
               <Input
                 type="number"
                 min={15}
@@ -454,21 +425,11 @@ export function ScheduleModal({
                 className="w-32"
               />
               <span className="text-sm text-muted-foreground">phút</span>
-
-              {/* Toggle link behavior */}
-              {/* <Button
-                type="button"
-                variant={isEndLinked ? "secondary" : "outline"}
-                onClick={() => setIsEndLinked((v) => !v)}
-                disabled={loading}
-              >
-                {isEndLinked ? "Đang tự động tính Kết thúc" : "Không tự động"}
-              </Button>
-              {!isEndLinked && (
-                <Button type="button" variant="ghost" onClick={relinkEnd} disabled={loading}>
-                  Gắn lại tự động
-                </Button>
-              )} */}
+              {/* Label is conceptually “always auto” */}
+              {/* <span className="text-xs text-muted-foreground ml-2">
+                Đang tự động tính Kết thúc
+              </span> */}
+              {/* Original toggle omitted as requested; logic remains auto-calc + manual override */}
             </div>
           </div>
 
