@@ -1,0 +1,30 @@
+{
+  "positionId": "a513bebd-1b23-425c-e8f3-08dde8b9a7bc",
+  "interviewPlan": {
+    "totalCandidates": 1,
+    "candidates": [
+      {
+        "candidateId": "c27204a8-92d6-4517-e8f5-08dde8b9a7bc",
+        "fullName": "Đặng Anh Vũ",
+        "email": "anhvu11102003@gmail.com",
+        "phone": "",
+        "totalInterviewDurationMinutes": 60,
+        "suggestedSchedules": [
+          {
+            "date": "2025-09-04",
+            "timeSlot": "08:00 - 09:00",
+            "nextInterviewStageName": "Vòng 3",
+            "nextInterviewStageId": "67449d0d-f08c-4d68-e8ec-08dde8b9a7bc",
+            "currentInterviewStageName": "Vòng 3",
+            "interviewers": [
+              {
+                "id": "38e31977-a021-4712-630b-08dde7f5edbf",
+                "name": "Tien Le"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

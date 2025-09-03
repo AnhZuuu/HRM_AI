@@ -15,8 +15,7 @@ import API from "@/api/api";
 import { authFetch } from "@/app/utils/authFetch";
 import { useDecodedToken } from "@/components/auth/useDecodedToken";
 
-import {isHR, isDepartmentManager, isHRorAdmin, isHRorDMorAdmin } from "@/lib/auth";
-
+import { isHR, isDepartmentManager, isHRorAdmin, isHRorDMorAdmin } from "@/lib/auth";
 
 // ---- API shapes ----
 type ApiItem = {
@@ -24,7 +23,7 @@ type ApiItem = {
   cvApplicantId: string;
   startTime: string;
   endTime?: string | null;
-  status: number;                    // 0 Pending, 1 Canceled, 2 Pass, 3 Fail
+  status: number; // 0 Pending, 1 Canceled, 2 Pass, 3 Fail
   stageName: string | null;
   interviewTypeId: string;
   interviewTypeName?: string | null;
@@ -71,11 +70,16 @@ const readApiPage = async (res: Response): Promise<ApiPage> => {
 
 const statusToString = (n: number | null | undefined): string | null => {
   switch (n) {
-    case 0: return "Pending";
-    case 1: return "Canceled";
-    case 2: return "Pass";
-    case 3: return "Fail";
-    default: return null;
+    case 0:
+      return "Pending";
+    case 1:
+      return "Canceled";
+    case 2:
+      return "Pass";
+    case 3:
+      return "Fail";
+    default:
+      return null;
   }
 };
 
@@ -107,9 +111,49 @@ const mapItem = (x: ApiItem): RowType => ({
         departmentName: (x as any).campaignPositionModel.departmentName ?? null,
       }
     : null,
-
 });
 
+// ---------- Fallback helpers ----------
+const buildScheduleUrls = (claims?: any) => {
+  const base = API.INTERVIEW.SCHEDULE;
+
+  // HR/Admin → always base (no fallback needed)
+  if (isHRorAdmin()) return { primary: base, fallback: null };
+
+  // Department Manager → try dept endpoint, fall back to base
+  if (isDepartmentManager()) {
+    const depId = typeof window !== "undefined" ? localStorage.getItem("departmentId") : null;
+    if (depId) return { primary: `${base}/${depId}/departments`, fallback: base };
+    return { primary: base, fallback: null };
+  }
+
+  // Regular account → try account-scoped, fall back to base
+  const accountId = claims?.accountId ?? "";
+  if (accountId) return { primary: `${base}/${accountId}/accounts`, fallback: base };
+
+  // Last resort
+  return { primary: base, fallback: null };
+};
+
+const fetchPageWithFallback = async (
+  primaryUrl: string,
+  fallbackUrl: string | null,
+  init: RequestInit & { signal?: AbortSignal }
+): Promise<ApiPage> => {
+  try {
+    const res = await authFetch(primaryUrl, init);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await readApiPage(res);
+  } catch (err) {
+    if (!fallbackUrl) throw err;
+    const res2 = await authFetch(fallbackUrl, init);
+    if (!res2.ok) throw new Error(`HTTP ${res2.status}`);
+    return await readApiPage(res2);
+  }
+};
+
+const withPage = (url: string, page: number, pageSize: number) =>
+  url.includes("?") ? `${url}&page=${page}&pageSize=${pageSize}` : `${url}?page=${page}&pageSize=${pageSize}`;
 
 export default function InterviewSchedulesPage() {
   // Full dataset (for stats + Today table)
@@ -123,29 +167,20 @@ export default function InterviewSchedulesPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
-  const {claims, expired} = useDecodedToken();
-  const accountId =  claims?.accountId ?? "";
-  const isAccountIdReady = useMemo(() => isHRorAdmin(), [claims]); 
-  const isDM = useMemo(() => isDepartmentManager(), [claims]);
 
-const getSchedulesUrl = () => {
-  if (isAccountIdReady) return `${API.INTERVIEW.SCHEDULE}`;
-  if(isDM) return `${API.INTERVIEW.SCHEDULE}/${localStorage.getItem("departmentId")}/departments`;
-  // else if isDM thi chay API schedule/deparmentId/departments
-  //departmentId từ localStorage
-  if (!accountId) return null; 
- 
-  return `${API.INTERVIEW.SCHEDULE}/${accountId}/accounts`;
-};
+  const { claims, expired } = useDecodedToken();
+  const accountId = claims?.accountId ?? "";
+
   // -------- fetch: full list for stats/today (iterate with real totalPages) --------
   useEffect(() => {
     let alive = true;
     const controller = new AbortController();
 
     (async () => {
-      const url = getSchedulesUrl();
-      if (expired) return;              
-      if (!url) return;     
+      if (expired) return;
+
+      const { primary, fallback } = buildScheduleUrls(claims);
+      if (!primary) return;
 
       setLoadingStats(true);
       setErr("");
@@ -154,14 +189,16 @@ const getSchedulesUrl = () => {
         let p = 1;
         let tp = 1;
 
+        // Use a larger fixed page size for stats to reduce loop count if supported by API
+        const statsPageSize = 50;
+
         do {
-          // const url = `${API.INTERVIEW.SCHEDULE}`;
-        console.log("url 1 " + url );
+          const pageUrl = withPage(primary, p, statsPageSize);
+          const apiPage = await fetchPageWithFallback(pageUrl, fallback ? withPage(fallback, p, statsPageSize) : null, {
+            method: "GET",
+            signal: controller.signal,
+          });
 
-          const res = await authFetch(url, { method: "GET", signal: controller.signal });
-          if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
-
-          const apiPage = await readApiPage(res);
           all.push(...(apiPage.data ?? []).map(mapItem));
           tp = apiPage.totalPages ?? p;
           p += 1;
@@ -179,9 +216,7 @@ const getSchedulesUrl = () => {
       alive = false;
       controller.abort();
     };
-    // If you want stats to be independent from the UI pageSize,
-    // replace &pageSize=${pageSize} with a larger fixed number, e.g. 50 or 100.
-  }, [pageSize, accountId, isAccountIdReady, expired, isDM]);
+  }, [claims, expired]);
 
   // -------- fetch: single page for All table --------
   useEffect(() => {
@@ -189,18 +224,18 @@ const getSchedulesUrl = () => {
     const controller = new AbortController();
 
     (async () => {
-      const urlBase = getSchedulesUrl();
       if (expired) return;
-      if (!urlBase) return;
-      setListLoading(true);
-        
-      try {
-        const url = urlBase;
-        console.log("url " + url );
-        const res = await authFetch(url, { method: "GET", signal: controller.signal });
-        if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
 
-        const apiPage = await readApiPage(res);
+      const { primary, fallback } = buildScheduleUrls(claims);
+      if (!primary) return;
+
+      setListLoading(true);
+      try {
+        const pageUrl = withPage(primary, page, pageSize);
+        const apiPage = await fetchPageWithFallback(pageUrl, fallback ? withPage(fallback, page, pageSize) : null, {
+          method: "GET",
+          signal: controller.signal,
+        });
 
         if (alive) {
           setPageItems((apiPage.data ?? []).map(mapItem));
@@ -217,7 +252,7 @@ const getSchedulesUrl = () => {
       alive = false;
       controller.abort();
     };
-  }, [page, pageSize, accountId, isAccountIdReady, expired, isDM]);
+  }, [page, pageSize, claims, expired]);
 
   // -------- stats & splits (from full items) --------
   const toLocalYMD = (d: Date) => {
@@ -291,8 +326,8 @@ const getSchedulesUrl = () => {
           <h1 className="text-3xl font-bold text-gray-900">Lịch phỏng vấn</h1>
           <p className="text-gray-600 mt-1">Danh sách lịch phỏng vấn của ứng viên</p>
           {/* <p className="text-gray-600 mt-1">AccountId: {accountId}</p> */}
-
         </div>
+
         {isHR() && (
           <Button asChild className="bg-blue-600 hover:bg-blue-700">
             <Link href="/dashboard/schedules/new">
@@ -301,7 +336,6 @@ const getSchedulesUrl = () => {
             </Link>
           </Button>
         )}
-        
       </div>
 
       {/* Stats */}
@@ -318,7 +352,7 @@ const getSchedulesUrl = () => {
           </p>
         </div>
         <div className="rounded-xl border border-gray-200 p-4 bg-white shadow-sm">
-          <p className="text-sm text-gray-500">Đã phỏng vấn (hôm nay)</p>
+          <p className="text-sm text-gray-500">Đang Pending (hôm nay)</p>
           <p className="text-2xl font-semibold">{loadingStats ? "…" : scheduledTodayCount}</p>
           <p className="text-xs text-gray-500 mt-1">
             {loadingStats
@@ -343,14 +377,15 @@ const getSchedulesUrl = () => {
           <p className="text-sm text-gray-500">Trong tuần này</p>
           <p className="text-2xl font-semibold">{loadingStats ? "…" : weekCount}</p>
           <p className="text-xs text-gray-500 mt-1">
-            {new Date(weekRange.s).toLocaleDateString("vi-VN")} – {new Date(weekRange.e).toLocaleDateString("vi-VN")}
+            {new Date(weekRange.s).toLocaleDateString("vi-VN")} –{" "}
+            {new Date(weekRange.e).toLocaleDateString("vi-VN")}
           </p>
         </div>
       </div>
 
       {/* Today-only table (always full dataset) */}
       <h2 className="text-lg font-semibold text-gray-900">Danh sách lịch phỏng vấn hôm nay</h2>
-      {/* {err && <div className="text-sm text-red-600 mb-2">Lỗi tải dữ liệu: {err}</div>}   */}
+      {/* {err && <div className="text-sm text-red-600 mb-2">Lỗi tải dữ liệu: {err}</div>} */}
       {loadingStats ? (
         <div className="rounded-xl border border-gray-200 p-6 bg-white shadow-sm text-gray-500">Đang tải…</div>
       ) : (
@@ -364,6 +399,7 @@ const getSchedulesUrl = () => {
       ) : (
         <>
           <InterviewSchedulesTable title="Tất cả" variant="all" data={pageItems} />
+          {/* If you have paging controls, wire them to setPage / setPageSize */}
         </>
       )}
     </div>
