@@ -13,6 +13,7 @@ import {
 import { authFetch } from "@/app/utils/authFetch";
 import API from "@/api/api";
 import { InterviewTracker } from "@/components/candidates/tracking/CvTracking";
+import GlobalLoading from "@/app/loading";
 
 /* ========= types unchanged ========= */
 interface CvApplicantDetail { type: string; key: string; value: string; groupIndex: number; }
@@ -104,7 +105,7 @@ export default function CampaignPositionPage() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Đang tải dữ liệu...</p>
+          <p className="text-muted-foreground"><GlobalLoading/></p>
         </div>
       </div>
     );
@@ -113,7 +114,7 @@ export default function CampaignPositionPage() {
   if (!campaignData) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-destructive text-lg">Không thể tải dữ liệu vị trí</p>
+        <p className="text-destructive text-lg"><GlobalLoading/></p>
       </div>
     );
   }

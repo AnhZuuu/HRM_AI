@@ -379,10 +379,10 @@ export default function InterviewProcessTable({
 
                           <DropdownMenuSeparator />
 
-                          <DropdownMenuItem className="text-red-600" onClick={() => confirmDelete(proc)}>
+                          {/* <DropdownMenuItem className="text-red-600" onClick={() => confirmDelete(proc)}>
                             <Trash2 className="mr-2 h-4 w-4" />
                             Xóa
-                          </DropdownMenuItem>
+                          </DropdownMenuItem> */}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>

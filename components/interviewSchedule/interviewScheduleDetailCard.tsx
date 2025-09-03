@@ -20,6 +20,7 @@ import RightTimeline from "./interviewScheduleDetail/sections/rightTimeline";
 import { isHR, isHRorDM } from "@/lib/auth";
 import { Candidate, Department } from "@/components/interviewSchedule/ui/ScheduleModal";
 import { ScheduleModal } from "./ui/ScheduleModal";
+import GlobalLoading from "@/app/loading";
 
 function durationMin(start?: string, end?: string | null) {
   if (!start || !end) return null;
@@ -139,7 +140,7 @@ export default function InterviewScheduleDetail({ interviewScheduleId }: { inter
     getScheduleData();
   }, [interviewScheduleId]);
 
-  if (!scheduleData) return <div>Đang tải...</div>;
+  if (!scheduleData) return <div><GlobalLoading /></div>;
 
   const outcome = scheduleData.interviewOutcomeModel;
   const applicant = scheduleData.cvApplicantModel;

@@ -7,6 +7,7 @@ import { authFetch } from "@/app/utils/authFetch";
 import API from "@/api/api";
 import { ProfileCard } from "@/components/profile/profileCard";
 import { ArrowLeft } from "lucide-react";
+import GlobalLoading from "@/app/loading";
 
 export interface AccountDetailApiResponse {
   code: number;
@@ -38,7 +39,7 @@ export default function AccountDetailPage() {
     })();
   }, [params.id]);
 
-  if (loading) return <div className="p-6">Đang tải…</div>;
+  if (loading) return <div className="p-6"><GlobalLoading /></div>;
   if (error) return <div className="p-6 text-red-600">Lỗi: {error}</div>;
   if (!account) return <div className="p-6">Không tìm thấy tài khoản</div>;
 

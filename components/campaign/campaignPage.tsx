@@ -26,7 +26,7 @@ import AddCampaignDialog from "./handleAddCampaign";
 import DeleteCampaignDialog from "./handleDeleteCampaign";
 
 import { authFetch } from "@/app/utils/authFetch";
-import { formatDMYHM, toIsoFromDateInput, toMidnight } from "@/app/utils/helper";
+import { formatDMYHM, formatISODate, toIsoFromDateInput, toMidnight } from "@/app/utils/helper";
 import { useRouter } from "next/navigation";
 import API from "@/api/api";
 import { isHR } from "@/lib/auth";
@@ -318,8 +318,8 @@ export default function CampaignPage() {
                         return <Badge className={getStatusColor(status)}>{status}</Badge>;
                       })()}
                     </TableCell>
-                    <TableCell>{formatDMYHM(campaign.startTime)}</TableCell>
-                    <TableCell>{formatDMYHM(campaign.endTime)}</TableCell>
+                    <TableCell>{formatISODate(campaign.startTime)}</TableCell>
+                    <TableCell>{formatISODate(campaign.endTime)}</TableCell>
                     <TableCell>{campaign.description}</TableCell>
                     <TableCell>{campaign.createdByName ?? "—"}</TableCell>
 
@@ -335,6 +335,7 @@ export default function CampaignPage() {
                           <DropdownMenuItem onClick={() => router.push(`/dashboard/campaigns/${campaign.id}`)}>
                             <Eye className="mr-2 h-4 w-4" /> Chi tiết
                           </DropdownMenuItem>
+
                           {isHR() && (
                             <DropdownMenuItem
                               onClick={() => {

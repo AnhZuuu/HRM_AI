@@ -49,8 +49,8 @@ const mapToApi = (c: Partial<Omit<Campaign, "id">>) => {
   const out: any = {
     name: c.name,
     description: c.description,
-    startTime: toIsoFromDateInput(c.startTime ?? null),
-    endTime: toIsoFromDateInput(c.endTime ?? null),
+    startTime: (c.startTime ?? null),
+    endTime: (c.endTime ?? null),
     createdById: c.createdBy ?? null,
   };
   Object.keys(out).forEach((k) => out[k] === undefined && delete out[k]);

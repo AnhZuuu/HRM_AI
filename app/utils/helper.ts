@@ -38,7 +38,7 @@ export const formatDMYHM = (s?: string | null): string => {
  * formatISODate("2025-08-31T17:00:00Z"); // "31/08/2025"
  * formatISODate(undefined); // "—"
  */
-export const formatISODate = (iso?: string) => {
+export const formatISODate = (iso?: string| null) => {
   if (!iso) return "—";
   try {
     const d = new Date(iso);
