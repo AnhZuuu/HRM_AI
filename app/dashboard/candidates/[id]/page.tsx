@@ -15,6 +15,7 @@ import { formatISODate } from "@/app/utils/helper";
 import HandleUpdateCandidate from "@/components/candidates/handleUpdateCandidate";
 import HandleUpdateStatusCandidate from "@/components/candidates/HandleUpdateStatusCandidate";
 import { InterviewTracker } from "@/components/candidates/tracking/CvTracking";
+import { toast } from "react-toastify";
 
 
 
@@ -121,7 +122,7 @@ function field(rows: CvApplicantDetail[], key: string) {
 export default function CvApplicantDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const { toast } = useToast();
+  // const { toast } = useToast();
 
   const [item, setItem] = useState<CvApplicant | null>(null);
   const [loading, setLoading] = useState(true);
@@ -135,10 +136,7 @@ export default function CvApplicantDetailPage() {
   }
   function handleStatusUpdated(updated: { status: 0 | 1 | 2 | 3 | 4 }) {
     setItem((prev) => (prev ? { ...prev, status: updated.status } : prev));
-    toast({
-      title: "Cập nhật trạng thái thành công",
-      description: `Trạng thái mới: ${STATUS_LABEL[updated.status]}`,
-    });
+    toast.success(`Trạng thái mới: ${STATUS_LABEL[updated.status]}`);
   }
 
 
@@ -158,11 +156,7 @@ export default function CvApplicantDetailPage() {
       } catch (e: any) {
         if (!cancelled) {
           setErr(e?.message || "Unexpected error");
-          toast({
-            title: "Failed to load CV",
-            description: e?.message || "Please try again.",
-            variant: "destructive",
-          });
+          toast.error(e?.message || "Please try again");
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -449,7 +443,7 @@ export default function CvApplicantDetailPage() {
               </Card> */}
             </div>
           </div>
-          <HandleUpdateCandidate
+          {/* <HandleUpdateCandidate
             open={openUpdate}
             onOpenChange={setOpenUpdate}
             candidateId={params.id}
@@ -458,11 +452,26 @@ export default function CvApplicantDetailPage() {
               fileAlt: item.fileAlt ?? "",
               fullName: item.fullName ?? "",
               email: item.email ?? "",
-              point: item.point ?? "",
+              // point: item.point ?? "",
               // Convert your current status mapping to the update mapping if needed.
               // If your backend already uses the new mapping (0 Pending, 1 Rejected, 2 Accepted, 3 Failed, 4 Onboarded),
               // just pass item.status directly (cast).
               status: (item.status as 0 | 1 | 2 | 3 | 4) ?? 0,
+            }}
+            onSuccess={handleUpdatedCandidate} */}
+          {/* /> */}
+          <HandleUpdateCandidate
+            open={openUpdate}
+            onOpenChange={setOpenUpdate}
+            candidateId={params.id}
+            campaignPositionId={item.campaignPositionId ?? ""} // lấy từ dữ liệu hiện tại
+            initial={{
+              fullName: item.fullName,
+              email: item.email,
+              fileUrl: item.fileUrl,
+              fileAlt: item.fileAlt,
+              status: (item.status as 0 | 1 | 2 | 3 | 4) ?? 0,  // giữ nguyên
+              point: item.point ?? "",        
             }}
             onSuccess={handleUpdatedCandidate}
           />
