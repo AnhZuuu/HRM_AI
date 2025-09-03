@@ -459,7 +459,7 @@ export default function CandidatesPage() {
                           </DropdownMenuTrigger>
 
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => router.push(`/dashboard/accounts/${a.id}`)}>
+                            <DropdownMenuItem onClick={() => router.push(`/dashboard/candidates/${a.id}`)}>
                               <Eye className="mr-2 h-4 w-4" /> Chi tiết
                             </DropdownMenuItem>
 

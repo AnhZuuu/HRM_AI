@@ -366,11 +366,11 @@ export default function CampaignPositions({
                 id="cvFiles"
                 type="file"
                 multiple
-                accept=".pdf,.png,.jpg,.jpeg"
+                accept=".pdf"
                 onChange={(e) => setFiles(e.target.files)}
               />
               <p className="text-xs text-muted-foreground">
-                Hỗ trợ PDF/PNG/JPG/JPEG. Có thể chọn nhiều file.
+                Hỗ trợ PDF. Có thể chọn nhiều file.
               </p>
             </div>
           </div>
