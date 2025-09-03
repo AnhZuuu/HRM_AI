@@ -14,7 +14,9 @@ import { Plus } from "lucide-react";
 import API from "@/api/api";
 import { authFetch } from "@/app/utils/authFetch";
 import { useDecodedToken } from "@/components/auth/useDecodedToken";
-import { isDepartmentManager, isHRorAdmin, isHRorDMorAdmin } from "@/lib/auth";
+
+import {isHR, isDepartmentManager, isHRorAdmin, isHRorDMorAdmin } from "@/lib/auth";
+
 
 // ---- API shapes ----
 type ApiItem = {
@@ -291,12 +293,15 @@ const getSchedulesUrl = () => {
           {/* <p className="text-gray-600 mt-1">AccountId: {accountId}</p> */}
 
         </div>
-        <Button asChild className="bg-blue-600 hover:bg-blue-700">
-          <Link href="/dashboard/schedules/new">
-            <Plus className="w-4 h-4 mr-2" />
-            Tạo phỏng vấn
-          </Link>
-        </Button>
+        {isHR() && (
+          <Button asChild className="bg-blue-600 hover:bg-blue-700">
+            <Link href="/dashboard/schedules/new">
+              <Plus className="w-4 h-4 mr-2" />
+              Tạo phỏng vấn
+            </Link>
+          </Button>
+        )}
+        
       </div>
 
       {/* Stats */}
